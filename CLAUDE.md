@@ -78,6 +78,9 @@ contra vaults sintéticos.
   con traducción en `README.es.md` — al tocar uno, actualizar el otro en el mismo commit.
   Documentación interna (planes, ADRs) y comunicación con Ángel en español.
 - Commits: convencionales y pequeños (`feat:`, `fix:`, `docs:`, `adr:`). Un cambio, un commit.
+- **Sin co-autoría ni atribución del agente.** Nunca añadir `Co-Authored-By:`, «Generated with
+  Claude Code» ni enlaces de sesión a commits, PRs o MRs. La autoría es solo de Ángel.
+  Aplicado también vía `.claude/settings.json` (`attribution.commit`/`pr` vacíos).
 - Sin frameworks pesados: scripts pequeños, dependencias mínimas y justificadas.
   Lenguaje del indexador: pendiente de ADR (Python vs TypeScript) — no empezar sin ella.
 - Salidas de CLI: legibles para humanos por defecto, `--json` para el agente.
