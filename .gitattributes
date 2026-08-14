@@ -1,0 +1,14 @@
+# El destino es Linux: LF en el repositorio y en el árbol de trabajo, se desarrolle donde se desarrolle.
+* text=auto eol=lf
+
+# Binarios: que Git no toque el contenido.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.pdf   binary
+*.zip   binary
+*.sqlite binary
+*.sqlite3 binary
+*.db    binary
