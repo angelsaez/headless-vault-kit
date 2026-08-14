@@ -1,0 +1,37 @@
+# Secretos y configuración local — NUNCA en git
+.env
+*.env
+!*.env.example
+*.key
+*.pem
+secrets/
+
+# Claude Code: preferencias locales de máquina (el settings.json compartido SÍ se commitea)
+.claude/settings.local.json
+
+# Índice y artefactos de ejecución (derivados, reconstruibles — nunca versionarlos)
+*.sqlite
+*.sqlite3
+*.db
+.nexus-index/
+
+# Node / TypeScript (si la ADR-001 elige TS)
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Python (si la ADR-001 elige Python)
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Vaults de prueba: los sintéticos versionados SÍ; estado de Obsidian y papelera, no
+test-vaults/**/.obsidian/workspace*
+test-vaults/**/.trash/
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+*.swp

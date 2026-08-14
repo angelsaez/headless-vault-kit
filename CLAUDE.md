@@ -102,3 +102,4 @@ headless-vault-kit/
 - Probado contra `test-vaults/`, incluidos los casos límite.
 - Criterios de salida de la fase (plan §5) repasados uno a uno.
 - Ninguna dependencia nueva sin justificar en el commit o ADR.
+- Entrada correspondiente añadida en docs/registro-cambios.md.
