@@ -83,6 +83,27 @@ def build_parser() -> argparse.ArgumentParser:
     links.add_argument("source", nargs="?", help="restrict to one note")
     links.add_argument("--broken", action="store_true", help="only unresolved links")
     links.add_argument("--ambiguous", action="store_true", help="only links with rival candidates")
+    tags_cmd = add("tags", "every tag in the vault")
+    tags_cmd.add_argument("--count", action="store_true", help="how many files carry each tag")
+    tags_cmd.add_argument("--prefix", help="only this tag and its descendants")
+
+    tasks_cmd = add("tasks", "tasks across the vault")
+    tasks_cmd.add_argument("--pending", action="store_true", help="only unfinished tasks")
+    tasks_cmd.add_argument("--done", action="store_true", help="only finished tasks")
+    tasks_cmd.add_argument("--due-before", metavar="YYYY-MM-DD", help="tasks due before a date")
+    tasks_cmd.add_argument("--path", help="restrict to paths containing this text")
+
+    props_cmd = add("props", "files by property, or the catalogue of keys")
+    props_cmd.add_argument(
+        "--where", action="append", metavar="COND",
+        help="key=value, key!=value, or a bare key; repeat to combine with AND",
+    )
+    props_cmd.add_argument("--key", help="which property to show in the output")
+
+    orphans_cmd = add("orphans", "files nothing links to")
+    orphans_cmd.add_argument(
+        "--attachments", action="store_true", help="include unreferenced attachments"
+    )
 
     return parser
 
@@ -139,6 +160,48 @@ def _run(args: argparse.Namespace) -> int:
                 as_json=args.json,
                 empty="no links match",
             )
+        elif args.command == "tags":
+            rows = query.tags(conn, count=args.count, prefix=args.prefix)
+            if args.count:
+                output.emit(rows, headers=("TAG", "FILES"), columns=("tag", "files"),
+                            as_json=args.json, empty="no tags")
+            else:
+                output.emit([{"tag": r["tag"]} for r in rows], headers=("TAG",),
+                            columns=("tag",), as_json=args.json, empty="no tags")
+
+        elif args.command == "tasks":
+            rows = query.tasks(
+                conn, pending=args.pending, done=args.done,
+                due_before=args.due_before, path=args.path,
+            )
+            output.emit(
+                rows,
+                headers=("PATH", "LINE", "ST", "DUE", "TEXT"),
+                columns=("path", "line", "status", "due", "text"),
+                as_json=args.json,
+                empty="no tasks match",
+            )
+
+        elif args.command == "props":
+            rows = query.props(conn, args.where, key=args.key)
+            extra = [k for k in (rows[0] if rows else {}) if k != "path"]
+            headers = ("PATH", *(k.upper() for k in extra)) if "path" in (rows[0] if rows else {}) \
+                else ("KEY", "FILES", "OCCURRENCES")
+            columns = ("path", *extra) if "path" in (rows[0] if rows else {}) \
+                else ("key", "files", "occurrences")
+            output.emit(rows, headers=headers, columns=columns, as_json=args.json,
+                        empty="nothing matches")
+
+        elif args.command == "orphans":
+            rows = query.orphans(conn, attachments=args.attachments)
+            output.emit(
+                rows,
+                headers=("PATH", "KIND", "OUT"),
+                columns=("path", "kind", "outgoing"),
+                as_json=args.json,
+                empty="nothing is orphaned",
+            )
+
     finally:
         conn.close()
     return 0
