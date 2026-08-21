@@ -4,6 +4,28 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — Phase 3 begins: a real expression engine for Bases
+
+- `docs/adr/0005-bases-subset.md` answers the question the plan left open — what "the
+  documented subset" of Bases means. The YAML structure is supported in full; the expression
+  language gets a closed function library, chosen for what filters actually contain. Excluded
+  and why: rendering helpers (nothing to render without a screen), `random` (it would make
+  output irreproducible, against principle 1), the lambda-taking list functions (they need
+  scoping for a construct that barely appears in filters) and the regular expression type
+  (its literal syntax is not published).
+- `src/hvk/bases/`: a tokeniser and a Pratt parser, then an evaluator over the tree. Not
+  pattern matching — `if(price, price.toFixed(2) + " dollars")` has a call, a method chain and
+  an operator in one line, and phase 4's Dataview subset now has an evaluator to build on.
+- The semantics the documentation does not define are defined here and written down: a missing
+  property is null rather than an error, null equals only null (so `status != "done"` is true
+  for a note with no status), ordering against null is false both ways, values that cannot be
+  coerced to a common type do not order at all, and nulls sort last in either direction.
+- Missing data stays quiet, mistakes do not: `price.toFixed(2)` on a note with no price is
+  null, while `price.toFixxed(2)` on a note that has one names the typo. Calling `random()` or
+  `html()` fails naming the function and pointing at the ADR.
+- One bug caught by writing the tests: an unsupported function fell through to the
+  note-property lookup and returned a silent null, which is exactly what the ADR forbids.
+
 ## 2026-08-21 — The vault-queries skill, and the plan's numbers measured
 
 - `skills/vault-queries/SKILL.md`: when to reach for which command, written for the agent that
