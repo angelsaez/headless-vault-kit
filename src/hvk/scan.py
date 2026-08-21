@@ -87,6 +87,11 @@ def _file_fields(vault: Path, path: Path, stat: os.stat_result, digest: str) -> 
         "parent": parent,
         "ext": ext,
         "kind": KIND_BY_EXT.get(ext, "attachment"),
+        # Linux rarely records a creation time, so st_birthtime_ns is used where the
+        # filesystem offers it and the inode change time stands in where it does not. Bases
+        # exposes this as file.ctime, and a wrong answer would be worse than an honest
+        # approximation nobody documented.
+        "ctime": getattr(stat, "st_birthtime_ns", None) or stat.st_ctime_ns,
         "mtime": stat.st_mtime_ns,
         "size": stat.st_size,
         "hash": digest,
@@ -226,7 +231,7 @@ def index_file(
         file_id = previous["id"]
         conn.execute(
             "UPDATE files SET name=:name, stem=:stem, stem_lower=:stem_lower, "
-            "parent=:parent, ext=:ext, kind=:kind, mtime=:mtime, size=:size, "
+            "parent=:parent, ext=:ext, kind=:kind, ctime=:ctime, mtime=:mtime, size=:size, "
             "hash=:hash, parse_error=NULL WHERE id = :id",
             {**fields, "id": file_id},
         )
@@ -235,8 +240,8 @@ def index_file(
     else:
         cursor = conn.execute(
             "INSERT INTO files(path, name, stem, stem_lower, parent, ext, kind, "
-            "mtime, size, hash) VALUES(:path, :name, :stem, :stem_lower, :parent, "
-            ":ext, :kind, :mtime, :size, :hash)",
+            "ctime, mtime, size, hash) VALUES(:path, :name, :stem, :stem_lower, :parent, "
+            ":ext, :kind, :ctime, :mtime, :size, :hash)",
             fields,
         )
         file_id = cursor.lastrowid
