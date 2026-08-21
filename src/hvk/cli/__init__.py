@@ -12,6 +12,9 @@ import time
 from pathlib import Path
 
 from hvk import __version__, db, output, paths, query, scan as scanner
+from hvk.bases import base_file as _base_file
+from hvk.bases import values as bases_values
+from hvk.bases.expr import ExpressionError
 
 EPILOG = """\
 examples:
@@ -112,6 +115,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     add("verify", "re-hash every file as a safety net; run it nightly from cron")
+    base_cmd = add("base", "run a view from a .base file against the index")
+    base_cmd.add_argument("file", help="path to the .base file, absolute or inside the vault")
+    base_cmd.add_argument("--view", help="which view to run (default: the first one)")
+    base_cmd.add_argument(
+        "--this", metavar="PATH",
+        help="the note the base is embedded in, for expressions that use 'this'",
+    )
 
     return parser
 
@@ -223,9 +233,99 @@ def _run(args: argparse.Namespace) -> int:
                 empty="nothing is orphaned",
             )
 
+        elif args.command == "base":
+            _base(conn, location, args)
+
     finally:
         conn.close()
     return 0
+def _jsonable(value):
+    """Values a base produces are richer than JSON: dates, files and links become text."""
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, dict):
+        return {str(k): _jsonable(v) for k, v in value.items()}
+    return bases_values.as_text(value)
+
+
+def _base(conn, location: paths.Locations, args: argparse.Namespace) -> None:
+    """Run one view of a .base file and print it as a Markdown table, or as JSON."""
+    from hvk.bases import base_file, run as base_run
+
+    # is_file, not exists: on a case-insensitive filesystem a folder named "library" answers
+    # to "Library" and would be opened as if it were the base.
+    candidate = Path(args.file)
+    if not candidate.is_absolute() and not candidate.is_file():
+        candidate = location.vault / args.file
+    if not candidate.is_file() and candidate.suffix != ".base":
+        candidate = candidate.with_suffix(".base")
+    if not candidate.is_file():
+        raise base_file.BaseError(f"no such base file: {args.file}")
+
+    parsed = base_file.load(candidate)
+    result = base_run.run(parsed, conn, args.view, args.this)
+
+    for warning in result.warnings:
+        print(f"hvk: {warning}", file=sys.stderr)
+
+    if args.json:
+        output.emit_object(
+            {
+                "base": candidate.name,
+                "view": result.view.name,
+                "type": result.view.type,
+                "columns": result.columns,
+                "headers": result.headers,
+                "total": result.total,
+                "shown": len(result.rows),
+                "rows": [
+                    {"path": row["path"],
+                     "values": {k: _jsonable(v) for k, v in row["values"].items()}}
+                    for row in result.rows
+                ],
+                "groups": [
+                    {"group": name, "paths": [row["path"] for row in rows]}
+                    for name, rows in result.groups
+                ],
+                "summaries": {k: _jsonable(v) for k, v in result.summaries.items()},
+                "warnings": result.warnings,
+            },
+            as_json=True,
+        )
+        return
+
+    shown = len(result.rows)
+    counted = f"{shown} of {result.total} rows" if shown != result.total else f"{shown} rows"
+    print(f"{candidate.name} - view {result.view.name!r} ({counted})")
+    print()
+
+    def table(rows) -> str:
+        return output.markdown_table(
+            result.headers,
+            [[bases_values.as_text(row["values"].get(column)) for column in result.columns]
+             for row in rows],
+        )
+
+    if result.groups:
+        for name, rows in result.groups:
+            print(f"### {name}")
+            print()
+            print(table(rows))
+            print()
+    elif result.rows:
+        print(table(result.rows))
+    else:
+        print("no rows match")
+
+    if result.summaries:
+        print()
+        for column, value in result.summaries.items():
+            label = result.view.summaries[column]
+            print(f"{label} of {column}: {bases_values.as_text(value)}")
+
+
 def _watch(location: paths.Locations, args: argparse.Namespace) -> int:
     """Run the watcher until interrupted, reporting one line per batch."""
     from hvk import watch as watcher
@@ -269,7 +369,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _merge_globals(build_parser().parse_args(argv))
     try:
         return _run(args)
-    except (paths.VaultError, db.IndexError_, query.QueryError) as exc:
+    except (paths.VaultError, db.IndexError_, query.QueryError,
+            _base_file.BaseError, ExpressionError) as exc:
         print(f"hvk: {exc}", file=sys.stderr)
         return 2
     except BrokenPipeError:
