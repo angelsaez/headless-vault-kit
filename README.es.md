@@ -37,8 +37,10 @@ el suyo. Nunca se ejecuta código de plugins ni se reproduce la interfaz.
 ## Estado
 
 🚧 **Fase 2 en marcha.** El indexador de Nivel 0 funciona: parsea un vault a SQLite y responde
-búsquedas, backlinks y consultas de enlaces, con reconstrucción determinista. Queda pendiente de
-la fase el watcher de sistema de archivos y los comandos `tags`, `tasks`, `props` y `orphans`.
+búsquedas, backlinks, enlaces, etiquetas, tareas, propiedades y huérfanos, con
+reconstrucción determinista. Queda pendiente de
+la fase el watcher de sistema de archivos, el re-escaneo nocturno de verificación y la skill
+de Claude Code.
 
 El plan completo, con fases y criterios de salida, está en
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md); las decisiones
@@ -65,6 +67,10 @@ Dentro de un vault se puede omitir `--vault`: hvk sube por el árbol hasta encon
 | `hvk search "texto tag:proyecto path:Areas"` | Búsqueda a texto completo, con filtros de etiqueta y ruta |
 | `hvk backlinks "Nota"` | Qué enlaza aquí, por nombre de nota o por ruta |
 | `hvk links [Nota] [--broken] [--ambiguous]` | Enlaces salientes, los rotos, o aquellos donde encajó más de un archivo |
+| `hvk tags [--count] [--prefix casa]` | Todas las etiquetas y cuántos archivos las llevan; el prefijo incluye las anidadas |
+| `hvk tasks [--pending] [--due-before 2026-09-01]` | Tareas del vault, por estado, vencimiento o ruta |
+| `hvk props --where "estado=abierto"` | Archivos por propiedad; repite `--where` para combinar con AND, u omítelo para ver el catálogo de claves |
+| `hvk orphans [--attachments]` | Archivos que nadie enlaza |
 | `hvk info` | Qué contiene el índice ahora mismo |
 
 Todos los comandos aceptan `--json` para salida legible por máquina.
