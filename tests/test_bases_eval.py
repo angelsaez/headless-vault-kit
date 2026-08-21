@@ -294,3 +294,12 @@ def test_the_official_example_filter_evaluates(note):
     assert run('file.inFolder("Required Reading")', note) is False
     assert run('status != "done"', note) is True
     assert run("price > 2.1", note) is True
+
+
+def test_accented_property_names_resolve(note):
+    context = Context(
+        file=File(path="a.md"),
+        note={"categoría": "habilidad", "última_actualización": "2026-08-18"},
+    )
+    assert run('categoría == "habilidad"', context) is True
+    assert run('última_actualización > "2026-01-01"', context) is True

@@ -143,3 +143,20 @@ def test_the_full_official_filter_parses():
         "price > 2.1",
     ):
         parse(source)
+
+
+def test_property_names_may_be_written_in_any_language():
+    """A vault written in Spanish is full of accented property names."""
+    assert parse("categoría") == Name("categoría")
+    assert parse("última_actualización") == Name("última_actualización")
+    assert parse("日本語") == Name("日本語")
+
+
+def test_an_accented_filter_parses_whole():
+    tree = parse('categoría == "habilidad"')
+    assert tree == Binary("==", Name("categoría"), Literal("habilidad"))
+
+
+def test_a_name_still_cannot_start_with_a_digit():
+    with pytest.raises(ExpressionError):
+        parse("2fast == 1")
