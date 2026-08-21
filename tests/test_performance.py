@@ -128,3 +128,44 @@ def test_queries_under_100_milliseconds(big, name, call):
     size = len(result) if isinstance(result, (list, dict)) else len(result[1])
     print(f"  {name}: {elapsed:.1f}ms ({size} rows)")
     assert elapsed < 100, f"{name} took {elapsed:.1f}ms"
+
+
+def test_a_base_over_ten_thousand_notes(big, tmp_path):
+    """Running a base is a whole-vault operation, not a point query, so it gets its own bar.
+
+    The plan's 100 ms target covers index lookups. A base loads every note, evaluates a
+    filter per row and computes the columns, which is closer in shape to a scan.
+    """
+    from hvk import db
+    from hvk.bases import base_file
+    from hvk.bases import run as base_run
+
+    scanner.scan(big)
+    source = [
+        "filters:",
+        "  and:",
+        "    - 'status == \"open\"'",
+        "formulas:",
+        "  ratio: '(priority + 1).toFixed(2)'",
+        "views:",
+        "  - type: table",
+        "    name: v",
+        "    order: [file.name, status, priority, formula.ratio]",
+        "    sort:",
+        "      - property: priority",
+        "        direction: DESC",
+    ]
+    path = tmp_path / "Big.base"
+    path.write_text(chr(10).join(source) + chr(10), encoding="utf-8", newline=chr(10))
+
+    conn = db.connect(big.db_path)
+    try:
+        base = base_file.load(path)
+        started = time.perf_counter()
+        result = base_run.run(base, conn)
+        elapsed = time.perf_counter() - started
+    finally:
+        conn.close()
+    print(f"  base over {result.total} matching rows: {elapsed:.2f}s")
+    assert result.total > 5000
+    assert elapsed < 3
