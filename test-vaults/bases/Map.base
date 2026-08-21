@@ -1,0 +1,5 @@
+views:
+  - type: map
+    name: "Pins"
+    order:
+      - file.name
