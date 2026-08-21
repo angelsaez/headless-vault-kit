@@ -3,8 +3,8 @@
 > Sistema agéntico 24/7 sobre un vault de Obsidian en VPS, sin interfaz gráfica, replicando los **datos** que Obsidian deriva al abrirse — no su runtime.
 
 **Estado del documento:** plan de implementación v2, sustituye operativamente al v1 ("Vault Gateway Headless")
-**Fecha:** 2026-08-14
-**Versión:** 2.0
+**Fecha:** 2026-08-14 · revisado 2026-08-21 con los datos del inventario
+**Versión:** 2.1
 **Hardware objetivo:** VPS Linux, 2 núcleos, 12 GB RAM
 **Naturaleza:** el v1 se conserva como mapa de máximos; este documento define lo que se construye de verdad y en qué orden
 
@@ -44,16 +44,16 @@ Disponer de un Nexus operativo 24/7 en el VPS, accesible por Telegram, donde el 
 - mantiene vistas materializadas visibles desde el móvil,
 - opera con permisos acotados, auditoría vía git y recuperación probada.
 
-| Indicador | Objetivo |
-|---|---:|
-| Mensaje Telegram → respuesta del agente | Funciona 24/7, sobrevive a reinicios |
-| Reconstrucción completa del índice (vault ~10k notas) | < 60 s |
-| Actualización incremental tras sync | < 5 s |
-| Consulta al índice (backlinks, tags, búsqueda) | < 100 ms |
-| Nota-orden creada en el móvil | Ejecutada exactamente una vez |
-| Bucles sync ↔ agente | 0 |
-| Restauración desde backup | Ensayada y documentada |
-| RAM total del stack (Headless + índice + Claude Code) | Holgada en 12 GB |
+| Indicador | Objetivo | Medido (2026-08-21) |
+|---|---:|---|
+| Mensaje Telegram → respuesta del agente | Funciona 24/7, sobrevive a reinicios | Pendiente de la Fase 0 |
+| Reconstrucción completa del índice (vault ~10k notas) | < 60 s | ✅ **4,9 s** en Linux |
+| Actualización incremental tras sync | < 5 s | ✅ **0,34 s**, o 0,19 s dirigida |
+| Consulta al índice (backlinks, tags, búsqueda) | < 100 ms | ✅ **0,5 – 35 ms** |
+| Nota-orden creada en el móvil | Ejecutada exactamente una vez | Pendiente de la Fase 5 |
+| Bucles sync ↔ agente | 0 | Regla dura implementada (ADR-0002); sin probar en producción |
+| Restauración desde backup | Ensayada y documentada | Pendiente de la Fase 6 |
+| RAM total del stack (Headless + índice + Claude Code) | Holgada en 12 GB | Sin medir: no hay VPS todavía |
 
 ---
 
@@ -123,12 +123,15 @@ Componentes y su coste real:
 |---|---|---|
 | Obsidian Headless | Sync oficial, servicio systemd (lección Nexus 5, Fase 6b) | Config propia |
 | Watcher + Indexador | Un proceso pequeño: escaneo inicial + eventos de archivo | SQLite, **fuera del vault** y reconstruible |
-| CLI `hvk` | Consultas: search, backlinks, tags, tasks, props, dv, base | Ninguna |
+| CLI `hvk` | Consultas: search, backlinks, links, tags, tasks, props, orphans, base | Ninguna |
 | Claude Code | Harness: permisos, hooks, skills, Telegram, MCP | `~/.claude` |
 | Runner de notas-orden | Script de ~100 líneas disparado por cron/watcher | El estado vive en el frontmatter de cada nota-orden |
 | git | Auto-commit periódico: checkpoint, auditoría y recuperación | Repo local (remoto opcional) |
 
-El índice y la base de datos viven fuera del vault (p. ej. `~/.nexus-index/`) para que Sync jamás los toque y ningún watcher se dispare por ellos.
+El índice y la base de datos viven fuera del vault —en
+`${XDG_DATA_HOME:-~/.local/share}/hvk/<vault>-<hash8>/`, una carpeta por vault, según la
+[ADR-0002](../docs/adr/0002-index-location.md)— para que Sync jamás los toque y ningún
+watcher se dispare por ellos.
 
 ---
 
@@ -146,15 +149,42 @@ El setup de la comunidad, tal cual las lecciones del Nexus 5, sin inventar nada:
 
 **Criterios de salida:** nota creada en el móvil visible en el VPS en segundos; mensaje a Telegram respondido; reinicio sin intervención manual; `git log` muestra los cambios del día.
 
-### Fase 1 — Inventario del vault (1 día)
+### Fase 1 — Inventario del vault ✅ HECHA (2026-08-21)
 
-La única pieza de la Fase 0 del v1 que se mantiene íntegra. Un script (o el propio agente) produce `Informes/inventario-vault.md`:
+Ejecutada sobre una copia del vault real, excluyendo `_PRIVATE/`, `.git/`, `.trash/` y
+`workspace*`. El vault de producción no se tocó.
 
-- Plugins activos (`.obsidian/community-plugins.json`, `core-plugins.json`) clasificados en niveles 0/1/2/fuera.
-- Recuento de bloques ` ```dataview `, ` ```dataviewjs `, ` ```tasks `, ` ```base `, plantillas Templater y qué hace cada uno.
-- Tamaño del vault: nº de notas, adjuntos, profundidad, rarezas de sintaxis (encabezados duplicados, YAML complejo, Unicode).
+**Resultado, y no es el que este plan suponía:**
 
-**Criterios de salida:** lista finita y priorizada de usos reales a replicar. El alcance de las fases 3 y 4 se decide con estos datos, no con suposiciones.
+| Qué | Dato |
+|---|---|
+| Tamaño | 273 notas, 270 adjuntos, 22 MB |
+| **Plugins de comunidad** | **Ninguno.** No existe `community-plugins.json` ni la carpeta `plugins/` |
+| Plugins core relevantes | `bases`, `canvas`, `daily-notes`, `templates`, `sync`, backlinks, tags |
+| Wikilinks | 265 en 105 notas |
+| Embeds de adjunto | 544 en 75 notas |
+| Tareas (checkbox) | 175 en 17 notas |
+| Frontmatter | 36 claves distintas, buena parte con tildes |
+| Archivos `.base` | **1** |
+| Bloques ` ```dataview ` | **2, en una sola nota**, ambos `TABLE … FROM "carpeta" SORT … ASC` sin `WHERE` |
+| Bloques ` ```dataviewjs `, ` ```tasks ` | **0** |
+| Archivos `.canvas` | **0** |
+| Campos inline `clave::`, sintaxis del plugin Tasks, Templater `<% %>` | **0 de cada** |
+| Referencias de bloque `^id` | **0** |
+| Rarezas | 24 notas con encabezados duplicados; 1 frontmatter YAML inválido; 9 enlaces rotos |
+
+Dos consecuencias que este plan no anticipaba:
+
+1. **Sin plugins de comunidad, el Nivel 2 no tiene usuarios en este vault.** Dataview no está
+   instalado, así que sus dos bloques ni siquiera se renderizan hoy: son código muerto.
+2. **Los formatos de Nivel 1 pendientes tampoco los tiene:** cero `.canvas`, y la carpeta de
+   plantillas que declara `templates.json` no existe.
+
+Lo que sí tiene usuarios masivos es el Nivel 0 —enlaces, tareas, frontmatter, búsqueda— y
+Bases, que es justo lo que ya está construido.
+
+**Criterio de salida cumplido:** hay una lista finita de usos reales, y las fases 3 y 4 se
+re-priorizan abajo con esos datos en vez de con suposiciones.
 
 ### Fase 2 — Indexador Nivel 0 (la primera pieza de valor, 1–2 semanas)
 
@@ -183,30 +213,55 @@ Esta CLI es lo que el agente usa en vez de leer archivos a lo bruto: **el sustit
 
 **Decisión técnica a tomar aquí (ADR corta):** Python (watchdog + sqlite3, cero build) frente a TypeScript (chokidar + better-sqlite3, mejor para futuro MCP). Ambas válidas en 2 núcleos; se decide y se documenta, no se debate eternamente.
 
-### Fase 3 — Nivel 1: formatos oficiales (1 semana)
+### Fase 3 — Nivel 1: formatos oficiales (re-priorizada tras el inventario)
 
-- **Bases:** parsear `.base`, ejecutar filtros y fórmulas del subconjunto documentado contra el índice; salida como tabla Markdown o JSON. `hvk base "Archivo.base" [--view nombre]`.
-- **Canvas:** lectura estructurada y edición segura de `.canvas`.
-- **Plantillas y periódicas:** skill + script para crear la diaria/semanal desde plantilla (invocable por Telegram: "crea la nota de hoy").
+- **Bases** ✅ **hecho.** `.base` parseado y ejecutado contra el índice: filtros globales y por
+  vista, fórmulas, `displayName`, orden, agrupación, límites y sumarios integrados. Salida
+  como tabla Markdown o JSON. `hvk base "Archivo.base" [--view nombre] [--this ruta]`.
+  El alcance exacto del lenguaje de expresiones está en la ADR-0005.
+- **Canvas** — **pospuesto.** El vault tiene cero archivos `.canvas`. Se implementa cuando
+  aparezca el primero, no antes: JSON Canvas es una especificación publicada y estable, así
+  que esperar no cuesta nada y construir sin usuarios sí.
+- **Plantillas y periódicas** — **bloqueado por una decisión, no por trabajo.** El vault no
+  dice qué hacer: `templates.json` apunta a una carpeta que no existe, no hay
+  `daily-notes.json`, y no se usa `{{date}}` en ninguna nota. Hay que decidir carpeta, formato
+  de nombre y plantilla antes de escribir nada (Anexo, decisión 7).
 
-**Criterios de salida:** un `.base` real del vault produce el mismo resultado que la app (validación manual con captura); la diaria se crea desde el móvil.
+**Criterios de salida:** un `.base` real del vault produce el mismo resultado que la app
+(validación manual, pendiente de comparar las 26 filas que devuelve el único `.base`); la
+diaria se crea desde el móvil (pendiente de la decisión 7 y de la Fase 0).
 
-### Fase 4 — Dataview DQL + vistas materializadas (1–2 semanas)
+### Fase 4 — Vistas materializadas (Dataview degradado a opcional)
 
-- Subconjunto DQL: `TABLE`, `LIST`, `TASK`; `FROM` (carpeta, tag, enlaces), `WHERE`, `SORT`, `GROUP BY`, `LIMIT`; campos de frontmatter e inline. `hvk dv "TABLE estado FROM #proyecto WHERE estado != 'cerrado'"`.
-- **DataviewJS queda fuera**; los usos concretos del inventario se reescriben como scripts o se migran a Bases.
-- **Vistas materializadas:** una nota marca su bloque generado:
+El inventario deshace el supuesto sobre el que se escribió esta fase: **no hay Dataview**, y
+sus dos únicos bloques son `TABLE … FROM "carpeta" SORT … ASC` sin `WHERE`. Construir un
+intérprete de DQL para eso serían semanas de trabajo para dos consultas que se reescriben como
+un `.base` en diez minutos, o que ya responde `hvk props --where`.
+
+- **Subconjunto DQL** — **pospuesto indefinidamente.** Se reactiva si aparece un vault (propio
+  o de la comunidad) con uso real de Dataview. El motor de expresiones de Bases ya existe y
+  sirve de base, así que el coste de empezar entonces es menor que el de empezar ahora.
+- **Los dos bloques existentes se migran a Bases**, que es adonde Obsidian empuja de todas
+  formas.
+- **DataviewJS** sigue fuera, y ahora además sin usuarios: cero bloques.
+- **Vistas materializadas — esta sí, y es la mitad valiosa de la fase.** Se construyen sobre
+  **Bases**, no sobre DQL. Una nota marca su bloque generado:
 
 ```markdown
-%% vista: dv "TASK FROM #proyecto WHERE !completed" cada 30m %%
+%% vista: base "000 BASE habilidades.base" vista "Tabla" cada 30m %%
 <!-- vista:inicio -->
 (contenido regenerado)
 <!-- vista:fin -->
 ```
 
-  Un cron regenera el contenido entre marcadores de forma idempotente. Resultado visible desde cualquier dispositivo, móvil incluido — algo que la app, que solo renderiza en pantalla, no ofrece.
+  Un cron regenera el contenido entre marcadores de forma idempotente. Resultado visible desde
+  cualquier dispositivo, móvil incluido — algo que la app, que solo renderiza en pantalla, no
+  ofrece. Y es la primera vez que el proyecto **escribe** en el vault, así que hereda las
+  reglas de `CLAUDE.md`: escritura atómica, preservar frontmatter y finales de línea, papelera
+  antes que borrado.
 
-**Criterios de salida:** todos los bloques dataview del inventario ejecutan o están migrados; regenerar dos veces sin cambios no produce diff; las vistas llegan al móvil vía Sync.
+**Criterios de salida:** los dos bloques dataview del inventario están migrados a Bases;
+regenerar dos veces sin cambios no produce diff; las vistas llegan al móvil vía Sync.
 
 ### Fase 5 — Automatización: el vault como cola (1 semana)
 
@@ -315,7 +370,27 @@ El v1 no se tira: es el plano de a dónde puede crecer esto si alguna de esas co
 
 ---
 
-## 9. Primer ciclo recomendado (un fin de semana)
+## 9. Orden real de ejecución (revisado 2026-08-21)
+
+El plan se escribió suponiendo Fase 0 primero. En la práctica se hizo al revés: las fases 1 y 2
+se desarrollaron en local contra vaults sintéticos, porque no necesitan servidor. Estado a
+2026-08-21:
+
+| Fase | Estado |
+|---|---|
+| 1 · Inventario | ✅ Hecha |
+| 2 · Indexador Nivel 0 + CLI | ✅ Hecha salvo la demo por Telegram, que depende de la Fase 0 |
+| 3 · Nivel 1 | Bases ✅ · Canvas pospuesto (sin usuarios) · plantillas bloqueadas por la decisión 7 |
+| 4 · Vistas materializadas | Pendiente. DQL degradado a opcional |
+| 0 · Base operativa en el VPS | **Lo siguiente.** Es lo único que impide que todo lo construido funcione de verdad |
+| 5–7 | Sin empezar |
+
+**Lo siguiente es la Fase 0**, y no por orden numérico: cierra el último criterio de salida de
+la Fase 2, y todo lo que ya está construido tiene usuarios reales en el vault pero no corre en
+ningún sitio. Las vistas materializadas de la Fase 4 dependen además de que exista el cron del
+servidor.
+
+### Primer ciclo recomendado, tal como se escribió (referencia histórica)
 
 1. Fase 0 completa siguiendo las lecciones del Nexus 5 (Headless systemd + Claude/Telegram + git auto-commit + prueba de reinicio).
 2. Inventario del vault (Fase 1) — lo puede hacer el propio agente ya corriendo.
@@ -329,8 +404,21 @@ Si esa demostración funciona, el resto del plan es acumular capas sobre algo qu
 ## Anexo: decisiones pendientes (no asumir en silencio)
 
 1. ~~Nombre del proyecto~~ — DECIDIDO (2026-08-14): **headless-vault-kit**, binario del CLI **`hvk`**.
-2. Python vs TypeScript para el indexador (ADR en Fase 2).
-3. Ubicación exacta del índice y convención de exclusiones.
-4. Convención de resolución de wikilinks ambiguos (documentar la de `app.json` y sus límites).
-5. Git: solo local en el VPS, o remoto privado además del backup.
-6. Licencia y modelo de publicación cuando llegue la Fase 7.
+2. ~~Python vs TypeScript para el indexador~~ — DECIDIDO (2026-08-21): **Python 3.11+**,
+   instalado con `uv` ([ADR-0001](../docs/adr/0001-indexer-language.md)).
+3. ~~Ubicación del índice y exclusiones~~ — DECIDIDO (2026-08-21):
+   `${XDG_DATA_HOME:-~/.local/share}/hvk/<vault>-<hash8>/`, una carpeta por vault
+   ([ADR-0002](../docs/adr/0002-index-location.md)).
+4. ~~Resolución de wikilinks ambiguos~~ — DECIDIDO (2026-08-21): regla propia, documentada, con
+   la ambigüedad almacenada y consultable ([ADR-0003](../docs/adr/0003-link-resolution.md)).
+   Corrige de paso el plan: `newLinkFormat` y `useMarkdownLinks` gobiernan cómo se **escriben**
+   los enlaces, no cómo se leen.
+5. **Git en el VPS: solo local, o remoto privado además del backup.** Abierta. Se decide en la
+   Fase 0, que es cuando existe el VPS.
+6. **Licencia y modelo de publicación.** Abierta, sin urgencia: el repositorio está en privado.
+   Se decide antes de publicarlo.
+7. **Plantillas y notas periódicas: carpeta, formato de nombre y plantilla.** Abierta, y
+   bloquea esa parte de la Fase 3. El inventario confirma que el vault no lo dice —
+   `templates.json` apunta a una carpeta inexistente, no hay `daily-notes.json` y no se usa
+   `{{date}}` en ninguna nota—, así que hay que decidirlo desde cero. Es además la primera vez
+   que el proyecto escribiría en el vault, lo que exige su propia ADR.
