@@ -1,0 +1,47 @@
+filters:
+  and:
+    - file.hasTag("book")
+formulas:
+  ppu: "(price / age).toFixed(2)"
+  label: 'if(price, price.toFixed(2) + " dollars")'
+properties:
+  status:
+    displayName: Status
+  formula.ppu:
+    displayName: "Per unit"
+  file.name:
+    displayName: Name
+views:
+  - type: table
+    name: "Open books"
+    filters:
+      and:
+        - 'status != "done"'
+        - "price > 2.1"
+    order:
+      - file.name
+      - status
+      - formula.ppu
+      - formula.label
+    sort:
+      - property: price
+        direction: DESC
+    summaries:
+      price: Sum
+  - type: table
+    name: "Everything, grouped"
+    groupBy:
+      property: status
+      direction: ASC
+    order:
+      - file.name
+      - price
+  - type: table
+    name: "Top two"
+    limit: 2
+    order:
+      - file.name
+      - price
+    sort:
+      - property: price
+        direction: DESC
