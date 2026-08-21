@@ -74,10 +74,14 @@ contra vaults sintéticos.
 
 ## Convenciones
 
-- **Idiomas:** código e identificadores en inglés. README público en inglés (`README.md`)
-  con traducción en `README.es.md` — al tocar uno, actualizar el otro en el mismo commit.
-  Documentación interna (planes, ADRs) y comunicación con Ángel en español.
-- Commits: convencionales y pequeños (`feat:`, `fix:`, `docs:`, `adr:`). Un cambio, un commit.
+- **Idiomas:** todo lo que se publica con el repositorio va en **inglés**: código e
+  identificadores, mensajes de commit, nombres de rama, ADRs (`docs/adr/`) y el registro de
+  cambios (`docs/CHANGELOG.md`). El README es bilingüe: `README.md` en inglés y `README.es.md`
+  en español — al tocar uno, actualizar el otro en el mismo commit. Siguen en español, por ser
+  trabajo interno: los planes (`.plans/`), este archivo y la comunicación con Ángel.
+- Commits: convencionales, pequeños y en inglés (`feat:`, `fix:`, `docs:`, `adr:`). Un cambio,
+  un commit. Ramas: una por funcionalidad, nombradas `tipo/asunto-en-ingles`
+  (`adr/bootstrap-decisions`, `feat/indexer-scan`), y PR a `main` — nada se mergea sin revisión.
 - **Sin co-autoría ni atribución del agente.** Nunca añadir `Co-Authored-By:`, «Generated with
   Claude Code» ni enlaces de sesión a commits, PRs o MRs. La autoría es solo de Ángel.
   Aplicado también vía `.claude/settings.json` (`attribution.commit`/`pr` vacíos).
@@ -105,4 +109,4 @@ headless-vault-kit/
 - Probado contra `test-vaults/`, incluidos los casos límite.
 - Criterios de salida de la fase (plan §5) repasados uno a uno.
 - Ninguna dependencia nueva sin justificar en el commit o ADR.
-- Entrada correspondiente añadida en docs/registro-cambios.md.
+- Entrada correspondiente añadida en `docs/CHANGELOG.md`.
