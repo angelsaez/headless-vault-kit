@@ -6,6 +6,7 @@ in milliseconds instead of spending tokens on the whole vault.
 
 from __future__ import annotations
 
+import datetime as _dt
 import re
 import sqlite3
 
@@ -20,6 +21,29 @@ DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 class QueryError(Exception):
     """Raised for a malformed query or a target that cannot be found."""
+
+
+# FTS5 reads bare punctuation as syntax: "subject-13" parses as an expression and "kind/3"
+# looks like a column filter, so a perfectly ordinary search for a hyphenated word or a dated
+# note name fails with a SQL error nobody can act on. Ordinary words are therefore quoted, and
+# only the operators someone typed on purpose are passed through.
+FTS_OPERATORS = {"AND", "OR", "NOT", "NEAR"}
+FTS_TOKEN_RE = re.compile(r'"[^"]*"\*?|[()]|[^\s()]+\*?')
+
+
+def to_fts_query(text: str) -> str:
+    """Turn what a person typed into a valid FTS5 expression, preserving deliberate syntax."""
+    parts = []
+    for token in FTS_TOKEN_RE.findall(text):
+        if token.startswith('"') or token in FTS_OPERATORS or token in ("(", ")"):
+            parts.append(token)
+            continue
+        prefix = "*" if token.endswith("*") else ""
+        bare = token[:-1] if prefix else token
+        if not bare:
+            continue
+        parts.append('"' + bare.replace('"', '""') + '"' + prefix)
+    return " ".join(parts)
 
 
 def _file_entry(row: sqlite3.Row) -> FileEntry:
@@ -38,10 +62,23 @@ def find_file(conn: sqlite3.Connection, target: str) -> sqlite3.Row:
     ``hvk backlinks Alpha`` and ``hvk backlinks Projects/Alpha.md`` agree.
     """
     row = conn.execute(
-        "SELECT id, path, parent, name, stem, ext FROM files WHERE path = ?", (target,)
+        "SELECT id, path, parent, name, stem, ext FROM files WHERE path = ? OR path = ?",
+        (target, f"{target}.md"),
     ).fetchone()
     if row:
         return row
+
+    # Fast path: a bare name that matches exactly one note needs no tie-break, so there is no
+    # reason to build an in-memory index of the whole vault to answer it. Anything ambiguous,
+    # or written as a partial path, still goes through the full rules below.
+    if "/" not in target:
+        candidates = conn.execute(
+            "SELECT id, path, parent, name, stem, ext FROM files "
+            "WHERE stem_lower = lower(?) OR lower(name) = lower(?) LIMIT 2",
+            (target, target),
+        ).fetchall()
+        if len(candidates) == 1:
+            return candidates[0]
 
     root = FileEntry(-1, "", "", "", "", "")
     result = _index(conn).resolve(target, root)
@@ -84,7 +121,7 @@ def search(
         "FROM fts JOIN files f ON f.id = fts.rowid",
         "WHERE fts MATCH ?",
     ]
-    params: list = [text]
+    params: list = [to_fts_query(text)]
     if path:
         sql.append("AND f.path LIKE ?")
         params.append(f"%{path}%")
@@ -309,8 +346,15 @@ def info(conn: sqlite3.Connection) -> dict:
     def count(sql: str) -> int:
         return conn.execute(sql).fetchone()[0]
 
+    last_scan = conn.execute("SELECT value FROM meta WHERE key='last_scan'").fetchone()
     return {
         "vault": conn.execute("SELECT value FROM meta WHERE key='vault_path'").fetchone()[0],
+        # Whoever is reading this needs to know whether the answers are current, so the age of
+        # the index is part of the report rather than something to go digging for.
+        "last_scan": (
+            _dt.datetime.fromtimestamp(int(last_scan[0])).isoformat(timespec="seconds")
+            if last_scan else None
+        ),
         "hvk_version": conn.execute("SELECT value FROM meta WHERE key='hvk_version'").fetchone()[0],
         "schema_version": conn.execute(
             "SELECT value FROM meta WHERE key='schema_version'"
