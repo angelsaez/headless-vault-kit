@@ -4,6 +4,19 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — ADR-0002: index location and exclusion rules
+
+- `docs/adr/0002-index-location.md`: the index lives in
+  `${XDG_DATA_HOME:-~/.local/share}/hvk/<vault>-<hash8>/`, one directory per vault, with
+  precedence `--index` > `HVK_INDEX_DIR` > default, and the vault discovered by walking up
+  until a `.obsidian/` appears.
+- Splits the two lists the plan mentioned as one: what is not indexed (any directory starting
+  with `.`, with `.obsidian/*.json` read by path as the exception) and what is not watched
+  (additionally `workspace*`, temporaries and files that have not settled).
+- Why: `~/.nexus-index/` carried a personal vault's name into a public tool and did not
+  support multiple vaults. Adds a hard rule — if the index directory resolves inside the
+  vault, `hvk` aborts — which is what prevents the sync ↔ watcher loop.
+
 ## 2026-08-21 — ADR-0001: the indexer and CLI are written in Python
 
 - `docs/adr/` (new): index, format and lifecycle of the decision records.
