@@ -10,7 +10,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # FTS5 with diacritics folded, so that searching "cafe" finds "café" -- which matters in a
 # vault written in Spanish.
@@ -29,6 +29,7 @@ CREATE TABLE files (
     parent      TEXT NOT NULL,          -- vault-relative folder, '' at the root
     ext         TEXT NOT NULL,          -- lowercased, no dot, '' when there is none
     kind        TEXT NOT NULL,          -- 'note' | 'attachment'
+    ctime       INTEGER NOT NULL,       -- creation time where the filesystem has one
     mtime       INTEGER NOT NULL,
     size        INTEGER NOT NULL,
     hash        TEXT NOT NULL,          -- sha256 of the file bytes
