@@ -4,6 +4,19 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — ADR-0003: wikilink resolution and ambiguity
+
+- `docs/adr/0003-link-resolution.md`: an explicit, deterministic resolution algorithm —
+  exact path, then path suffix, then basename; tie-break `.md` → exact case → same folder →
+  closest to root → lexicographic — plus a `candidates` column on `links` so ambiguous
+  resolutions can be listed with `hvk links --ambiguous`.
+- Corrects the plan: `app.json`'s `newLinkFormat` and `useMarkdownLinks` govern how links are
+  **written**, not how they are read, so resolution is defined independently of them.
+- Why: Obsidian is closed source and its tie-break for duplicate basenames is unpublished,
+  with community sources contradicting each other. Rather than guess silently or drop
+  ambiguous links, the choice is made explicit and the ambiguity is stored as data, turning
+  GUI validation into a finite checklist.
+
 ## 2026-08-21 — ADR-0002: index location and exclusion rules
 
 - `docs/adr/0002-index-location.md`: the index lives in
