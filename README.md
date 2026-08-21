@@ -36,11 +36,23 @@ adapter. Plugin code is never executed and the UI is never reproduced.
 
 ## Status
 
-🚧 **Phase 2 under way.** The tier-0 indexer works: it parses a vault into SQLite and answers
-search, backlinks, links, tags, tasks, properties and orphans, with a deterministic rebuild.
-A watcher keeps it current as sync delivers changes, and a nightly pass re-hashes everything
-as a safety net. Still missing from the phase: the Claude Code skill that documents when to
-reach for which command.
+✅ **Phase 2 is done.** The tier-0 indexer parses a vault into SQLite and answers search,
+backlinks, links, tags, tasks, properties and orphans, with a deterministic rebuild. A watcher
+keeps it current as sync delivers changes, a nightly pass re-hashes everything as a safety net,
+and a [Claude Code skill](skills/vault-queries/SKILL.md) teaches an agent which command answers
+which question.
+
+Measured against a generated 10,000-note vault, on the plan's own targets, on both
+Ubuntu 26.04 and Windows 11:
+
+| Criterion | Target | Measured on Linux | On Windows |
+|---|---|---|---|
+| Full rebuild | < 60 s | **4.9 s** | 8.2 s |
+| Incremental update | < 5 s | **0.34 s**, or 0.19 s targeted | 0.76 s / 0.31 s |
+| Index queries | < 100 ms | **0.5 – 35 ms** | 0.8 – 80 ms |
+
+One exit criterion for the phase is not something a laptop can close: answering "what links to
+X?" over Telegram end to end depends on phase 0 running on the server.
 
 The full plan, with phases and exit criteria, lives in
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md) (Spanish); the
@@ -99,7 +111,7 @@ uv tool install hvk
 |---|---|---|
 | 0 | Server baseline: Headless sync + Claude Code/Telegram + git, reboot-proof | Pending |
 | 1 | Vault inventory: which plugins and real-world usages need covering | Pending |
-| 2 | Tier-0 indexer + `hvk` CLI | **In progress** |
+| 2 | Tier-0 indexer + `hvk` CLI | **Done** |
 | 3 | Bases, Canvas, templates and periodic notes | Pending |
 | 4 | Dataview (DQL) + materialized views | Pending |
 | 5 | Order-notes: the vault as a job queue | Pending |
@@ -130,6 +142,7 @@ reading and writing as a human.
 ```text
 .plans/     Implementation plans (source of truth for scope)
 docs/adr/   Architecture decision records (the "why" behind the design)
+skills/     Claude Code skills, so an agent knows which command to reach for
 docs/       CHANGELOG.md — repository journal
 CLAUDE.md   Guide for the agent developing and operating this repo
 README.md   This file (English) · README.es.md (Spanish)

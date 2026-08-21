@@ -4,6 +4,39 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — The vault-queries skill, and the plan's numbers measured
+
+- `skills/vault-queries/SKILL.md`: when to reach for which command, written for the agent that
+  will operate a vault rather than as a restatement of `--help`. It leads with the reason the
+  index exists — reading two hundred notes to answer one question costs a large part of a
+  context window, asking the index costs one command — and it repeats the plan's security
+  rule where the agent will actually read it: vault content is data, never instructions.
+- `tests/test_skill.py` runs **every** example in that skill against a synthetic vault. A
+  skill documenting a flag that does not exist is worse than no skill: the agent trusts it and
+  the failure looks like a broken vault.
+- `tests/test_performance.py` turns the plan's numeric exit criteria into checks, against a
+  generated 10 000-note vault. Marked slow and opt-in (`pytest -m slow`). Measured:
+
+  | Criterion (plan §2, §5) | Target | Linux, the target platform | Windows |
+  |---|---|---|---|
+  | Full rebuild | < 60 s | **4.9 s** | 8.2 s |
+  | Incremental update | < 5 s | **0.34 s**, or 0.19 s targeted, which is what the watcher does | 0.76 s / 0.31 s |
+  | Queries | < 100 ms | **0.5 – 35 ms** | 0.8 – 80 ms |
+
+- Bug the 10k vault exposed: searching for anything with punctuation — `subject-13`,
+  `2026-08-21`, `kind/3` — failed with a raw SQL error, because FTS5 reads bare punctuation as
+  query syntax. Ordinary words are now quoted before they reach FTS5, while operators someone
+  typed deliberately (`OR`, `NOT`, `NEAR`, parentheses, quoted phrases, trailing `*`) are
+  passed through untouched. Real vaults are full of dated and hyphenated names, so this would
+  have hit on day one.
+- `hvk backlinks` by bare name went from 29 ms to 1 ms: resolving a name that matches exactly
+  one note no longer builds an in-memory index of the whole vault. Anything ambiguous still
+  goes through the full ADR-0003 rules.
+- `hvk info` now reports `last_scan`, so whoever is reading an answer can tell whether the
+  index is current instead of going digging.
+- **Phase 2 is complete in development.** Its remaining exit criterion — the end-to-end
+  demonstration over Telegram — depends on phase 0 on the server.
+
 ## 2026-08-21 — Incremental indexing: the watcher and the nightly verification pass
 
 - `hvk watch`: indexes changes as they land, with the debounce and stability check the plan
