@@ -103,3 +103,21 @@ def test_ambiguous_links_are_listed(links_vault):
     assert ambiguous, "the validation list ADR-0003 promises must not be empty here"
     assert all(row["candidates"] > 1 for row in ambiguous)
     assert {row["source"] for row in ambiguous} == {"Source.md", "FolderA/Local.md", "Fences.md"}
+
+
+def test_relative_paths_climb_out_of_the_source_folder(tmp_path, index):
+    """Hand-written Markdown links use ../, and they point at real files."""
+    vault = tmp_path / "vault"
+    (vault / ".obsidian").mkdir(parents=True)
+    (vault / "A" / "Deep").mkdir(parents=True)
+    (vault / "B").mkdir()
+    (vault / "B" / "Target.md").write_text(
+        "# Target\n", encoding="utf-8", newline="\n")
+    (vault / "A" / "Deep" / "Source.md").write_text(
+        "[up](../../B/Target.md)\n[too far](../../../outside/Target.md)\n",
+        encoding="utf-8", newline="\n")
+
+    _, conn, _ = index(vault)
+    rows = links_of(conn, "A/Deep/Source.md")
+    assert rows[1]["resolved"] == "B/Target.md"
+    assert rows[2]["resolved"] is None, "a path climbing past the vault root is not a link"
