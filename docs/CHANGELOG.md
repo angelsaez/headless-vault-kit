@@ -4,6 +4,26 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — Incremental indexing: the watcher and the nightly verification pass
+
+- `hvk watch`: indexes changes as they land, with the debounce and stability check the plan
+  asks for. A path is released only once it has been quiet *and* has stopped changing size,
+  because Obsidian Headless writes large files in steps and parsing one mid-write puts
+  garbage in the index. Batches take about 25 ms against the synthetic vaults.
+- `hvk verify`: re-hashes every file instead of trusting mtime and size, as the nightly safety
+  net. When it reports changes after a quiet period, it says so explicitly — that means the
+  incremental path missed something, which is the only reason to run it.
+- `src/hvk/watch.py`: the decision logic lives in `ChangeQueue`, which takes the current time
+  as an argument and knows nothing about watchdog or threads, so debounce and stability are
+  tested with a made-up clock rather than by sleeping. Directory events and very large batches
+  fall back to a full scan, which settles folder moves correctly without reimplementing them.
+- `scan.py` gained `index_file` and `apply_changes`, shared by the full scan and the watcher,
+  so a single edit costs a single parse. Link resolution still runs over the whole table after
+  every batch: one new file can repair a broken link in a note that was never re-read.
+- New dependency: `watchdog`, which ADR-0001 authorised. Verified on both backends —
+  ReadDirectoryChangesW on Windows and inotify on Linux.
+- Phase 2 now has only the Claude Code skill left.
+
 ## 2026-08-21 — The rest of the phase 2 query commands
 
 - `hvk tags [--count] [--prefix]`, `hvk tasks [--pending] [--done] [--due-before] [--path]`,

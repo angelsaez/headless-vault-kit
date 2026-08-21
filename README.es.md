@@ -38,9 +38,9 @@ el suyo. Nunca se ejecuta código de plugins ni se reproduce la interfaz.
 
 🚧 **Fase 2 en marcha.** El indexador de Nivel 0 funciona: parsea un vault a SQLite y responde
 búsquedas, backlinks, enlaces, etiquetas, tareas, propiedades y huérfanos, con
-reconstrucción determinista. Queda pendiente de
-la fase el watcher de sistema de archivos, el re-escaneo nocturno de verificación y la skill
-de Claude Code.
+reconstrucción determinista. Un watcher lo mantiene al día según Sync trae cambios, y una
+pasada nocturna recalcula los hashes como red de seguridad. Queda pendiente de la fase la
+skill de Claude Code que documenta cuándo usar cada comando.
 
 El plan completo, con fases y criterios de salida, está en
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md); las decisiones
@@ -71,9 +71,20 @@ Dentro de un vault se puede omitir `--vault`: hvk sube por el árbol hasta encon
 | `hvk tasks [--pending] [--due-before 2026-09-01]` | Tareas del vault, por estado, vencimiento o ruta |
 | `hvk props --where "estado=abierto"` | Archivos por propiedad; repite `--where` para combinar con AND, u omítelo para ver el catálogo de claves |
 | `hvk orphans [--attachments]` | Archivos que nadie enlaza |
+| `hvk watch` | Indexa los cambios según llegan, hasta que lo interrumpas; pensado para correr como servicio |
+| `hvk verify` | Re-calcula el hash de todo como red de seguridad; se lanza de noche desde cron |
 | `hvk info` | Qué contiene el índice ahora mismo |
 
-Todos los comandos aceptan `--json` para salida legible por máquina.
+Todos los comandos aceptan `--json` para salida legible por máquina; `hvk watch` emite JSON
+Lines, un objeto por lote, para poder redirigirlo a un log.
+
+Para mantener el índice al día: `hvk watch` como servicio y verificación nocturna por cron:
+
+```cron
+17 4 * * *  hvk --vault /ruta/al/vault verify
+```
+
+La unidad de systemd del watcher es trabajo de la Fase 0 y vivirá en `deploy/`.
 
 Cuando la herramienta se publique, instalarla serán dos comandos y ningún `sudo`:
 
