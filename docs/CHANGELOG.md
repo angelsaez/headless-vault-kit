@@ -4,6 +4,19 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — Synthetic test vaults
+
+- `test-vaults/`: four vaults — `basic/` (realistic, the default fixture), `links/` (every
+  link form ADR-0003 has to resolve), `frontmatter/` (the YAML 1.1 vs 1.2 conformance cases
+  ADR-0001 accepted as a cost) and `unicode/` (non-ASCII filenames and content).
+- `test-vaults/README.md`: what each vault covers, and a per-link table of expected
+  resolutions that doubles as the spec the resolver is tested against.
+- Deliberately left out of git, to be built by fixtures at run time: filenames differing only
+  in case or only in Unicode normalisation, which cannot be checked out on Windows or macOS;
+  plus files mid-write, symlinks and volume tests.
+- Why: `CLAUDE.md` forbids developing against the real vault. Nothing can be indexed until
+  there is something safe to index.
+
 ## 2026-08-21 — ADR-0003 refined while implementing it
 
 - `docs/adr/0003-link-resolution.md`: two corrections found by writing the resolver.
