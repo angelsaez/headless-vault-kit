@@ -4,6 +4,23 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — A vault mirror, so real data can be tested against safely
+
+- `tools/mirror_vault.py` copies a vault into a working directory and keeps it in step:
+  re-running updates what changed and deletes what has gone. It leaves out `_PRIVATE` and
+  `_PRIVADA` (both spellings, because getting that wrong once would copy secrets), `.git`,
+  `.trash`, every other dot-directory and Obsidian's `workspace*`, while keeping
+  `.obsidian/*.json`, which an inventory has to read.
+- The refusals are the point. It will not write inside a git repository, because a mirror
+  there is one `git add -A` away from publishing personal notes; it will not write inside the
+  source, or over anything that looks like a real vault it did not create.
+- `CLAUDE.md` gains the rule: validating against real data goes through a mirror, never the
+  vault. The mirror lives outside the repository and its path on a given machine is not
+  recorded here.
+- Why now: the phase 1 inventory and the pending Bases validation both need real data, and
+  redoing an ad-hoc copy every session is how a private folder eventually gets copied by
+  accident.
+
 ## 2026-08-21 — Phase 1 inventory, and the plan revised to v2.1 with its data
 
 - The vault inventory ran against a copy of the real vault, excluding `_PRIVATE/`, `.git/`,
