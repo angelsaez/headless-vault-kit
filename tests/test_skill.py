@@ -22,6 +22,11 @@ BLOCK_RE = re.compile(r"```bash\n(.*?)```", re.DOTALL)
 # Long-running or destructive by nature; documented in prose, never in an example block.
 NOT_RUNNABLE = {"watch"}
 
+# Which synthetic vault an example needs. Everything answers against the realistic vault
+# except the .base examples, which need a vault that has base files in it.
+VAULT_FOR = {"base": "bases"}
+DEFAULT_VAULT = "basic"
+
 
 def documented_commands() -> list[str]:
     commands = []
@@ -42,7 +47,8 @@ def test_every_documented_example_runs(command, tmp_path, capsys):
     args = shlex.split(command)[1:]
     assert args and args[0] not in NOT_RUNNABLE, f"{command} cannot be run in a test"
 
-    base = ["--vault", str(VAULTS / "basic"), "--index", str(tmp_path / "idx")]
+    vault = VAULT_FOR.get(args[0], DEFAULT_VAULT)
+    base = ["--vault", str(VAULTS / vault), "--index", str(tmp_path / "idx")]
     cli.main([*base, "scan"])
     capsys.readouterr()
 
