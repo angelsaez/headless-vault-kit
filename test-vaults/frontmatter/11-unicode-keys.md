@@ -1,5 +1,5 @@
 ---
-titulo con acentos: Se llama "titulo" y lleva tilde en el valor: Angel
+título: Con acentos
 日本語: 値
 "key with spaces": value
 emoji_🚀: launch

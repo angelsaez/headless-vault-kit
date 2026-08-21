@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "headless-vault-kit"
+version = "0.1.0"
+description = "Headless toolkit for Obsidian vaults: SQLite index, backlinks and queries without the app"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Ángel Sáez de Santiago" }]
+keywords = ["obsidian", "markdown", "vault", "index", "backlinks", "headless"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Text Processing :: Indexing",
+]
+
+# Runtime dependencies are capped by ADR-0001: ruamel.yaml for YAML 1.2 parity with the app,
+# watchdog once incremental indexing lands. Everything else comes from the standard library,
+# including sqlite3 and FTS5.
+dependencies = ["ruamel.yaml>=0.18"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+hvk = "hvk.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/angelsaez/headless-vault-kit"
+Source = "https://github.com/angelsaez/headless-vault-kit"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hvk"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
