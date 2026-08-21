@@ -19,9 +19,15 @@ antes de ejecutarla; si el plan cambia, se edita el plan primero.
 
 ## Estado actual
 
-**Fase de planificación.** Todavía no hay código. El repo solo contiene `.plans/`, este
-archivo y el README. La primera implementación será el indexador (Fase 2) en local,
-contra vaults sintéticos.
+**Fase 2 completa en desarrollo.** El indexador de Nivel 0 y el CLI `hvk` funcionan:
+escaneo, watcher incremental, verificación nocturna y los comandos `search`, `backlinks`,
+`links`, `tags`, `tasks`, `props`, `orphans` e `info`. Decisiones en `docs/adr/` (0001–0004),
+suite en `tests/` contra `test-vaults/`, y los criterios numéricos del plan medidos con
+`pytest -m slow` sobre un vault generado de 10 000 notas.
+
+Queda un criterio de salida de la Fase 2 que **no se puede cerrar en local**: la demostración
+de extremo a extremo por Telegram, que depende de la Fase 0 en el VPS. Lo siguiente en
+desarrollo es la Fase 3 (Bases y Canvas).
 
 ## Entornos de trabajo
 
@@ -56,10 +62,13 @@ contra vaults sintéticos.
 - **Vault real intocable en desarrollo.** Todo se prueba contra un vault sintético en
   `test-vaults/` (crear casos límite: Unicode, YAML raro, encabezados duplicados, enlaces
   ambiguos y rotos). Nunca apuntar pruebas al vault de producción.
-- El índice y su base de datos viven **fuera del vault** (`~/.nexus-index/` por convención)
-  para que Obsidian Sync no los toque y ningún watcher se dispare por ellos.
-- Exclusiones de watcher siempre presentes: `.git/`, `.obsidian/workspace*`, `.trash/`,
-  carpeta del índice.
+- El índice y su base de datos viven **fuera del vault**, en
+  `${XDG_DATA_HOME:-~/.local/share}/hvk/<vault>-<hash8>/` (ADR-0002), para que Obsidian Sync
+  no los toque y ningún watcher se dispare por ellos. Si la carpeta de índice cae dentro del
+  vault, `hvk` aborta: es lo que impide el bucle sync ↔ watcher.
+- Exclusiones: dos listas distintas (ADR-0002). No se indexa nada bajo un directorio que
+  empiece por `.` — `.obsidian/*.json` se lee por ruta como excepción. No se vigila, además,
+  `workspace*`, temporales (`*.tmp`, `*.partial`, `~$*`) ni archivos aún inestables.
 - Escrituras al vault: atómicas cuando sea posible, papelera (`.trash/`) en vez de borrado,
   y preservando frontmatter y finales de línea tal cual estaban.
 
@@ -92,7 +101,7 @@ contra vaults sintéticos.
   el commit o una ADR propia.
 - Salidas de CLI: legibles para humanos por defecto, `--json` para el agente.
 
-## Estructura prevista (no crear hasta que su fase llegue)
+## Estructura (lo que no existe aún, no se crea hasta que llegue su fase)
 
 ```text
 headless-vault-kit/
