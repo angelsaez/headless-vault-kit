@@ -1,0 +1,8 @@
+views:
+  - type: table
+    name: "Uses a function we do not implement"
+    filters:
+      and:
+        - "random() > 0.5"
+    order:
+      - file.name

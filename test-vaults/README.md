@@ -114,6 +114,23 @@ read and — just as importantly — what is left alone.
 Checkbox *states* stay in `basic/Tasks.md`, which is tier 0. The split is deliberate: one
 vault covers what Obsidian itself derives, the other what a plugin adds.
 
+## `bases/` — `.base` files, the fixture behind ADR-0005
+
+Notes with the properties a base filters on, plus base files covering what is supported and
+what is refused.
+
+| File | What it covers |
+|---|---|
+| `Library.base` | The shape of the official example: global filters, formulas, `displayName`, and three views — filtered and summed, grouped, and limited |
+| `Nested.base` | `and` / `or` / `not` nested inside one another |
+| `Unsupported.base` | A filter calling `random()`, which must fail naming the function |
+| `Map.base` | A `map` view, which must fail naming the type |
+| `Extra keys.base` | Unknown keys at the top level and inside a view, which must warn and still run |
+| `library/*.md`, `Required Reading/Textbook.md` | The rows: prices, ages, statuses, tags including a nested one, a note with no properties at all |
+
+`Untitled.md` carries no frontmatter on purpose: it is the row that proves nulls sort last and
+that a missing property is not an error.
+
 ## `unicode/` — names and content outside ASCII
 
 Accented (NFC), CJK and astral-plane (emoji) filenames, plus a note whose body carries a
