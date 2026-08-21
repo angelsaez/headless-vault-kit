@@ -4,6 +4,26 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — The rest of the phase 2 query commands
+
+- `hvk tags [--count] [--prefix]`, `hvk tasks [--pending] [--done] [--due-before] [--path]`,
+  `hvk props [--where COND]... [--key]` and `hvk orphans [--attachments]`. Every one of them
+  takes `--json`, like the rest.
+- `docs/adr/0004-tier-2-fields-in-the-core.md`: due dates are not tier 0, so reading them
+  means letting tier-2 knowledge into the core several phases before the parser interface
+  exists. The ADR records the shortcut, constrains it to a pure function shaped like a future
+  adapter, and sets the rule for when it may happen again.
+- `src/hvk/parse/tasks.py`: reads the Tasks plugin's date and priority markers and bracketed
+  Dataview fields; `tasks.due` and `tasks.extra_json` are now populated. Schema version 2.
+- `test-vaults/tasks/`: a vault per concern, covering what is read and what is deliberately
+  left in the task text.
+- Bug found and fixed: `hvk rebuild` checked the schema version before doing anything, so an
+  index written by an older version could not be rebuilt — while the version-mismatch error
+  told people to run exactly that. Rebuilding now deletes the database first, which also
+  guarantees no stale rows survive.
+- Still open in phase 2: the filesystem watcher, the nightly verification scan, and the
+  Claude Code skill.
+
 ## 2026-08-21 — Tier-0 indexer and the first hvk commands
 
 - `src/hvk/`: the package decided in ADR-0001 — `paths` (vault and index location),

@@ -23,6 +23,8 @@ import re
 from dataclasses import dataclass, field
 
 from ruamel.yaml import YAML, YAMLError
+
+from hvk.parse import tasks as task_fields
 from ruamel.yaml.constructor import SafeConstructor
 from ruamel.yaml.nodes import MappingNode
 
@@ -123,6 +125,9 @@ class Task:
     status: str
     done: bool
     line: int
+    due: str | None = None
+    # Tier-2 fields read from the Tasks plugin and Dataview syntax (ADR-0004).
+    extra: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -317,8 +322,12 @@ def parse_note(text: str, *, fallback_title: str = "") -> ParsedNote:
         task = TASK_RE.match(unquoted)
         if task:
             status = task.group(2)
+            clean, extracted = task_fields.extract(task.group(3))
             note.tasks.append(
-                Task(task.group(3).strip(), status, status in ("x", "X"), line_no)
+                Task(
+                    clean, status, status in ("x", "X"), line_no,
+                    due=extracted.pop("due", None), extra=extracted,
+                )
             )
 
         # --- links, then whatever survives them ---------------------------------------

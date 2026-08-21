@@ -11,6 +11,7 @@ file the walk has not reached yet.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import sqlite3
 import time
@@ -126,8 +127,15 @@ def _store_note(conn: sqlite3.Connection, file_id: int, path: str, text: str) ->
     )
     conn.executemany(
         "INSERT INTO tasks(file_id, text, status, done, line, due, extra_json) "
-        "VALUES(?, ?, ?, ?, ?, NULL, NULL)",
-        [(file_id, t.text, t.status, int(t.done), t.line) for t in note.tasks],
+        "VALUES(?, ?, ?, ?, ?, ?, ?)",
+        [
+            (
+                file_id, t.text, t.status, int(t.done), t.line, t.due,
+                # sort_keys keeps the stored JSON byte-identical across rebuilds.
+                json.dumps(t.extra, ensure_ascii=False, sort_keys=True) if t.extra else None,
+            )
+            for t in note.tasks
+        ],
     )
     # Links go in unresolved; the second pass fills target_file_id and candidates.
     conn.executemany(
@@ -178,13 +186,16 @@ def scan(loc: Locations, *, rebuild: bool = False) -> ScanStats:
     started = time.monotonic()
     stats = ScanStats()
 
+    if rebuild:
+        # Start from an empty file rather than emptying tables, so that a rebuild also
+        # recovers an index written by an older schema version.
+        db.remove(loc.db_path)
+
     conn = db.connect(loc.db_path, create=True)
     try:
         db.check_schema(conn)
         if not rebuild:
             db.check_vault(conn, loc.vault)
-        else:
-            db.clear_content(conn)
 
         known = {
             r["path"]: r

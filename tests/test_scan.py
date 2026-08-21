@@ -150,3 +150,45 @@ def test_touching_a_file_without_changing_it_does_not_reparse(tmp_path, index):
     stats = scanner.scan(location)
     assert stats.changed == 0
     assert stats.unchanged == 1
+
+
+def test_rebuild_recovers_from_an_older_schema(tmp_path, index):
+    """The version-mismatch error tells people to rebuild, so rebuilding has to work."""
+    vault = tmp_path / "vault"
+    (vault / ".obsidian").mkdir(parents=True)
+    (vault / "One.md").write_text("# One\n", encoding="utf-8", newline="\n")
+
+    location, conn, _ = index(vault)
+    conn.execute("UPDATE meta SET value = '0' WHERE key = 'schema_version'")
+    conn.commit()
+    conn.close()
+
+    with pytest.raises(db.IndexError_, match="rebuild"):
+        scanner.scan(location)
+
+    stats = scanner.scan(location, rebuild=True)
+    assert stats.added == 1
+    fresh = db.connect(location.db_path)
+    try:
+        db.check_schema(fresh)
+    finally:
+        fresh.close()
+
+
+def test_rebuild_starts_from_an_empty_database(tmp_path, index):
+    """Stale rows from a previous shape of the index must not survive a rebuild."""
+    vault = tmp_path / "vault"
+    (vault / ".obsidian").mkdir(parents=True)
+    (vault / "One.md").write_text("# One\n", encoding="utf-8", newline="\n")
+
+    location, conn, _ = index(vault)
+    conn.execute("INSERT INTO tags(file_id, tag, source, line) VALUES(1, 'ghost', 'inline', 1)")
+    conn.commit()
+    conn.close()
+
+    scanner.scan(location, rebuild=True)
+    fresh = db.connect(location.db_path)
+    try:
+        assert fresh.execute("SELECT count(*) FROM tags WHERE tag='ghost'").fetchone()[0] == 0
+    finally:
+        fresh.close()
