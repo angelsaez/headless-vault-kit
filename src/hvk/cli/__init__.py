@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 from hvk import __version__, db, output, paths, query, scan as scanner
@@ -104,6 +105,13 @@ def build_parser() -> argparse.ArgumentParser:
     orphans_cmd.add_argument(
         "--attachments", action="store_true", help="include unreferenced attachments"
     )
+    watch_cmd = add("watch", "index changes as they happen, until interrupted")
+    watch_cmd.add_argument(
+        "--debounce", type=float, default=1.0, metavar="SECONDS",
+        help="how long a file must be quiet before it is indexed (default: 1)",
+    )
+
+    add("verify", "re-hash every file as a safety net; run it nightly from cron")
 
     return parser
 
@@ -111,13 +119,26 @@ def build_parser() -> argparse.ArgumentParser:
 def _run(args: argparse.Namespace) -> int:
     location = paths.resolve(args.vault, args.index)
 
-    if args.command in ("scan", "rebuild"):
-        stats = scanner.scan(location, rebuild=args.command == "rebuild")
+    if args.command in ("scan", "rebuild", "verify"):
+        stats = scanner.scan(
+            location, rebuild=args.command == "rebuild", verify=args.command == "verify"
+        )
         output.emit_object(
             {"vault": str(location.vault), "index": str(location.index_dir), **stats.as_dict()},
             as_json=args.json,
         )
+        # After a quiet period, anything the verification pass finds changed is something the
+        # incremental path missed. Saying so is the entire point of running it.
+        if args.command == "verify" and (stats.changed or stats.removed) and not args.json:
+            print(
+                f"note: {stats.changed} changed and {stats.removed} removed files were found "
+                f"by re-hashing. If nothing edited the vault since the last scan, the "
+                f"incremental path missed them."
+            )
         return 0
+
+    if args.command == "watch":
+        return _watch(location, args)
 
     conn = db.connect(location.db_path)
     try:
@@ -205,6 +226,35 @@ def _run(args: argparse.Namespace) -> int:
     finally:
         conn.close()
     return 0
+def _watch(location: paths.Locations, args: argparse.Namespace) -> int:
+    """Run the watcher until interrupted, reporting one line per batch."""
+    from hvk import watch as watcher
+
+    def report(stats) -> None:
+        output.emit_line(
+            {"time": time.strftime("%H:%M:%S"), **stats.as_dict()},
+            as_json=args.json,
+            human=(
+                f"{time.strftime('%H:%M:%S')}  "
+                f"{stats.added} added, {stats.changed} changed, {stats.removed} removed"
+                f"  ({stats.seconds:.2f}s)"
+            ),
+        )
+
+    if not args.json:
+        print(
+            f"watching {location.vault} (debounce {args.debounce:g}s) -- Ctrl-C to stop",
+            flush=True,
+        )
+    # Catch up first: whatever changed while nothing was watching is still a change.
+    report(scanner.scan(location))
+    try:
+        watcher.watch(location, debounce=args.debounce, on_batch=report)
+    except KeyboardInterrupt:
+        pass
+    return 0
+
+
 
 
 def main(argv: list[str] | None = None) -> int:

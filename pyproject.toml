@@ -20,7 +20,7 @@ classifiers = [
 # Runtime dependencies are capped by ADR-0001: ruamel.yaml for YAML 1.2 parity with the app,
 # watchdog once incremental indexing lands. Everything else comes from the standard library,
 # including sqlite3 and FTS5.
-dependencies = ["ruamel.yaml>=0.18"]
+dependencies = ["ruamel.yaml>=0.18", "watchdog>=4.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]

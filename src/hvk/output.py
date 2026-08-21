@@ -71,3 +71,19 @@ def emit_object(data: dict, *, as_json: bool) -> None:
     width = max((display_width(k) for k in data), default=0)
     for key, value in data.items():
         print(f"{_pad(key, width)}  {value}")
+
+
+def emit_line(data: dict, *, as_json: bool, human: str | None = None) -> None:
+    """Print one record per line, for a long-running command.
+
+    A watcher writes to a log or a pipe for as long as it runs, so its output has to be one
+    self-contained line at a time: JSON Lines for a reader, a short sentence for a person.
+    Indented JSON would be unreadable in both, and a person does not want every counter that
+    happens to be zero.
+    """
+    if as_json:
+        print(json.dumps(data, ensure_ascii=False, separators=(",", ":")), flush=True)
+        return
+    print(human if human is not None else "  ".join(
+        f"{key} {value}" for key, value in data.items()
+    ), flush=True)

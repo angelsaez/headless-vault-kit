@@ -181,8 +181,123 @@ def resolve_links(conn: sqlite3.Connection) -> None:
     )
 
 
-def scan(loc: Locations, *, rebuild: bool = False) -> ScanStats:
-    """Bring the index up to date with the vault, or rebuild it from scratch."""
+def index_file(
+    conn: sqlite3.Connection,
+    vault: Path,
+    path: Path,
+    previous: sqlite3.Row | dict | None,
+    stats: ScanStats,
+    *,
+    rehash: bool = False,
+) -> None:
+    """Bring one file's rows up to date. Shared by the full scan and by the watcher.
+
+    *previous* is the row already in ``files`` for this path, or None. With *rehash*, the
+    mtime and size shortcut is skipped and the file is hashed no matter what -- which is the
+    whole point of the nightly verification pass, since a sync can land identical metadata on
+    different content.
+    """
+    try:
+        stat = path.stat()
+    except OSError:
+        return
+    rel = _relative(vault, path)
+    stats.files += 1
+
+    unchanged_metadata = (
+        previous is not None
+        and previous["mtime"] == stat.st_mtime_ns
+        and previous["size"] == stat.st_size
+    )
+    if unchanged_metadata and not rehash:
+        stats.unchanged += 1
+        return
+
+    data = path.read_bytes()
+    digest = _hash(data)
+    if previous is not None and previous["hash"] == digest:
+        # Touched but identical: record the new mtime and skip the reparse.
+        conn.execute("UPDATE files SET mtime = ? WHERE id = ?", (stat.st_mtime_ns, previous["id"]))
+        stats.unchanged += 1
+        return
+
+    fields = _file_fields(vault, path, stat, digest)
+    if previous is not None:
+        file_id = previous["id"]
+        conn.execute(
+            "UPDATE files SET name=:name, stem=:stem, stem_lower=:stem_lower, "
+            "parent=:parent, ext=:ext, kind=:kind, mtime=:mtime, size=:size, "
+            "hash=:hash, parse_error=NULL WHERE id = :id",
+            {**fields, "id": file_id},
+        )
+        _clear_derived(conn, file_id)
+        stats.changed += 1
+    else:
+        cursor = conn.execute(
+            "INSERT INTO files(path, name, stem, stem_lower, parent, ext, kind, "
+            "mtime, size, hash) VALUES(:path, :name, :stem, :stem_lower, :parent, "
+            ":ext, :kind, :mtime, :size, :hash)",
+            fields,
+        )
+        file_id = cursor.lastrowid
+        stats.added += 1
+
+    if fields["kind"] == "note":
+        stats.notes += 1
+        error = _store_note(conn, file_id, rel, data.decode("utf-8", errors="replace"))
+        if error:
+            stats.errors += 1
+            conn.execute("UPDATE files SET parse_error = ? WHERE id = ?", (error, file_id))
+
+
+def forget_file(conn: sqlite3.Connection, row: sqlite3.Row | dict, stats: ScanStats) -> None:
+    """Drop every row belonging to a file that is no longer in the vault."""
+    conn.execute("DELETE FROM fts WHERE rowid = ?", (row["id"],))
+    conn.execute("DELETE FROM files WHERE id = ?", (row["id"],))
+    stats.removed += 1
+
+
+def apply_changes(loc: Locations, paths) -> ScanStats:
+    """Index exactly the paths given, and forget the ones that no longer exist.
+
+    This is what the watcher calls, so that a single edit costs a single parse instead of a
+    walk of the whole vault. Link resolution still runs over the whole table afterwards,
+    because one new file can change what an untouched note's links mean.
+    """
+    started = time.monotonic()
+    stats = ScanStats()
+
+    conn = db.connect(loc.db_path, create=True)
+    try:
+        db.check_schema(conn)
+        db.check_vault(conn, loc.vault)
+        for path in sorted(set(paths)):
+            rel = _relative(loc.vault, path)
+            previous = conn.execute(
+                "SELECT id, path, mtime, size, hash FROM files WHERE path = ?", (rel,)
+            ).fetchone()
+            if path.is_file():
+                index_file(conn, loc.vault, path, previous, stats)
+            elif previous is not None:
+                forget_file(conn, previous, stats)
+        if stats.added or stats.changed or stats.removed:
+            resolve_links(conn)
+            db.set_meta(conn, "last_scan", str(int(time.time())))
+            conn.commit()
+    finally:
+        conn.close()
+
+    stats.seconds = time.monotonic() - started
+    return stats
+
+
+def scan(loc: Locations, *, rebuild: bool = False, verify: bool = False) -> ScanStats:
+    """Bring the index up to date with the vault, or rebuild it from scratch.
+
+    With *verify*, every file is hashed rather than trusting mtime and size. That is the
+    nightly safety net the plan asks for: if it reports anything as changed straight after a
+    quiet period, the incremental path missed something.
+    """
     started = time.monotonic()
     stats = ScanStats()
 
@@ -204,60 +319,12 @@ def scan(loc: Locations, *, rebuild: bool = False) -> ScanStats:
         seen: set[str] = set()
 
         for path in iter_vault_files(loc.vault):
-            try:
-                stat = path.stat()
-            except OSError:
-                continue
             rel = _relative(loc.vault, path)
             seen.add(rel)
-            stats.files += 1
-            previous = known.get(rel)
+            index_file(conn, loc.vault, path, known.get(rel), stats, rehash=verify)
 
-            if previous and previous["mtime"] == stat.st_mtime_ns and previous["size"] == stat.st_size:
-                stats.unchanged += 1
-                continue
-
-            data = path.read_bytes()
-            digest = _hash(data)
-            if previous and previous["hash"] == digest:
-                # Touched but identical: record the new mtime and skip the reparse.
-                conn.execute("UPDATE files SET mtime = ? WHERE id = ?", (stat.st_mtime_ns, previous["id"]))
-                stats.unchanged += 1
-                continue
-
-            fields = _file_fields(loc.vault, path, stat, digest)
-            if previous:
-                file_id = previous["id"]
-                conn.execute(
-                    "UPDATE files SET name=:name, stem=:stem, stem_lower=:stem_lower, "
-                    "parent=:parent, ext=:ext, kind=:kind, mtime=:mtime, size=:size, "
-                    "hash=:hash, parse_error=NULL WHERE id = :id",
-                    {**fields, "id": file_id},
-                )
-                _clear_derived(conn, file_id)
-                stats.changed += 1
-            else:
-                cursor = conn.execute(
-                    "INSERT INTO files(path, name, stem, stem_lower, parent, ext, kind, "
-                    "mtime, size, hash) VALUES(:path, :name, :stem, :stem_lower, :parent, "
-                    ":ext, :kind, :mtime, :size, :hash)",
-                    fields,
-                )
-                file_id = cursor.lastrowid
-                stats.added += 1
-
-            if fields["kind"] == "note":
-                stats.notes += 1
-                error = _store_note(conn, file_id, rel, data.decode("utf-8", errors="replace"))
-                if error:
-                    stats.errors += 1
-                    conn.execute("UPDATE files SET parse_error = ? WHERE id = ?", (error, file_id))
-
-        gone = set(known) - seen
-        for rel in gone:
-            conn.execute("DELETE FROM fts WHERE rowid = ?", (known[rel]["id"],))
-            conn.execute("DELETE FROM files WHERE id = ?", (known[rel]["id"],))
-            stats.removed += 1
+        for rel in sorted(set(known) - seen):
+            forget_file(conn, known[rel], stats)
 
         # Links from untouched notes can change meaning when other files appear or vanish,
         # so resolution always runs over the whole table. It is cheap: no file is reread.
