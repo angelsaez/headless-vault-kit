@@ -37,4 +37,7 @@ packages = ["src/hvk"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+# The performance checks build a 10k-note vault, so they are opt-in: run them with
+# `pytest -m slow` when the numbers matter, not on every save.
+addopts = "-q -m 'not slow'"
+markers = ["slow: the plan's numeric exit criteria, against a generated 10k-note vault"]
