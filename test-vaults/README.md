@@ -38,8 +38,9 @@ pathological.
 ## `links/` — link resolution, the fixture behind ADR-0003
 
 Every link form the resolver has to handle. Expected results follow the algorithm in
-[ADR-0003](../docs/adr/0003-link-resolution.md); `candidates` is how many files matched before
-the tie-break ran.
+[ADR-0003](../docs/adr/0003-link-resolution.md); `candidates` is how many distinct files
+matched **any** of the three rules, which is not the same as how many the winning rule found —
+that is what keeps `--ambiguous` from reading as a false all-clear.
 
 From `Source.md`, which sits at the vault root:
 
@@ -47,12 +48,12 @@ From `Source.md`, which sits at the vault root:
 |---|---|---|---|
 | `[[Note]]` | `Note.md` | 3 | Tie-break: same folder as the source |
 | `[[FolderB/Note]]` | `FolderB/Note.md` | 1 | Exact path |
-| `[[Note.md]]` | `Note.md` | 1 | Exact path, extension written out |
+| `[[Note.md]]` | `Note.md` | 3 | Exact path wins, but three files share the name |
 | `[[Inner/Deep]]` | `Nested/Inner/Deep.md` | 1 | Path suffix |
 | `[[Note\|shown like this]]` | `Note.md` | 3 | Display text stripped before resolving |
 | `[[Note#Heading Two]]` | `Note.md` | 3 | Subpath stored, ignored when choosing the file |
 | `[[Note#^ref-block]]` | `Note.md` | 3 | Block subpath |
-| `[[#Source subheading]]` | `Source.md` | n/a | Empty target resolves to the containing file |
+| `[[#Source subheading]]` | `Source.md` | 1 | Empty target resolves to the containing file |
 | `[[Unique Name]]` | `Unique Name.md` | 1 | Space in the filename |
 | `[[Missing Note]]` | *unresolved* | 0 | Reported by `hvk links --broken` |
 | `[[diagram.png]]` | `attachments/diagram.png` | 1 | Non-Markdown match requires the extension |
@@ -61,9 +62,9 @@ From `Source.md`, which sits at the vault root:
 | `![[Note]]` | `Note.md` | 3 | Embed of a note |
 | `[a unique name](Unique%20Name.md)` | `Unique Name.md` | 1 | Markdown link, percent-decoded |
 | `[heading](FolderA/Note.md#Heading%20Two)` | `FolderA/Note.md` | 1 | Markdown link with an anchor |
-| `[example](https://example.com/page)` | *external* | n/a | Never reported as broken |
-| `[write](mailto:someone@example.com)` | *external* | n/a | Scheme other than http |
-| `[relative](//example.com/x)` | *external* | n/a | Protocol-relative |
+| `[example](https://example.com/page)` | *external* | 0 | Never reported as broken |
+| `[write](mailto:someone@example.com)` | *external* | 0 | Scheme other than http |
+| `[relative](//example.com/x)` | *external* | 0 | Protocol-relative |
 
 From `FolderA/Local.md`, which does **not** sit at the root — the same bare link must resolve
 differently depending on where it is written:
@@ -71,7 +72,7 @@ differently depending on where it is written:
 | Link | Resolves to | `candidates` | Rule exercised |
 |---|---|---|---|
 | `[[Note]]` | `FolderA/Note.md` | 3 | Same-folder tie-break, opposite outcome to `Source.md` |
-| `[[Note.md]]` | `Note.md` | 1 | Exact path always wins over proximity |
+| `[[Note.md]]` | `FolderA/Note.md` | 3 | Writing the extension does not make a link root-absolute: both the root and the sibling match by exact path, and proximity still decides |
 | `[[Local]]` | `FolderA/Local.md` | 1 | A file linking to itself |
 
 `Fences.md` contains one real link and four decoys — inside a fenced block, inside inline
