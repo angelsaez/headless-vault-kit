@@ -36,8 +36,45 @@ el suyo. Nunca se ejecuta código de plugins ni se reproduce la interfaz.
 
 ## Estado
 
-🚧 **Fase de planificación.** Aún no hay código. El plan completo, con fases y criterios de
-salida, está en [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md).
+🚧 **Fase 2 en marcha.** El indexador de Nivel 0 funciona: parsea un vault a SQLite y responde
+búsquedas, backlinks y consultas de enlaces, con reconstrucción determinista. Queda pendiente de
+la fase el watcher de sistema de archivos y los comandos `tags`, `tasks`, `props` y `orphans`.
+
+El plan completo, con fases y criterios de salida, está en
+[`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md); las decisiones
+que sostienen el diseño, en [`docs/adr/`](docs/adr/).
+
+## Probarlo
+
+Todavía no está publicado, así que se ejecuta desde un clon. Python 3.11 o superior, y nada más:
+
+```bash
+git clone https://github.com/angelsaez/headless-vault-kit
+cd headless-vault-kit
+uv venv && uv pip install -e ".[dev]"        # o python -m venv .venv && .venv/bin/pip install -e ".[dev]"
+
+.venv/bin/hvk --vault /ruta/al/vault scan
+.venv/bin/hvk --vault /ruta/al/vault backlinks "Una nota"
+```
+
+Dentro de un vault se puede omitir `--vault`: hvk sube por el árbol hasta encontrar `.obsidian/`.
+
+| Comando | Qué responde |
+|---|---|
+| `hvk scan` / `hvk rebuild` | Indexa lo nuevo y lo cambiado, o reconstruye desde cero |
+| `hvk search "texto tag:proyecto path:Areas"` | Búsqueda a texto completo, con filtros de etiqueta y ruta |
+| `hvk backlinks "Nota"` | Qué enlaza aquí, por nombre de nota o por ruta |
+| `hvk links [Nota] [--broken] [--ambiguous]` | Enlaces salientes, los rotos, o aquellos donde encajó más de un archivo |
+| `hvk info` | Qué contiene el índice ahora mismo |
+
+Todos los comandos aceptan `--json` para salida legible por máquina.
+
+Cuando la herramienta se publique, instalarla serán dos comandos y ningún `sudo`:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv tool install hvk
+```
 
 ## Hoja de ruta
 
@@ -45,7 +82,7 @@ salida, está en [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headles
 |---|---|---|
 | 0 | Base operativa en el VPS: Headless + Claude Code/Telegram + git, sobrevive a reinicios | Pendiente |
 | 1 | Inventario del vault: qué plugins y usos reales hay que cubrir | Pendiente |
-| 2 | Indexador Nivel 0 + CLI `hvk` | Pendiente |
+| 2 | Indexador Nivel 0 + CLI `hvk` | **En curso** |
 | 3 | Bases, Canvas, plantillas y notas periódicas | Pendiente |
 | 4 | Dataview (DQL) + vistas materializadas | Pendiente |
 | 5 | Notas-orden: el vault como cola de trabajos | Pendiente |

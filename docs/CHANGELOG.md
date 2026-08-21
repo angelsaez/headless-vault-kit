@@ -4,6 +4,28 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — Tier-0 indexer and the first hvk commands
+
+- `src/hvk/`: the package decided in ADR-0001 — `paths` (vault and index location),
+  `db` (schema), `parse/markdown` (frontmatter, tags, headings, blocks, links, tasks, inline
+  fields), `links` (resolution), `scan` (walk, hash, two-pass resolve), `query` and `cli`.
+- Commands: `scan`, `rebuild`, `search` (FTS5 with `tag:` and `path:` filters), `backlinks`,
+  `links --broken --ambiguous`, `info`. All of them take `--json`.
+- `tests/`: 106 tests, including a three-way determinism check (scan, rebuild, from scratch)
+  over all four synthetic vaults, and the filesystem cases that cannot be committed to git.
+- Verified on Windows 11 and on Ubuntu 26.04, with identical results. On Linux the two tests
+  Windows has to skip — filenames differing only in case, and only in Unicode normalisation —
+  run and pass. `uv` installed there in one command without `sudo`, as ADR-0001 predicted.
+- Three findings from writing it, each fixed rather than worked around:
+  - ruamel keeps the **first** of a repeated frontmatter key while js-yaml keeps the last, so
+    the mapping is now built by a constructor that matches the app.
+  - The ADR-0002 safety rule could be bypassed by building `Locations` directly, so the check
+    moved into the object itself.
+  - Link resolution compared raw code points, which would have broken every link in a vault
+    synced between macOS (NFD) and Linux (NFC). Names are now folded to NFC before comparison.
+- Still open in phase 2: the filesystem watcher, the nightly verification scan, and the
+  `tags`, `tasks`, `props` and `orphans` commands.
+
 ## 2026-08-21 — Synthetic test vaults
 
 - `test-vaults/`: four vaults — `basic/` (realistic, the default fixture), `links/` (every
