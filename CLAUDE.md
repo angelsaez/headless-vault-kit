@@ -25,9 +25,16 @@ escaneo, watcher incremental, verificación nocturna y los comandos `search`, `b
 suite en `tests/` contra `test-vaults/`, y los criterios numéricos del plan medidos con
 `pytest -m slow` sobre un vault generado de 10 000 notas.
 
-Queda un criterio de salida de la Fase 2 que **no se puede cerrar en local**: la demostración
-de extremo a extremo por Telegram, que depende de la Fase 0 en el VPS. Lo siguiente en
-desarrollo es la Fase 3 (Bases y Canvas).
+**Fase 1 hecha** (inventario del vault real, 2026-08-21) y **Bases de la Fase 3 hecha**:
+`hvk base` ejecuta vistas de `.base` contra el índice (ADR-0005).
+
+El inventario cambió el orden del plan, que está revisado a v2.1 con esos datos: el vault no
+tiene **ningún plugin de comunidad**, cero archivos `.canvas` y solo dos bloques `dataview`
+triviales. Por eso Canvas queda pospuesto, el subconjunto DQL de la Fase 4 degradado a
+opcional, y las vistas materializadas pasan a construirse sobre Bases.
+
+**Lo siguiente es la Fase 0**, el despliegue en el VPS: es lo único que impide que todo lo
+construido funcione de verdad, y cierra el último criterio de salida de la Fase 2.
 
 ## Entornos de trabajo
 
