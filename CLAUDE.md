@@ -74,15 +74,22 @@ contra vaults sintéticos.
 
 ## Convenciones
 
-- **Idiomas:** código e identificadores en inglés. README público en inglés (`README.md`)
-  con traducción en `README.es.md` — al tocar uno, actualizar el otro en el mismo commit.
-  Documentación interna (planes, ADRs) y comunicación con Ángel en español.
-- Commits: convencionales y pequeños (`feat:`, `fix:`, `docs:`, `adr:`). Un cambio, un commit.
+- **Idiomas:** todo lo que se publica con el repositorio va en **inglés**: código e
+  identificadores, mensajes de commit, nombres de rama, ADRs (`docs/adr/`) y el registro de
+  cambios (`docs/CHANGELOG.md`). El README es bilingüe: `README.md` en inglés y `README.es.md`
+  en español — al tocar uno, actualizar el otro en el mismo commit. Siguen en español, por ser
+  trabajo interno: los planes (`.plans/`), este archivo y la comunicación con Ángel.
+- Commits: convencionales, pequeños y en inglés (`feat:`, `fix:`, `docs:`, `adr:`). Un cambio,
+  un commit. Ramas: una por funcionalidad, nombradas `tipo/asunto-en-ingles`
+  (`adr/bootstrap-decisions`, `feat/indexer-scan`), y PR a `main` — nada se mergea sin revisión.
 - **Sin co-autoría ni atribución del agente.** Nunca añadir `Co-Authored-By:`, «Generated with
   Claude Code» ni enlaces de sesión a commits, PRs o MRs. La autoría es solo de Ángel.
   Aplicado también vía `.claude/settings.json` (`attribution.commit`/`pr` vacíos).
 - Sin frameworks pesados: scripts pequeños, dependencias mínimas y justificadas.
-  Lenguaje del indexador: pendiente de ADR (Python vs TypeScript) — no empezar sin ella.
+  Lenguaje del indexador: **Python 3.11+** (ADR-0001), instalado con `uv`. Dependencias de
+  ejecución permitidas: `ruamel.yaml` y `watchdog`; todo lo demás, biblioteca estándar. El CLI
+  usa `argparse` y formatea tablas a mano. Cualquier dependencia nueva exige justificación en
+  el commit o una ADR propia.
 - Salidas de CLI: legibles para humanos por defecto, `--json` para el agente.
 
 ## Estructura prevista (no crear hasta que su fase llegue)
@@ -91,12 +98,16 @@ contra vaults sintéticos.
 headless-vault-kit/
 ├── .plans/            # planes (ya existe)
 ├── docs/adr/          # decisiones (desde Fase 2)
-├── indexer/           # watcher + parsing + SQLite (Fase 2)
-├── cli/               # hvk (Fase 2)
+├── src/hvk/           # paquete Python: indexador + CLI (Fase 2, ver ADR-0001)
+│   ├── db.py          #   esquema SQLite y acceso
+│   ├── parse/         #   parsers de formatos (Niveles 0–2)
+│   ├── scan.py        #   escaneo inicial y watcher
+│   └── cli/           #   subcomandos de hvk
+├── tests/             # pytest (desde Fase 2)
+├── test-vaults/       # vaults sintéticos (desde Fase 2)
 ├── runner/            # notas-orden (Fase 5)
 ├── skills/            # skills de Claude Code (Fases 2–5)
-├── deploy/            # systemd, cron, instalación VPS (Fase 0)
-└── test-vaults/       # vaults sintéticos (desde Fase 2)
+└── deploy/            # systemd, cron, instalación VPS (Fase 0)
 ```
 
 ## Verificación mínima antes de dar algo por hecho
@@ -105,4 +116,4 @@ headless-vault-kit/
 - Probado contra `test-vaults/`, incluidos los casos límite.
 - Criterios de salida de la fase (plan §5) repasados uno a uno.
 - Ninguna dependencia nueva sin justificar en el commit o ADR.
-- Entrada correspondiente añadida en docs/registro-cambios.md.
+- Entrada correspondiente añadida en `docs/CHANGELOG.md`.
