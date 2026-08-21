@@ -37,8 +37,10 @@ adapter. Plugin code is never executed and the UI is never reproduced.
 ## Status
 
 🚧 **Phase 2 under way.** The tier-0 indexer works: it parses a vault into SQLite and answers
-search, backlinks, links, tags, tasks, properties and orphans, with a deterministic rebuild. Still missing from the phase:
-the filesystem watcher, the nightly verification scan, and the Claude Code skill.
+search, backlinks, links, tags, tasks, properties and orphans, with a deterministic rebuild.
+A watcher keeps it current as sync delivers changes, and a nightly pass re-hashes everything
+as a safety net. Still missing from the phase: the Claude Code skill that documents when to
+reach for which command.
 
 The full plan, with phases and exit criteria, lives in
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md) (Spanish); the
@@ -69,9 +71,20 @@ Inside a vault, `--vault` can be omitted: hvk walks up until it finds `.obsidian
 | `hvk tasks [--pending] [--due-before 2026-09-01]` | Tasks across the vault, by state, due date or path |
 | `hvk props --where "status=open"` | Files by property; repeat `--where` to combine with AND, or omit it for the catalogue of keys |
 | `hvk orphans [--attachments]` | Files nothing links to |
+| `hvk watch` | Index changes as they land, until interrupted; meant to run as a service |
+| `hvk verify` | Re-hash every file as a safety net; run it nightly from cron |
 | `hvk info` | What the index currently holds |
 
-Every command takes `--json` for machine-readable output.
+Every command takes `--json` for machine-readable output; `hvk watch` emits JSON Lines, one
+object per batch, so it can be piped into a log.
+
+To keep the index current, run `hvk watch` as a service and re-hash nightly from cron:
+
+```cron
+17 4 * * *  hvk --vault /path/to/vault verify
+```
+
+The systemd unit for the watcher belongs to phase 0 and will live in `deploy/`.
 
 When the tool is published, installing it will be two commands and no `sudo`:
 
