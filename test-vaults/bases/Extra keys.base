@@ -1,0 +1,7 @@
+somethingNew: 42
+views:
+  - type: table
+    name: "From a newer app"
+    futureOption: true
+    order:
+      - file.name

@@ -87,3 +87,20 @@ def emit_line(data: dict, *, as_json: bool, human: str | None = None) -> None:
     print(human if human is not None else "  ".join(
         f"{key} {value}" for key, value in data.items()
     ), flush=True)
+
+
+def markdown_table(headers, rows) -> str:
+    """Render a Markdown table, which is what a base result is meant to be pasted into.
+
+    Cells escape the pipe character; without that, one property containing a pipe
+    silently shifts every column to its right.
+    """
+    def cell(value) -> str:
+        text = "" if value is None else str(value)
+        return text.replace("|", "\\|").replace("\n", " ")
+
+    lines = ["| " + " | ".join(cell(h) for h in headers) + " |",
+             "|" + "|".join("---" for _ in headers) + "|"]
+    for row in rows:
+        lines.append("| " + " | ".join(cell(value) for value in row) + " |")
+    return "\n".join(lines)

@@ -1,0 +1,13 @@
+filters:
+  or:
+    - file.hasTag("manual")
+    - and:
+        - file.hasTag("book")
+        - file.hasLink("Solaris")
+    - not:
+        - file.inFolder("Required Reading")
+views:
+  - type: table
+    name: "Nested filters"
+    order:
+      - file.name

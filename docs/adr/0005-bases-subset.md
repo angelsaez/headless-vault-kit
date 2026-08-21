@@ -97,6 +97,9 @@ about:
   up as an answer.
 - Division by zero is null, not a crash. A base is a query, and one bad row should not take
   the table down.
+- **A row is a note.** Attachments and `.base` files are not rows, so an unfiltered base does
+  not list its own file next to the notes. `file.ext` stays available for filtering, but the
+  row set it filters is the vault's Markdown notes.
 
 Two literal formats the documentation does not pin down, implemented here as documented
 approximations rather than claims of parity:

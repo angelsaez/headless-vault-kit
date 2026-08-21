@@ -4,6 +4,29 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — Bases run: `.base` files against the index
+
+- `hvk base FILE [--view NAME] [--this PATH]` reads a `.base` file, runs one of its views
+  against the index and prints a Markdown table, or JSON with `--json`. Global and per-view
+  filters, formulas, `displayName`, sorting, grouping, limits and the built-in summaries.
+- `src/hvk/bases/base_file.py` validates the whole file before a single row is read, so a
+  broken base is reported up front rather than halfway through printing a table.
+- Unknown YAML keys **warn** and the view still runs, because Obsidian keeps adding to this
+  format and refusing a newer key would break the tool the week after an app release. Unknown
+  functions and unsupported view types still fail: those change the answer rather than merely
+  going unread.
+- Two semantics ADR-0005 now states outright, both discovered by looking at the output:
+  a row is a note, so an unfiltered base does not list its own `.base` file next to the notes;
+  and an empty group sorts last in either direction, the same rule nulls follow.
+- `file.ctime` needed a column, so the schema goes to version 3. On Linux the filesystem
+  rarely records a creation time, so `st_birthtime_ns` is used where it exists and the inode
+  change time stands in where it does not — recorded rather than quietly wrong.
+- A bug worth naming: base paths were resolved with `exists()`, so on a case-insensitive
+  filesystem the folder `library/` answered to `hvk base Library` and was opened as if it
+  were the base. It is `is_file()` now.
+- Measured on the 10 000-note vault: a base with a filter, a formula and a sort runs in
+  0.18 s.
+
 ## 2026-08-21 — Phase 3 begins: a real expression engine for Bases
 
 - `docs/adr/0005-bases-subset.md` answers the question the plan left open — what "the

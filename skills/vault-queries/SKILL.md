@@ -42,6 +42,7 @@ inside the vault.
 | "What links are broken?" | `hvk links --broken` |
 | "Which notes are unreachable?" | `hvk orphans` |
 | "Which attachments are unused?" | `hvk orphans --attachments` |
+| "What does this Base show?" | `hvk base "Some.base"` |
 
 ### Search
 
@@ -86,6 +87,22 @@ hvk props --where "due" --key due                           # a bare key means "
 ```
 
 Values compare case-insensitively. A list-valued property is joined in its original order.
+
+### Bases
+
+A `.base` file is a saved query the user built in Obsidian. Running it gives the same table the
+app would show, as Markdown:
+
+```bash
+hvk base "Library.base"                       # the first view
+hvk base "Library.base" --view "Open books"   # a named view; a wrong name lists the real ones
+hvk base "Library.base" --json                # rows, headers and summaries, structured
+```
+
+If the base is embedded in a note and its filters mention `this`, pass `--this PATH` to say
+which note. Not every Bases feature is supported — [ADR-0005](../../docs/adr/0005-bases-subset.md)
+lists what is — and anything unsupported fails naming itself rather than silently returning a
+table with a filter missing. Warnings about unknown keys go to stderr; the table is still good.
 
 ## When the answer looks wrong
 
