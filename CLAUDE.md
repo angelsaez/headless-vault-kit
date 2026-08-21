@@ -69,6 +69,12 @@ construido funcione de verdad, y cierra el último criterio de salida de la Fase
 - **Vault real intocable en desarrollo.** Todo se prueba contra un vault sintético en
   `test-vaults/` (crear casos límite: Unicode, YAML raro, encabezados duplicados, enlaces
   ambiguos y rotos). Nunca apuntar pruebas al vault de producción.
+- **Para validar contra datos reales se usa un espejo, nunca el vault.** `tools/mirror_vault.py`
+  lo crea y lo refresca: excluye `_PRIVATE`/`_PRIVADA`, `.git`, `.trash` y los `workspace*`,
+  conserva `.obsidian/*.json` porque el inventario los necesita, y se niega a escribir dentro
+  del repositorio (un espejo ahí está a un `git add -A` de publicar notas personales) o encima
+  de algo que parezca un vault. El espejo vive **fuera del repo**; su ruta en esta máquina está
+  en la memoria del agente.
 - El índice y su base de datos viven **fuera del vault**, en
   `${XDG_DATA_HOME:-~/.local/share}/hvk/<vault>-<hash8>/` (ADR-0002), para que Obsidian Sync
   no los toque y ningún watcher se dispare por ellos. Si la carpeta de índice cae dentro del
@@ -121,6 +127,7 @@ headless-vault-kit/
 │   └── cli/           #   subcomandos de hvk
 ├── tests/             # pytest (desde Fase 2)
 ├── test-vaults/       # vaults sintéticos (desde Fase 2)
+├── tools/             # utilidades de desarrollo, no del producto (mirror_vault.py)
 ├── runner/            # notas-orden (Fase 5)
 ├── skills/            # skills de Claude Code (Fases 2–5)
 └── deploy/            # systemd, cron, instalación VPS (Fase 0)
