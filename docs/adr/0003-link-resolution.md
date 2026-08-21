@@ -57,7 +57,9 @@ For a link found in source file `S`:
    `mailto:`, `obsidian:`, …) or a protocol-relative `//`. It is stored with `kind='external'`
    and no target, so that `hvk links --broken` never reports it.
 4. **An empty target** (`[[#Heading]]`, `[[#^block]]`) resolves to `S` itself.
-5. **Find candidates**, case-insensitively, stopping at the first step that yields any:
+5. **Find candidates**, comparing names folded to NFC and then lowercased. All three rules
+   are evaluated; the winner comes from the most specific one that matched, while the
+   candidate *count* is the union of all of them (see below for why):
    1. **Exact path** — the target read as a vault-relative path, first with the extension as
       written, then with `.md` appended. Also tried relative to `S`'s own folder.
    2. **Path suffix** — files whose vault-relative path ends in `/<target>`, with or without
@@ -72,9 +74,17 @@ For a link found in source file `S`:
    4. Fewest path segments, i.e. closest to the vault root.
    5. Lexicographic path order — the backstop that guarantees the result never depends on
       filesystem order or insertion order, which is what a deterministic rebuild requires.
-7. **No candidate** means an unresolved link: `target_file_id` is `NULL`. This is a normal
+7. **The winner** is chosen from the most specific rule that produced anything: exact path
+   beats path suffix, which beats basename. Only within that rule does the tie-break run.
+8. **No candidate** means an unresolved link: `target_file_id` is `NULL`. This is a normal
    state, not an error — Obsidian displays these too — and it is what `hvk links --broken`
    reports.
+
+**Names are folded to NFC before comparison.** macOS stores filenames decomposed (NFD) and
+Linux stores whatever it is handed, so a vault synced between the two ends up holding both
+forms. Comparing raw code points would report every cross-platform link as broken, which is
+the kind of failure that looks like data loss to the person hitting it. Two files whose names
+differ only in normalisation therefore also count as ambiguous, and are flagged.
 
 **Aliases do not resolve links.** Frontmatter `aliases` are indexed and reachable through
 `hvk search`, but `[[Some Alias]]` does not resolve to the note carrying that alias. This
@@ -83,9 +93,14 @@ it is listed below as a difference to confirm against the GUI.
 
 ### Ambiguity is stored, not swallowed
 
-The `links` table carries a `candidates` column: how many files matched before the tie-break
-ran. `candidates > 1` means "a choice was made here, and the app may have made a different
-one". That turns an unbounded worry into a finite checklist:
+The `links` table carries a `candidates` column: how many distinct files matched **any** of
+the three rules, not just the winning one. That distinction matters. Counting only within the
+winning rule would report `[[Note]]` as unambiguous whenever a root-level `Note.md` existed,
+even with two more `Note.md` elsewhere in the vault that the app might well have preferred —
+a false all-clear, which is worse than no signal at all. Counting the union means
+`candidates > 1` reads as "several files could plausibly have been meant here", which is
+exactly the question a validation pass needs answered. It turns an unbounded worry into a
+finite checklist:
 
 ```text
 hvk links --ambiguous     # every link where our rule had to pick a winner
@@ -122,3 +137,4 @@ the property that makes it safe to ship a documented approximation now.
 | 2 | Aliases never resolve links | Same, per bug reports — but worth confirming per version |
 | 3 | No normalisation of spaces, `-` and `_` | Claimed by one community gist, uncorroborated |
 | 4 | Case-insensitive matching | Believed identical; matters only on case-sensitive filesystems, i.e. the Linux target |
+| 5 | Names folded to NFC before comparison | Unknown; chosen because the alternative breaks macOS-to-Linux vaults outright |

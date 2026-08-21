@@ -17,6 +17,18 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   ambiguous links, the choice is made explicit and the ambiguity is stored as data, turning
   GUI validation into a finite checklist.
 
+## 2026-08-21 — ADR-0003 refined while implementing it
+
+- `docs/adr/0003-link-resolution.md`: two corrections found by writing the resolver.
+  `candidates` now counts the union of every matching rule rather than only the winning one —
+  counting within the winner alone would have reported a link as unambiguous whenever a
+  root-level file matched, hiding rival files elsewhere in the vault and turning the
+  validation list into a false all-clear. And names are folded to NFC before comparison,
+  because macOS stores filenames decomposed while Linux stores what it is given, so raw
+  code-point comparison would report every link in a cross-platform vault as broken.
+- Recorded here rather than quietly changed: an ADR that no longer describes the code is
+  worse than no ADR.
+
 ## 2026-08-21 — ADR-0002: index location and exclusion rules
 
 - `docs/adr/0002-index-location.md`: the index lives in
