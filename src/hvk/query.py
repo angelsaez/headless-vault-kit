@@ -12,6 +12,10 @@ import sqlite3
 from hvk.links import FileEntry, FileIndex
 
 FILTER_RE = re.compile(r"\b(path|tag):(\"[^\"]+\"|\S+)")
+# key=value, key!=value, or a bare key. The operator group is optional, so a bare key
+# leaves groups 2 and 3 as None.
+CONDITION_RE = re.compile(r"([^=!]+?)\s*(?:(!=|=)\s*(.*))?")
+DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
 class QueryError(Exception):
@@ -146,6 +150,157 @@ def links(
         sql.append("AND l.candidates > 1")
     sql.append("ORDER BY f.path, l.line")
     rows = conn.execute("\n".join(sql), params).fetchall()
+    return [dict(row) for row in rows]
+
+
+def tags(conn: sqlite3.Connection, *, count: bool = False, prefix: str | None = None) -> list[dict]:
+    """Every distinct tag, with how many files carry it.
+
+    A nested tag is stored as written (``home/nested``); ``prefix`` matches a tag and all of
+    its descendants, the way Obsidian treats them.
+    """
+    where, params = "", []
+    if prefix:
+        prefix = prefix.lstrip("#")
+        where = "WHERE tag = ? OR tag LIKE ?"
+        params = [prefix, f"{prefix}/%"]
+    order = "ORDER BY files DESC, tag" if count else "ORDER BY tag"
+    rows = conn.execute(
+        f"SELECT tag, count(DISTINCT file_id) AS files FROM tags {where} GROUP BY tag {order}",
+        params,
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def tasks(
+    conn: sqlite3.Connection,
+    *,
+    pending: bool = False,
+    done: bool = False,
+    due_before: str | None = None,
+    path: str | None = None,
+) -> list[dict]:
+    """Tasks across the vault, filtered by state, due date or path.
+
+    Due dates come from the tier-2 fields of ADR-0004. A task without one is never returned by
+    a date filter, rather than being treated as due forever.
+    """
+    if due_before and not DATE_RE.fullmatch(due_before):
+        raise QueryError(f"expected a date as YYYY-MM-DD, got {due_before!r}")
+
+    sql = [
+        "SELECT f.path AS path, t.line AS line, t.status AS status, t.done AS done, "
+        "       t.due AS due, t.text AS text, t.extra_json AS extra "
+        "FROM tasks t JOIN files f ON f.id = t.file_id WHERE 1 = 1"
+    ]
+    params: list = []
+    if pending:
+        sql.append("AND t.done = 0")
+    if done:
+        sql.append("AND t.done = 1")
+    if due_before:
+        sql.append("AND t.due IS NOT NULL AND t.due < ?")
+        params.append(due_before)
+    if path:
+        sql.append("AND f.path LIKE ?")
+        params.append(f"%{path}%")
+    # Dated tasks first, soonest first; undated ones after, by where they live.
+    sql.append("ORDER BY t.due IS NULL, t.due, f.path, t.line")
+    return [dict(row) for row in conn.execute(chr(10).join(sql), params)]
+
+
+def _parse_condition(condition: str) -> tuple[str, list, str]:
+    """Turn one ``--where`` into an EXISTS clause. Returns ``(sql, params, key)``."""
+    match = CONDITION_RE.fullmatch(condition.strip())
+    if not match or not match.group(1).strip():
+        raise QueryError(
+            f"cannot read the condition {condition!r}. Expected key=value, key!=value, or a "
+            f"bare key meaning the property exists."
+        )
+    key, operator, value = match.group(1).strip(), match.group(2), match.group(3)
+    if operator is None:
+        return (
+            "AND EXISTS (SELECT 1 FROM props p WHERE p.file_id = f.id "
+            "AND lower(p.key) = lower(?))",
+            [key],
+            key,
+        )
+    # Values are compared case-insensitively: "Abierto" and "abierto" are the same thing to
+    # whoever typed them.
+    value = value.strip().strip("\"'")
+    negate = "NOT " if operator == "!=" else ""
+    return (
+        f"AND {negate}EXISTS (SELECT 1 FROM props p WHERE p.file_id = f.id "
+        f"AND lower(p.key) = lower(?) AND lower(p.value) = lower(?))",
+        [key, value],
+        key,
+    )
+
+
+def props(
+    conn: sqlite3.Connection,
+    where: list[str] | None = None,
+    *,
+    key: str | None = None,
+) -> list[dict]:
+    """Files filtered by their properties, or the catalogue of keys when nothing is asked for.
+
+    Each condition is ``key=value``, ``key!=value`` or a bare ``key`` meaning "has it";
+    several of them combine with AND.
+    """
+    if not where and not key:
+        rows = conn.execute(
+            "SELECT key, count(DISTINCT file_id) AS files, count(*) AS occurrences "
+            "FROM props GROUP BY key ORDER BY files DESC, key"
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    clauses: list[str] = []
+    params: list = []
+    shown = key
+    for condition in where or []:
+        clause, values, condition_key = _parse_condition(condition)
+        clauses.append(clause)
+        params.extend(values)
+        shown = shown or condition_key
+
+    sql = ["SELECT f.id AS id, f.path AS path FROM files f WHERE f.kind = 'note'"]
+    sql.extend(clauses)
+    sql.append("ORDER BY f.path")
+    rows = conn.execute(chr(10).join(sql), params).fetchall()
+
+    out = []
+    for row in rows:
+        item = {"path": row["path"]}
+        if shown:
+            values = conn.execute(
+                "SELECT value FROM props WHERE file_id = ? AND lower(key) = lower(?) "
+                "ORDER BY idx IS NULL, idx",
+                (row["id"], shown),
+            ).fetchall()
+            item[shown] = ", ".join(v["value"] for v in values if v["value"] is not None)
+        out.append(item)
+    return out
+
+
+def orphans(conn: sqlite3.Connection, *, attachments: bool = False) -> list[dict]:
+    """Files nothing links to.
+
+    Notes by default. With *attachments*, unreferenced attachments too, which is the list
+    worth reading before deleting anything. A file linking to itself does not save it.
+    """
+    kinds = ("note", "attachment") if attachments else ("note",)
+    placeholders = ", ".join("?" for _ in kinds)
+    rows = conn.execute(
+        f"SELECT f.path AS path, f.kind AS kind, "
+        f"       (SELECT count(*) FROM links l WHERE l.file_id = f.id) AS outgoing "
+        f"FROM files f "
+        f"WHERE f.kind IN ({placeholders}) "
+        f"  AND NOT EXISTS (SELECT 1 FROM links l WHERE l.target_file_id = f.id "
+        f"                  AND l.file_id != f.id) "
+        f"ORDER BY f.path",
+        kinds,
+    ).fetchall()
     return [dict(row) for row in rows]
 
 

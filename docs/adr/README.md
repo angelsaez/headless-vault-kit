@@ -32,3 +32,4 @@ wrong is part of what makes the log worth keeping.
 | [0001](0001-indexer-language.md) | Implementation language for the indexer and CLI | accepted | 2 |
 | [0002](0002-index-location.md) | Index location and exclusion rules | accepted | 2 |
 | [0003](0003-link-resolution.md) | Wikilink resolution and ambiguity | accepted | 2 |
+| [0004](0004-tier-2-fields-in-the-core.md) | Tier-2 fields in the core, ahead of the parser interface | accepted | 2 |

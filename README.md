@@ -37,8 +37,8 @@ adapter. Plugin code is never executed and the UI is never reproduced.
 ## Status
 
 🚧 **Phase 2 under way.** The tier-0 indexer works: it parses a vault into SQLite and answers
-search, backlinks and link queries, with a deterministic rebuild. Still missing from the phase:
-the filesystem watcher and the `tags`, `tasks`, `props` and `orphans` commands.
+search, backlinks, links, tags, tasks, properties and orphans, with a deterministic rebuild. Still missing from the phase:
+the filesystem watcher, the nightly verification scan, and the Claude Code skill.
 
 The full plan, with phases and exit criteria, lives in
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md) (Spanish); the
@@ -65,6 +65,10 @@ Inside a vault, `--vault` can be omitted: hvk walks up until it finds `.obsidian
 | `hvk search "text tag:project path:Areas"` | Full-text search, with optional tag and path filters |
 | `hvk backlinks "Note"` | What links here, by note name or by path |
 | `hvk links [Note] [--broken] [--ambiguous]` | Outgoing links, unresolved ones, or ones where more than one file matched |
+| `hvk tags [--count] [--prefix home]` | Every tag, with how many files carry it; a prefix includes nested tags |
+| `hvk tasks [--pending] [--due-before 2026-09-01]` | Tasks across the vault, by state, due date or path |
+| `hvk props --where "status=open"` | Files by property; repeat `--where` to combine with AND, or omit it for the catalogue of keys |
+| `hvk orphans [--attachments]` | Files nothing links to |
 | `hvk info` | What the index currently holds |
 
 Every command takes `--json` for machine-readable output.
