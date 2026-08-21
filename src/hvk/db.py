@@ -10,7 +10,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # FTS5 with diacritics folded, so that searching "cafe" finds "café" -- which matters in a
 # vault written in Spanish.
@@ -103,15 +103,13 @@ CREATE INDEX idx_links_target     ON links(target_file_id);
 CREATE INDEX idx_links_file       ON links(file_id);
 CREATE INDEX idx_tasks_file       ON tasks(file_id);
 CREATE INDEX idx_tasks_done       ON tasks(done);
+CREATE INDEX idx_tasks_due        ON tasks(due);
 
 CREATE VIRTUAL TABLE fts USING fts5(
     path, title, body,
     tokenize = "unicode61 remove_diacritics 2"
 );
 """
-
-# Everything except meta: what a rebuild wipes.
-CONTENT_TABLES = ("props", "tags", "headings", "blocks", "links", "tasks", "files")
 
 
 class IndexError_(Exception):
@@ -175,8 +173,19 @@ def check_vault(conn: sqlite3.Connection, vault: Path) -> None:
         )
 
 
-def clear_content(conn: sqlite3.Connection) -> None:
-    """Wipe every derived table, leaving meta alone. Used by ``hvk rebuild``."""
-    for table in CONTENT_TABLES:
-        conn.execute(f"DELETE FROM {table}")
-    conn.execute("DELETE FROM fts")
+def remove(db_path: Path) -> None:
+    """Delete the database and its write-ahead files.
+
+    This is what ``hvk rebuild`` does before scanning. Deleting rather than emptying tables
+    means a rebuild also recovers from an index written by an older schema -- which matters,
+    because rebuilding is exactly what the version-mismatch error tells people to do.
+    """
+    for suffix in ("", "-wal", "-shm"):
+        candidate = Path(str(db_path) + suffix)
+        try:
+            candidate.unlink(missing_ok=True)
+        except OSError as exc:
+            raise IndexError_(
+                f"cannot delete {candidate}: {exc}. Something else is holding the index open "
+                f"-- a running 'hvk watch', most likely. Stop it and try again."
+            ) from exc
