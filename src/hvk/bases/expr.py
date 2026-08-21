@@ -25,7 +25,10 @@ WORD_OPERATORS = {"and": "&&", "or": "||", "not": "!"}
 KEYWORDS = {"true": True, "false": False, "null": None}
 
 NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
-NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_-]*")
+# Property names are whatever the vault writes, and a vault written in Spanish is full
+# of "categoria" with an accent. [^\W\d] is "a word character that is not a digit",
+# which under Python 3 means any Unicode letter or underscore.
+NAME_RE = re.compile(r"[^\W\d][\w-]*", re.UNICODE)
 
 # Binding power per infix operator. Higher binds tighter.
 PRECEDENCE = {

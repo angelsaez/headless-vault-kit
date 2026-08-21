@@ -50,6 +50,26 @@ def _fold(text: str) -> str:
     return unicodedata.normalize("NFC", text).lower()
 
 
+def _join(base: str, target: str) -> str | None:
+    """Resolve *target* against the folder *base*, collapsing '.' and '..'.
+
+    Markdown links written by hand use relative paths, and a link that climbs out of the
+    vault root is not a link to anything -- so that returns None rather than a path with
+    leftover '..' in it that could never match a file.
+    """
+    segments: list[str] = [part for part in base.split("/") if part] if base else []
+    for part in target.split("/"):
+        if part in ("", "."):
+            continue
+        if part == "..":
+            if not segments:
+                return None
+            segments.pop()
+        else:
+            segments.append(part)
+    return "/".join(segments)
+
+
 class FileIndex:
     """In-memory lookup tables over every file in the vault, notes and attachments alike."""
 
@@ -70,11 +90,12 @@ class FileIndex:
 
     def _exact_path(self, target: str, source: FileEntry) -> set[FileEntry]:
         found: set[FileEntry] = set()
-        bases = {"", source.parent}
-        for base in bases:
+        for base in {"", source.parent}:
             for candidate in (target, target + ".md"):
-                key = _fold(f"{base}/{candidate}") if base else _fold(candidate)
-                found.update(self.by_path.get(key, ()))
+                resolved = _join(base, candidate)
+                if resolved is None:
+                    continue
+                found.update(self.by_path.get(_fold(resolved), ()))
         return found
 
     def _path_suffix(self, target: str) -> set[FileEntry]:
