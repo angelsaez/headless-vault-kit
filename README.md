@@ -36,8 +36,45 @@ adapter. Plugin code is never executed and the UI is never reproduced.
 
 ## Status
 
-🚧 **Planning phase.** No code yet. The full plan, with phases and exit criteria, lives in
-[`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md) (Spanish).
+🚧 **Phase 2 under way.** The tier-0 indexer works: it parses a vault into SQLite and answers
+search, backlinks and link queries, with a deterministic rebuild. Still missing from the phase:
+the filesystem watcher and the `tags`, `tasks`, `props` and `orphans` commands.
+
+The full plan, with phases and exit criteria, lives in
+[`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md) (Spanish); the
+decisions behind the design are in [`docs/adr/`](docs/adr/).
+
+## Try it
+
+Not published yet, so it runs from a checkout. Python 3.11 or newer, no other prerequisites:
+
+```bash
+git clone https://github.com/angelsaez/headless-vault-kit
+cd headless-vault-kit
+uv venv && uv pip install -e ".[dev]"        # or python -m venv .venv && .venv/bin/pip install -e ".[dev]"
+
+.venv/bin/hvk --vault /path/to/vault scan
+.venv/bin/hvk --vault /path/to/vault backlinks "Some Note"
+```
+
+Inside a vault, `--vault` can be omitted: hvk walks up until it finds `.obsidian/`.
+
+| Command | What it answers |
+|---|---|
+| `hvk scan` / `hvk rebuild` | Index new and changed files, or rebuild from scratch |
+| `hvk search "text tag:project path:Areas"` | Full-text search, with optional tag and path filters |
+| `hvk backlinks "Note"` | What links here, by note name or by path |
+| `hvk links [Note] [--broken] [--ambiguous]` | Outgoing links, unresolved ones, or ones where more than one file matched |
+| `hvk info` | What the index currently holds |
+
+Every command takes `--json` for machine-readable output.
+
+When the tool is published, installing it will be two commands and no `sudo`:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv tool install hvk
+```
 
 ## Roadmap
 
@@ -45,7 +82,7 @@ adapter. Plugin code is never executed and the UI is never reproduced.
 |---|---|---|
 | 0 | Server baseline: Headless sync + Claude Code/Telegram + git, reboot-proof | Pending |
 | 1 | Vault inventory: which plugins and real-world usages need covering | Pending |
-| 2 | Tier-0 indexer + `hvk` CLI | Pending |
+| 2 | Tier-0 indexer + `hvk` CLI | **In progress** |
 | 3 | Bases, Canvas, templates and periodic notes | Pending |
 | 4 | Dataview (DQL) + materialized views | Pending |
 | 5 | Order-notes: the vault as a job queue | Pending |
