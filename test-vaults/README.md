@@ -98,6 +98,22 @@ Numbered so failures are easy to name.
 | `11-unicode-keys.md` | Accented, CJK, quoted-with-spaces and emoji keys |
 | `12-duplicate-keys.md` | The same key twice — last one wins |
 
+## `tasks/` — tier-2 task fields, the fixture behind ADR-0004
+
+Due dates and priorities are not tier 0: a Markdown checkbox has neither. These come from the
+Tasks plugin's emoji vocabulary and from Dataview inline fields, and this vault pins what is
+read and — just as importantly — what is left alone.
+
+| File | What it pins |
+|---|---|
+| `Dates.md` | Each date marker (due, scheduled, start, done, created), several on one line, a recurrence rule, and a marker followed by prose instead of a date |
+| `Priorities.md` | All five priority markers, plus a task with none |
+| `Dataview.md` | Bracketed `[due:: …]`, a field we deliberately do not read (`[owner:: …]`) left in the text, and a bracketed value that is not a date |
+| `Plain.md` | A vault that never installed the plugin: tasks still index, the fields are simply absent |
+
+Checkbox *states* stay in `basic/Tasks.md`, which is tier 0. The split is deliberate: one
+vault covers what Obsidian itself derives, the other what a plugin adds.
+
 ## `unicode/` — names and content outside ASCII
 
 Accented (NFC), CJK and astral-plane (emoji) filenames, plus a note whose body carries a
