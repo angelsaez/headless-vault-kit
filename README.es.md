@@ -54,6 +54,12 @@ Ubuntu 26.04 y en Windows 11:
 Un criterio de salida de la fase no se puede cerrar desde un portátil: responder «¿qué notas
 enlazan a X?» por Telegram de extremo a extremo depende de la Fase 0 en el servidor.
 
+**La Fase 3 está en marcha.** Los `.base` se parsean y se ejecutan: `hvk base Library.base`
+aplica filtros, fórmulas, orden y agrupación de una vista contra el índice y devuelve una tabla
+Markdown. La [ADR-0005](docs/adr/0005-bases-subset.md) registra qué parte del lenguaje de
+expresiones de Bases se soporta y qué se rechaza. Canvas y las notas periódicas por plantilla
+van después.
+
 El plan completo, con fases y criterios de salida, está en
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md); las decisiones
 que sostienen el diseño, en [`docs/adr/`](docs/adr/).
@@ -85,6 +91,7 @@ Dentro de un vault se puede omitir `--vault`: hvk sube por el árbol hasta encon
 | `hvk orphans [--attachments]` | Archivos que nadie enlaza |
 | `hvk watch` | Indexa los cambios según llegan, hasta que lo interrumpas; pensado para correr como servicio |
 | `hvk verify` | Re-calcula el hash de todo como red de seguridad; se lanza de noche desde cron |
+| `hvk base Archivo.base [--view Nombre]` | Ejecuta una vista de un `.base` contra el índice, como tabla Markdown |
 | `hvk info` | Qué contiene el índice ahora mismo |
 
 Todos los comandos aceptan `--json` para salida legible por máquina; `hvk watch` emite JSON
@@ -112,7 +119,7 @@ uv tool install hvk
 | 0 | Base operativa en el VPS: Headless + Claude Code/Telegram + git, sobrevive a reinicios | Pendiente |
 | 1 | Inventario del vault: qué plugins y usos reales hay que cubrir | Pendiente |
 | 2 | Indexador Nivel 0 + CLI `hvk` | **Hecha** |
-| 3 | Bases, Canvas, plantillas y notas periódicas | Pendiente |
+| 3 | Bases, Canvas, plantillas y notas periódicas | **En curso** |
 | 4 | Dataview (DQL) + vistas materializadas | Pendiente |
 | 5 | Notas-orden: el vault como cola de trabajos | Pendiente |
 | 6 | Seguridad, healthchecks, backups ensayados | Pendiente |

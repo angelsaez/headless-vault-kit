@@ -54,6 +54,11 @@ Ubuntu 26.04 and Windows 11:
 One exit criterion for the phase is not something a laptop can close: answering "what links to
 X?" over Telegram end to end depends on phase 0 running on the server.
 
+**Phase 3 is under way.** `.base` files parse and run: `hvk base Library.base` executes a
+view's filters, formulas, sorting and grouping against the index and prints a Markdown table.
+[ADR-0005](docs/adr/0005-bases-subset.md) records exactly which part of the Bases expression
+language is supported and what is refused. Canvas and template-driven periodic notes are next.
+
 The full plan, with phases and exit criteria, lives in
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md) (Spanish); the
 decisions behind the design are in [`docs/adr/`](docs/adr/).
@@ -85,6 +90,7 @@ Inside a vault, `--vault` can be omitted: hvk walks up until it finds `.obsidian
 | `hvk orphans [--attachments]` | Files nothing links to |
 | `hvk watch` | Index changes as they land, until interrupted; meant to run as a service |
 | `hvk verify` | Re-hash every file as a safety net; run it nightly from cron |
+| `hvk base File.base [--view Name]` | Run a view from a `.base` file against the index, as a Markdown table |
 | `hvk info` | What the index currently holds |
 
 Every command takes `--json` for machine-readable output; `hvk watch` emits JSON Lines, one
@@ -112,7 +118,7 @@ uv tool install hvk
 | 0 | Server baseline: Headless sync + Claude Code/Telegram + git, reboot-proof | Pending |
 | 1 | Vault inventory: which plugins and real-world usages need covering | Pending |
 | 2 | Tier-0 indexer + `hvk` CLI | **Done** |
-| 3 | Bases, Canvas, templates and periodic notes | Pending |
+| 3 | Bases, Canvas, templates and periodic notes | **In progress** |
 | 4 | Dataview (DQL) + materialized views | Pending |
 | 5 | Order-notes: the vault as a job queue | Pending |
 | 6 | Security, healthchecks, rehearsed backups | Pending |
