@@ -4,6 +4,27 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — Phase 1 inventory, and the plan revised to v2.1 with its data
+
+- The vault inventory ran against a copy of the real vault, excluding `_PRIVATE/`, `.git/`,
+  `.trash/` and `workspace*`. The production vault was never touched.
+- It found what this plan had been guessing at, and guessed wrong: **no community plugins at
+  all**, no `.canvas` files, no Templater, no inline fields, and exactly two `dataview` blocks
+  — both plain `TABLE … FROM "folder" SORT … ASC` in a single note, and dead, since the plugin
+  is not installed to render them.
+- `.plans/Plan-v2-headless-vault-kit.md` goes to v2.1: phase 1 marked done with its results,
+  Canvas postponed until a `.canvas` file exists, the DQL subset of phase 4 downgraded to
+  optional, and materialised views re-pointed at Bases rather than Dataview. The success
+  indicators table now carries the measured numbers next to the targets, and §4 no longer
+  contradicts ADR-0002 about where the index lives.
+- Two decisions closed in the annex (index location, link resolution) and one added: templates
+  and periodic notes need a folder, a filename format and a template decided from scratch,
+  because the vault does not say — `templates.json` points at a folder that does not exist and
+  there is no `daily-notes.json`.
+- The order of work is now written down as it actually happened: phases 1 and 2 first in local
+  development, phase 0 next, because everything built has real users in the vault and nothing
+  runs anywhere yet.
+
 ## 2026-08-21 — Bases run: `.base` files against the index
 
 - `hvk base FILE [--view NAME] [--this PATH]` reads a `.base` file, runs one of its views
