@@ -36,11 +36,23 @@ el suyo. Nunca se ejecuta código de plugins ni se reproduce la interfaz.
 
 ## Estado
 
-🚧 **Fase 2 en marcha.** El indexador de Nivel 0 funciona: parsea un vault a SQLite y responde
-búsquedas, backlinks, enlaces, etiquetas, tareas, propiedades y huérfanos, con
-reconstrucción determinista. Un watcher lo mantiene al día según Sync trae cambios, y una
-pasada nocturna recalcula los hashes como red de seguridad. Queda pendiente de la fase la
-skill de Claude Code que documenta cuándo usar cada comando.
+✅ **Fase 2 terminada.** El indexador de Nivel 0 parsea un vault a SQLite y responde búsquedas,
+backlinks, enlaces, etiquetas, tareas, propiedades y huérfanos, con reconstrucción determinista.
+Un watcher lo mantiene al día según Sync trae cambios, una pasada nocturna recalcula los hashes
+como red de seguridad, y una [skill de Claude Code](skills/vault-queries/SKILL.md) le enseña al
+agente qué comando responde cada pregunta.
+
+Medido sobre un vault generado de 10 000 notas, contra los objetivos del propio plan, en
+Ubuntu 26.04 y en Windows 11:
+
+| Criterio | Objetivo | Medido en Linux | En Windows |
+|---|---|---|---|
+| Reconstrucción completa | < 60 s | **4,9 s** | 8,2 s |
+| Actualización incremental | < 5 s | **0,34 s**, o 0,19 s dirigida | 0,76 s / 0,31 s |
+| Consultas al índice | < 100 ms | **0,5 – 35 ms** | 0,8 – 80 ms |
+
+Un criterio de salida de la fase no se puede cerrar desde un portátil: responder «¿qué notas
+enlazan a X?» por Telegram de extremo a extremo depende de la Fase 0 en el servidor.
 
 El plan completo, con fases y criterios de salida, está en
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md); las decisiones
@@ -99,7 +111,7 @@ uv tool install hvk
 |---|---|---|
 | 0 | Base operativa en el VPS: Headless + Claude Code/Telegram + git, sobrevive a reinicios | Pendiente |
 | 1 | Inventario del vault: qué plugins y usos reales hay que cubrir | Pendiente |
-| 2 | Indexador Nivel 0 + CLI `hvk` | **En curso** |
+| 2 | Indexador Nivel 0 + CLI `hvk` | **Hecha** |
 | 3 | Bases, Canvas, plantillas y notas periódicas | Pendiente |
 | 4 | Dataview (DQL) + vistas materializadas | Pendiente |
 | 5 | Notas-orden: el vault como cola de trabajos | Pendiente |
@@ -130,6 +142,7 @@ y escribir como humano.
 ```text
 .plans/     Planes de implementación (fuente de verdad del alcance)
 docs/adr/   Decisiones de arquitectura (el «por qué» del diseño)
+skills/     Skills de Claude Code, para que el agente sepa qué comando usar
 docs/       CHANGELOG.md — bitácora del repositorio
 CLAUDE.md   Guía para el agente que desarrolla y opera este repo
 README.md   Versión en inglés (por defecto) · README.es.md este archivo
