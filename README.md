@@ -75,12 +75,15 @@ reading and writing as a human.
 
 ```text
 .plans/     Implementation plans (source of truth for scope)
+docs/adr/   Architecture decision records (the "why" behind the design)
+docs/       CHANGELOG.md — repository journal
 CLAUDE.md   Guide for the agent developing and operating this repo
 README.md   This file (English) · README.es.md (Spanish)
 ```
 
-Remaining folders (`indexer/`, `cli/`, `runner/`, `deploy/`, `docs/adr/`, `test-vaults/`)
-will appear as their phases are implemented.
+Remaining folders (`src/hvk/`, `tests/`, `test-vaults/`, `runner/`, `deploy/`) will appear as
+their phases are implemented. The tool is written in Python 3.11+ (see
+[ADR-0001](docs/adr/0001-indexer-language.md)).
 
 ## Contributing
 

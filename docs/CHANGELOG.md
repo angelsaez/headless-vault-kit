@@ -4,6 +4,20 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — ADR-0001: the indexer and CLI are written in Python
+
+- `docs/adr/` (new): index, format and lifecycle of the decision records.
+- `docs/adr/0001-indexer-language.md`: Python 3.11+, with `uv` as the documented install path
+  and `ruamel.yaml` + `watchdog` as the only runtime dependencies.
+- Why: measured on Windows 11 and Ubuntu 26.04. PEP 668 blocks `pip install --user` and
+  neither `pipx` nor `uv` ships by default; Node is absent and current LTS releases serve
+  Node 18, below the minimum `node:sqlite` requires. Given the audience — most users do not
+  write code — installing in two commands without `sudo` and editing the source without a
+  build step outweigh the free `js-yaml` parity, whose cost is absorbed with `ruamel.yaml`
+  and a conformance suite.
+- `CLAUDE.md` and both READMEs: the tree moves from `indexer/` + `cli/` to `src/hvk/`, because
+  Python needs a single importable package.
+
 ## 2026-08-21 — Repository docs and git history move to English
 
 - `docs/registro-cambios.md` → `docs/CHANGELOG.md`, translated; existing entries preserved.

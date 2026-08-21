@@ -75,12 +75,15 @@ y escribir como humano.
 
 ```text
 .plans/     Planes de implementación (fuente de verdad del alcance)
+docs/adr/   Decisiones de arquitectura (el «por qué» del diseño)
+docs/       CHANGELOG.md — bitácora del repositorio
 CLAUDE.md   Guía para el agente que desarrolla y opera este repo
 README.md   Versión en inglés (por defecto) · README.es.md este archivo
 ```
 
-El resto de carpetas (`indexer/`, `cli/`, `runner/`, `deploy/`, `docs/adr/`, `test-vaults/`)
-irán apareciendo a medida que sus fases se implementen.
+El resto de carpetas (`src/hvk/`, `tests/`, `test-vaults/`, `runner/`, `deploy/`) irán
+apareciendo a medida que sus fases se implementen. La herramienta se escribe en Python 3.11+
+(ver [ADR-0001](docs/adr/0001-indexer-language.md)).
 
 ## Contribuir
 
