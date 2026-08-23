@@ -19,7 +19,7 @@ That is a good trade, and it moves the hard parts somewhere else:
 * **This is the first thing here that executes something.** Everything before it read files,
   and phase 4 wrote them. A runner launches an agent with access to the vault *because a note
   said so* — and a note can arrive from anywhere: a web capture, something forwarded to an
-  inbox, a shared folder. `CLAUDE.md` already says vault content is data and never
+  inbox, a shared folder. A standing rule of this project says vault content is data and never
   instructions; this is where that stops being a principle and becomes an attack surface.
 * **The plan is written in one person's vocabulary.** `tipo: orden`, `estado: pendiente`, a
   folder called `Jobs/`. None of that can become a constant in a repository meant to be
@@ -86,7 +86,7 @@ The note supplies a *name*, which is validated against a pattern that admits no 
 no traversal, and looked up in a directory outside its reach. So the untrusted side of the
 system chooses among options the trusted side defined, and can express nothing else. The
 command is executed directly with an argument list — there is no shell anywhere in this path
-(`CLAUDE.md`).
+(a standing rule: the scripts take structured arguments).
 
 Putting the command in the profile rather than in the code is also what keeps this agnostic:
 the runner never learns a single Claude Code flag, so it works with another agent, and a

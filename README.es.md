@@ -95,9 +95,9 @@ valor por defecto**, y nada se ejecuta hasta que alguien dice dónde están; y u
 del directorio de trabajos se rechaza, porque así es como un runner se da trabajo a sí mismo
 para siempre. El razonamiento está en la [ADR-0009](docs/adr/0009-order-notes.md).
 
-El plan completo, con fases y criterios de salida, está en
-[`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md); las decisiones
-que sostienen el diseño, en [`docs/adr/`](docs/adr/).
+Por qué el diseño es como es está en [`docs/adr/`](docs/adr/), una decisión por fichero, y qué
+cambió y cuándo en [`docs/CHANGELOG.md`](docs/CHANGELOG.md). Los planes de implementación son
+documentos de trabajo y no se publican.
 
 ## Requisitos
 
@@ -254,12 +254,15 @@ y escribir como humano.
 ## Estructura del repositorio
 
 ```text
-.plans/     Planes de implementación (fuente de verdad del alcance)
-docs/adr/   Decisiones de arquitectura (el «por qué» del diseño)
-skills/     Skills de Claude Code, para que el agente sepa qué comando usar
-docs/       CHANGELOG.md — bitácora del repositorio
-CLAUDE.md   Guía para el agente que desarrolla y opera este repo
-README.md   Versión en inglés (por defecto) · README.es.md este archivo
+src/hvk/      El paquete: indexador, parsers, capa de escritura y el CLI hvk
+tests/        pytest, contra los vaults sintéticos de abajo
+test-vaults/  Vaults sintéticos, con los casos incómodos: Unicode, YAML raro,
+              encabezados duplicados, enlaces ambiguos y rotos
+deploy/       Units de systemd de usuario, cron y el runbook para el servidor
+tools/        Utilidades de desarrollo, no del producto (espejo del vault, testbed)
+skills/       Skills de Claude Code, para que el agente sepa qué comando usar
+docs/adr/     Decisiones de arquitectura: el «por qué» de cada elección de diseño
+docs/         CHANGELOG.md, la bitácora del repositorio
 ```
 
 El resto de carpetas (`src/hvk/`, `tests/`, `test-vaults/`, `runner/`, `deploy/`) irán

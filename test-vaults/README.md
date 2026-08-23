@@ -1,6 +1,6 @@
 # Synthetic test vaults
 
-Everything in this directory exists to be indexed by the test suite. Per `CLAUDE.md`, the real
+Everything in this directory exists to be indexed by the test suite. By a standing rule, the real
 vault is never used during development: correctness is demonstrated here, edge cases included.
 
 ## Rules

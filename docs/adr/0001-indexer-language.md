@@ -8,7 +8,7 @@
 
 The v2 plan (§5, phase 2) leaves the choice open between Python (`watchdog` + `sqlite3`, no
 build step) and TypeScript (`chokidar` + `better-sqlite3`, a better fit for the MCP server in
-phase 7), and `CLAUDE.md` forbids starting the indexer until this ADR is closed.
+phase 7), and the working rules forbid starting the indexer until this ADR is closed.
 
 The choice is not purely technical. This project will be open source, and its audience splits
 into two groups with opposite needs. **Most users do not write code**: for them the only thing
@@ -86,7 +86,7 @@ Specifics:
 - **Runtime dependencies:** `ruamel.yaml` (YAML 1.2) and, once incremental indexing lands,
   `watchdog`. Nothing else. `sqlite3` and FTS5 come from the standard library, verified on all
   three operating systems. The CLI uses `argparse` and formats tables by hand: no `click`, no
-  `typer`, no `rich` (`CLAUDE.md`: no heavy frameworks).
+  `typer`, no `rich` (a standing rule of the project: no heavy frameworks).
 - **Minimum version 3.11**, which is what Debian 12 ships. CI runs against 3.11 and 3.14.
 - **`pytest`** as the only development dependency.
 
@@ -114,10 +114,10 @@ deployment target is Linux, where this is a non-issue, but anyone running `hvk` 
 laptop will feel it. If it ever becomes a real problem, the answer is a long-lived daemon the
 CLI talks to over a socket, not a change of language.
 
-**The directory layout in `CLAUDE.md` changes.** The planned tree separated `indexer/` and
+**The planned directory layout changes.** The original tree separated `indexer/` and
 `cli/` at the root; that was drawn before a language was chosen and is not packageable in
 Python, which needs a single importable package. It becomes `src/hvk/` with internal modules,
-and `CLAUDE.md` and both READMEs are updated in this same commit.
+and both READMEs are updated in this same commit.
 
 **Node stops being a project dependency**, even though it will still be present on the VPS
 because Claude Code runs on it. The two are independent: `hvk` works without an agent, and the

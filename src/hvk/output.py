@@ -1,6 +1,6 @@
 """Rendering results: a readable table for people, JSON for the agent.
 
-CLI output is human-readable by default and switches to JSON with ``--json`` (CLAUDE.md).
+CLI output is human-readable by default and switches to JSON with ``--json``.
 Column widths account for East Asian wide characters, because a vault with CJK filenames
 should not produce a ragged table.
 """

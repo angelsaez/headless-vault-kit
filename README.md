@@ -90,9 +90,9 @@ nothing runs until somebody says where they are; and an output path inside the j
 is refused, because that is how a runner feeds itself work for ever.
 [ADR-0009](docs/adr/0009-order-notes.md) has the reasoning.
 
-The full plan, with phases and exit criteria, lives in
-[`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md) (Spanish); the
-decisions behind the design are in [`docs/adr/`](docs/adr/).
+Why the design is the way it is lives in [`docs/adr/`](docs/adr/), one decision per file,
+and what changed and when is in [`docs/CHANGELOG.md`](docs/CHANGELOG.md). The implementation
+plans themselves are working documents and are not published.
 
 ## Requirements
 
@@ -248,17 +248,19 @@ reading and writing as a human.
 ## Repository layout
 
 ```text
-.plans/     Implementation plans (source of truth for scope)
-docs/adr/   Architecture decision records (the "why" behind the design)
-skills/     Claude Code skills, so an agent knows which command to reach for
-docs/       CHANGELOG.md — repository journal
-CLAUDE.md   Guide for the agent developing and operating this repo
-README.md   This file (English) · README.es.md (Spanish)
+src/hvk/      The package: indexer, parsers, the write layer, and the hvk CLI
+tests/        pytest, run against the synthetic vaults below
+test-vaults/  Synthetic vaults, including the awkward cases: Unicode, odd YAML,
+              duplicate headings, ambiguous and broken links
+deploy/       systemd user units, cron and the runbook for putting it on a server
+tools/        Development utilities, not part of the product (vault mirror, testbed)
+skills/       Claude Code skills, so an agent knows which command to reach for
+docs/adr/     Architecture decision records — the "why" behind every design choice
+docs/         CHANGELOG.md, the repository journal
 ```
 
-Remaining folders (`src/hvk/`, `tests/`, `test-vaults/`, `runner/`, `deploy/`) will appear as
-their phases are implemented. The tool is written in Python 3.11+ (see
-[ADR-0001](docs/adr/0001-indexer-language.md)).
+Written in Python 3.11+ ([ADR-0001](docs/adr/0001-indexer-language.md)), with `ruamel.yaml`
+and `watchdog` as its only runtime dependencies.
 
 ## Contributing
 
