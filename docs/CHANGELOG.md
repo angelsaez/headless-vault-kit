@@ -4,6 +4,28 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-23 — Shipping the repository so a stranger's first command works
+
+- **Every `.sh` was committed at mode 100644**, so a clone on Linux produced files nobody can
+  run and `./deploy/preflight.sh` — the first line of the runbook — answered `Permission
+  denied`. Found by cloning inside a container and running it, not by reading modes. The cause
+  is structural: development happens on Windows, where the executable bit does not exist, so a
+  new script arrives non-executable unless somebody remembers. CI now refuses one that is not
+  `100755` and prints the command that fixes it.
+- `README.es.md` still advertised `hvk dv "..."`, a command that has never existed. The English
+  side lost it earlier; the Spanish side had kept it.
+- `.gitignore` still branched on "if ADR-001 chooses TypeScript", carrying `node_modules/` and
+  `*.tsbuildinfo` for a decision settled months ago in favour of Python. Gone, along with the
+  misnumbered ADR reference; `.pytest_cache/`, `build/` and `dist/` added, since the last two
+  are what a packaging check leaves behind.
+- `.gitignore` and `.gitattributes` were the last two published files still commented in
+  Spanish, which the language convention in `CLAUDE.md` puts in English. The `eol=lf` rule now
+  also says *why* it exists: a script edited on Windows reaching the server with CRLF fails at
+  its shebang, with an error that names nothing useful.
+- Also checked and clean, so it is worth recording: no personal paths or credentials in any
+  versioned file, every relative link in every Markdown file resolves, and the command tables
+  in the two READMEs list the same fourteen commands.
+
 ## 2026-08-23 — A README somebody else can follow, and CI
 
 - The `## Status` section still opened with "Phase 2 is done, phase 3 is under way" while four
