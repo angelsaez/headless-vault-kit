@@ -3,8 +3,8 @@
 > Sistema agéntico 24/7 sobre un vault de Obsidian en VPS, sin interfaz gráfica, replicando los **datos** que Obsidian deriva al abrirse — no su runtime.
 
 **Estado del documento:** plan de implementación v2, sustituye operativamente al v1 ("Vault Gateway Headless")
-**Fecha:** 2026-08-14 · revisado 2026-08-21 con los datos del inventario · 2026-08-23 con la Fase 4 hecha
-**Versión:** 2.2
+**Fecha:** 2026-08-14 · revisado 2026-08-21 con los datos del inventario · 2026-08-23 con las Fases 4 y 5 hechas
+**Versión:** 2.3
 **Hardware objetivo:** VPS Linux, 2 núcleos, 12 GB RAM
 **Naturaleza:** el v1 se conserva como mapa de máximos; este documento define lo que se construye de verdad y en qué orden
 
@@ -308,7 +308,24 @@ Anti-bucle (las reglas de idempotencia del v1, versión mínima): el runner solo
 
 A esto se suma el **scheduler trivial**: cron con `claude -p` para tareas periódicas (resumen matinal a Telegram, procesado del inbox, regeneración de vistas). N8N puede seguir siendo el disparador externo (webhooks de terceros → crea una nota-orden), sin acoplarse a nada más.
 
-**Criterios de salida:** una orden creada desde el móvil se ejecuta exactamente una vez; un fallo deja `estado: fallido` con causa legible; ningún cambio del agente re-dispara órdenes; el estado del trabajo es visible en el propio vault desde cualquier dispositivo.
+✅ **Hecha (2026-08-23)** como `hvk jobs` (ADR-0009), con dos desviaciones del plan que la ADR
+justifica: es un subcomando del CLI y no un script en `runner/`, para no duplicar la
+localización del vault, la capa de escritura ni los tests; y **ni la carpeta de órdenes ni la
+de perfiles tienen valor por defecto** — `Jobs/` era vocabulario de un vault concreto, y un
+runner que arranca porque una carpeta se llamaba de cierta forma es justo el fallo a evitar.
+Además, todo trabajo **debe** nombrar un perfil de permisos: eso adelanta la parte barata de la
+Fase 6, porque ejecutar un agente sin límites declarados no puede ser el comportamiento por
+defecto ni durante una fase.
+
+**Criterios de salida:**
+
+| Criterio | Estado |
+|---|---|
+| Se ejecuta exactamente una vez | ✅ El reclamo es una escritura que declara el hash leído; dos runners en carrera, o uno reiniciado, pierden la carrera en vez de repetir |
+| Un fallo deja `estado: fallido` con causa legible | ✅ En el frontmatter y en una línea al pie de la propia nota |
+| Ningún cambio del agente re-dispara órdenes | ✅ Solo se vigila la carpeta declarada, y una salida dentro de ella se rechaza |
+| El estado es visible en el propio vault | ✅ Es el frontmatter de la nota |
+| Creada **desde el móvil**, y aviso por Telegram | Pendiente de la Fase 0: son transporte y credenciales, no lógica |
 
 ### Fase 6 — Harness de seguridad y operación (1 semana)
 
@@ -395,13 +412,21 @@ se desarrollaron en local contra vaults sintéticos, porque no necesitan servido
 | 3 · Nivel 1 | Bases ✅ · Canvas pospuesto (sin usuarios) · plantillas bloqueadas por la decisión 7 |
 | 0 · Base operativa | ✅ **La mitad que se construye**: `deploy/` con units de usuario, cron y runbook (ADR-0006), verificado en contenedor Debian 12 incluida la prueba de reinicio. Falta **ejecutarlo en el VPS**, que es trabajo de Ángel |
 | 4 · Vistas materializadas | ✅ **Hecha** (2026-08-23), sobre la capa de escritura de ADR-0007. DQL sigue pospuesto |
-| 5–7 | Sin empezar |
+| 5 · Notas-orden | ✅ **Hecha** (2026-08-23). Falta solo lo que depende de Sync y Telegram |
+| 6–7 | Sin empezar |
 
-**Lo siguiente es la Fase 5**, las notas-orden. La capa de escritura que las fases 4 y 5
-comparten ya está construida y auditada (ADR-0007), así que la Fase 5 empieza con la mitad
-difícil hecha: lo que le falta es la transición atómica de `estado:` dentro del frontmatter,
-que se hará editando esas líneas como texto —nunca reserializando el YAML, por lo mismo que
-la ADR-0007 explica— y el runner que la usa.
+**Lo siguiente es la Fase 6** (permisos reales, healthcheck, backup ensayado) o **ejecutar la
+Fase 0 en el VPS**, y la segunda pesa más de lo que este plan suponía: hay ya cinco criterios
+de salida abiertos en las fases 2, 4 y 5 que no son código, sino Sync y Telegram. Todo lo
+demás de esas fases está construido y verificado.
+
+Queda además **enchufar en `deploy/` los dos temporizadores** que hacen que lo construido corra
+solo: `hvk views --apply` y `hvk jobs --run`. Ambos están documentados como línea de cron, pero
+no tocan aún los scripts de despliegue, que se verifican en el contenedor.
+
+Y una deuda que la ADR-0009 nombra y no resuelve: el runner comprueba que un perfil de permisos
+existe y está bien formado, no que **restrinja** algo. Hacer que los permisos sean reales es
+trabajo de la Fase 6.
 
 La ejecución de la Fase 0 en el VPS sigue pendiente y no bloquea nada de lo anterior: cierra el
 último criterio de salida de la Fase 2 y hace que todo lo construido corra de verdad, pero se

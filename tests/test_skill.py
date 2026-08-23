@@ -19,8 +19,11 @@ from conftest import VAULTS
 SKILL = Path(__file__).resolve().parent.parent / "skills" / "vault-queries" / "SKILL.md"
 BLOCK_RE = re.compile(r"```bash\n(.*?)```", re.DOTALL)
 
-# Long-running or destructive by nature; documented in prose, never in an example block.
-NOT_RUNNABLE = {"watch"}
+# Long-running or destructive by nature, or needing directories no synthetic vault has;
+# documented in prose, never in a runnable example block.
+NOT_RUNNABLE = {"watch", "jobs"}
+# ...and jobs, whose two directories have no defaults on purpose (ADR-0009), so there is
+# no invocation that would run anywhere.
 
 # Which synthetic vault an example needs. Everything answers against the realistic vault
 # except the .base examples, which need a vault that has base files in it.

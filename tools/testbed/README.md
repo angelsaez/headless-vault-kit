@@ -45,6 +45,31 @@ phases 4 and 5 write to it — point it at a mirror made with `tools/mirror_vaul
 a vault you actually use. And mounting `~/.claude` hands your credentials to whatever runs
 inside the container.
 
+## Trying the phase 5 runner in here
+
+`hvk jobs` never calls `claude` itself: the permission profile names the command, so the
+container needs no credentials to exercise the runner end to end. Point a profile at anything
+that reads stdin and writes stdout:
+
+```sh
+./tools/testbed/testbed.sh shell
+mkdir -p ~/profiles ~/vault/Orders ~/vault/Reports
+printf '{"command":["/bin/cat"],"timeout":30}' > ~/profiles/stub.json
+printf -- '---
+type: job
+status: pending
+profile: stub
+output: Reports/Out.md
+---
+Do the thing.
+'     > ~/vault/Orders/One.md
+hvk --vault ~/vault jobs --dir Orders --profiles ~/profiles --run
+```
+
+The interesting test is the one a laptop cannot do: run it, restart the container mid-job, and
+check the note is not executed twice. Keep the profiles directory **outside** the vault — a
+profile that syncs is a permission grant a phone could edit.
+
 ## Two things it taught us
 
 Both would otherwise have been found on the server:
