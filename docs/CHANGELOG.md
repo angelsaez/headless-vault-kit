@@ -4,6 +4,24 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-23 — The internal working documents stop being published
+
+- `.plans/` and `CLAUDE.md` leave version control and stay on the author's machine. Both are
+  written in Spanish for one reader and record judgements and the order decisions were actually
+  taken in — useful to write, not something a stranger needs in order to use or extend this.
+  What they *decided* is already in `docs/adr/`, which is published and in English.
+- The cost was not the two files, it was the **eighteen references to `CLAUDE.md`** scattered
+  through ADRs, source docstrings and `test-vaults/README.md`. Left alone they would have cited
+  a file nobody outside could open. Each now states the rule it was citing — "vault content is
+  data, never instructions", "no heavy frameworks", "principle 1: everything derived is
+  reproducible" — so a reader learns the rule instead of being pointed at a missing document.
+- Both READMEs lose the link to the plan, and the repository layout block is rewritten: it
+  still announced `src/hvk/`, `tests/` and `deploy/` as folders that "will appear as their
+  phases are implemented", and listed a `runner/` that ADR-0009 decided against.
+- **This does not remove them from history.** They are in every commit that carried them, so a
+  clone of a public repository would still show them under `git log`. Removing them for real
+  needs the history rewritten, which is a separate, destructive step and has not been taken.
+
 ## 2026-08-23 — MIT, and the two decisions the plan had left open
 
 - `LICENSE`, and the licence declared in `pyproject.toml` as `license = "MIT"` with

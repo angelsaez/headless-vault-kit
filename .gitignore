@@ -32,3 +32,9 @@ test-vaults/**/.trash/
 .DS_Store
 Thumbs.db
 *.swp
+
+# Internal working documents: the implementation plans and the agent's guide. They stay on
+# the author's machine -- they are written in Spanish, for one reader, and record judgements
+# and the order decisions were actually taken in. What they decided lives in docs/adr/.
+/.plans/
+/CLAUDE.md

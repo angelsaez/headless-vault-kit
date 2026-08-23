@@ -36,7 +36,7 @@ from a checkbox line. It is constrained on purpose:
 - **A pure function.** Text in, `(clean_text, fields)` out. No I/O, no state, no knowledge of
   SQLite, no imports from the rest of `hvk`. That is precisely the contract an out-of-process
   adapter will have, so moving it behind the interface later is a relocation, not a rewrite.
-- **Syntax only, never plugin code** (CLAUDE.md, principle 2). Nothing is executed and nothing
+- **Syntax only, never plugin code** (principle 2 of the project). Nothing is executed and nothing
   is inferred; a field exists only if it is written in the file.
 - **A closed list of recognised fields:** due, scheduled, start, done, created and cancelled
   dates; priority; recurrence rule. Anything else is left in the task text untouched.

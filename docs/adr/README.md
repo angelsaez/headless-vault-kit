@@ -2,7 +2,7 @@
 
 One decision per file, numbered, one page long. Filename: `NNNN-title-in-kebab-case.md`.
 
-Working rule (see `CLAUDE.md`): **no relevant decision is made silently**. When implementation
+Working rule: **no relevant decision is made silently**. When implementation
 runs into a fork that constrains the rest of the system, the code stops and the ADR is written
 first.
 

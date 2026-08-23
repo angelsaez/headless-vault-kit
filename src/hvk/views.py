@@ -220,7 +220,7 @@ def _render(conn: sqlite3.Connection, vault: write.Vault, note: str, indexed: bo
             declaration: Declaration) -> tuple[str, int, str]:
     """Run one declaration's base view and return its Markdown, row count and any warning."""
     name = declaration.base
-    # The base is named by a note, and a note is untrusted input (CLAUDE.md), so the path is
+    # The base is named by a note, and a note is untrusted input, so the path is
     # resolved and checked to be inside the vault before anything is opened.
     candidate = vault.resolve(name)
     if not candidate.is_file() and candidate.suffix != ".base":

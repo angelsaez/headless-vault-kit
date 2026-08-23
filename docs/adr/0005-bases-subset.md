@@ -21,7 +21,7 @@ Two things make the scope decision unavoidable rather than a matter of taste:
    `escapeHTML()` exist to render things in a view. On a server producing a Markdown table
    there is nothing for them to render.
 2. **One function breaks the project's first principle.** `random()` would make the same base
-   over the same vault produce different output on every run, and principle 1 of `CLAUDE.md`
+   over the same vault produce different output on every run, and the first principle of this project
    is that everything derived is reproducible.
 
 ## Alternatives
