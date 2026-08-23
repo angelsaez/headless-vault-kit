@@ -73,10 +73,13 @@ jobs:
       # is "Permission denied" on the first line of the runbook, for a stranger, on Linux.
       - name: every script is executable
         run: |
-          not_executable=$(git ls-files --stage '*.sh' | awk '$1 != "100755" {print $4}')
+          # Checked on disk rather than through git, because what matters is the file a
+          # stranger ends up with after cloning, and because a check that depends on the
+          # runner's git state fails for reasons that have nothing to do with the bit.
+          not_executable=$(find . -path ./.git -prune -o -name '*.sh' -type f ! -perm -u+x -print)
           if [ -n "$not_executable" ]; then
-            echo "these need: git update-index --chmod=+x <file>"
+            echo "not executable after checkout; fix with: git update-index --chmod=+x <file>"
             echo "$not_executable"
             exit 1
           fi
-          echo "all shell scripts are mode 100755"
+          echo "every .sh is executable after a clone"
