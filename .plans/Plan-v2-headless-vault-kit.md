@@ -382,14 +382,20 @@ se desarrollaron en local contra vaults sintéticos, porque no necesitan servido
 | 1 · Inventario | ✅ Hecha |
 | 2 · Indexador Nivel 0 + CLI | ✅ Hecha salvo la demo por Telegram, que depende de la Fase 0 |
 | 3 · Nivel 1 | Bases ✅ · Canvas pospuesto (sin usuarios) · plantillas bloqueadas por la decisión 7 |
-| 4 · Vistas materializadas | Pendiente. DQL degradado a opcional |
-| 0 · Base operativa en el VPS | **Lo siguiente.** Es lo único que impide que todo lo construido funcione de verdad |
+| 0 · Base operativa | ✅ **La mitad que se construye**: `deploy/` con units de usuario, cron y runbook (ADR-0006), verificado en contenedor Debian 12 incluida la prueba de reinicio. Falta **ejecutarlo en el VPS**, que es trabajo de Ángel |
+| 4 · Vistas materializadas | **Lo siguiente.** DQL degradado a opcional |
 | 5–7 | Sin empezar |
 
-**Lo siguiente es la Fase 0**, y no por orden numérico: cierra el último criterio de salida de
-la Fase 2, y todo lo que ya está construido tiene usuarios reales en el vault pero no corre en
-ningún sitio. Las vistas materializadas de la Fase 4 dependen además de que exista el cron del
-servidor.
+**Lo siguiente es la Fase 4**, y concretamente su mitad valiosa: las vistas materializadas
+sobre Bases. Antes que ellas hay que construir la **capa de escritura al vault**, que hoy no
+existe —todo lo escrito hasta ahora solo lee— y que comparten las fases 4 y 5: escritura
+atómica, papelera en vez de borrado, preservar frontmatter y finales de línea, y jamás salir
+del vault. Es el primer código del proyecto capaz de destruir algo, así que va con su propia
+ADR y se prueba contra un espejo, nunca contra el vault real.
+
+La ejecución de la Fase 0 en el VPS sigue pendiente y no bloquea nada de lo anterior: cierra el
+último criterio de salida de la Fase 2 y hace que todo lo construido corra de verdad, pero se
+puede seguir desarrollando mientras tanto.
 
 ### Primer ciclo recomendado, tal como se escribió (referencia histórica)
 
