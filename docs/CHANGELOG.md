@@ -102,6 +102,15 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
 - Why: the repository is meant to go public. A reader who has to already know what a Nexus is
   cannot tell what this project does from its first paragraph.
 
+## 2026-08-21 — The testbed's reboot command explains an empty container
+
+- `tools/testbed/testbed.sh reboot` printed "0 loaded units listed" when nothing was
+  installed, which reads as the deployment having failed to come back. It had not: the
+  selftest uninstalls everything as its last act, so there was nothing to return. It now says
+  so and points at how to set up a real reboot test.
+- Also switched the output from a unit table to `systemctl --user is-active`, which answers
+  the actual question in three words instead of a paragraph.
+
 ## 2026-08-21 — A throwaway container to test the deployment in
 
 - `tools/testbed/`: a disposable Debian 12 box with systemd, so `deploy/selftest.sh` can
