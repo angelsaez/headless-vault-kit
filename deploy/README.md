@@ -207,6 +207,8 @@ whole system in one question.
 | `Unit ... not found` | You left out `--user` |
 | `Failed to load environment files` | `~/.config/hvk/deploy.env` is missing. The units read that exact path |
 | Service dies and restarts forever | `journalctl --user -u hvk-watch -n 50`. After five failures in a minute it stops trying and stays failed, on purpose |
+| `status=127` and `not found`, naming a path that looks right | A path in `deploy.env` is not literal. systemd reads that file itself and expands nothing, so `$HOME/vault` reaches the service as those eleven characters. `preflight.sh` checks for this |
+| `Start request repeated too quickly` after fixing the cause | The failure counter is still full: `systemctl reset-failed hvk-watch` (add `--user` if user-scope), then start it |
 | Everything stops when you log out | Lingering is off — step 5 |
 | The bot ignores you | `tmux attach -t hvk-agent` and check the session is alive and paired |
 | `ob` fails on start | It needs `ob login` first; credentials are per-user and interactive |
