@@ -3,7 +3,7 @@
 # headless-vault-kit
 
 > Devuelve la funcionalidad propia de Obsidian a un vault que vive en un servidor headless,
-> donde la app nunca se abre: índice SQLite, backlinks, consultas Dataview y Bases, y
+> donde la app nunca se abre: índice SQLite, backlinks, consultas de Bases, y
 > automatización agéntica 24/7. El CLI se instala como **`hvk`**.
 
 ## El problema
@@ -25,8 +25,10 @@ reconstruible desde los propios archivos. Este proyecto lo reconstruye en el ser
   actualización incremental al ritmo del sync.
 - **CLI `hvk`**: búsquedas, backlinks, tareas y propiedades en milisegundos, para
   que el agente consulte sin gastar tokens leyendo archivos.
-- **Consultas sin app**: Bases (`.base`) y un subconjunto de Dataview (DQL) ejecutados
-  contra el índice, con vistas materializadas a Markdown visibles desde el móvil.
+- **Consultas sin app**: Bases (`.base`) ejecutado contra el índice, más vistas
+  materializadas escritas como Markdown dentro de tus propias notas — visibles desde
+  cualquier dispositivo. El subconjunto de Dataview (DQL) estaba planificado y queda
+  pospuesto; mira la hoja de ruta.
 - **Vault como cola**: notas-orden con estado en frontmatter; un runner las ejecuta con
   Claude Code y el resultado se sincroniza de vuelta a todos tus dispositivos.
 - **Harness**: permisos, hooks y auditoría con los medios nativos de Claude Code + git.
@@ -39,7 +41,11 @@ el suyo. Nunca se ejecuta código de plugins ni se reproduce la interfaz.
 
 ## Estado
 
-✅ **Fase 2 terminada.** El indexador de Nivel 0 parsea un vault a SQLite y responde búsquedas,
+**Fases 1, 2, 4 y 5 hechas, más la mitad de Bases de la fase 3.** Lo que no está hecho es la
+fase 0 —ejecutarlo en un servidor de verdad— y hasta que eso ocurra nadie, ni su propio autor,
+lo ha usado en producción un solo día. Lee la hoja de ruta antes de confiarle nada.
+
+✅ **Fase 2.** El indexador de Nivel 0 parsea un vault a SQLite y responde búsquedas,
 backlinks, enlaces, etiquetas, tareas, propiedades y huérfanos, con reconstrucción determinista.
 Un watcher lo mantiene al día según Sync trae cambios, una pasada nocturna recalcula los hashes
 como red de seguridad, y una [skill de Claude Code](skills/vault-queries/SKILL.md) le enseña al
@@ -93,20 +99,88 @@ El plan completo, con fases y criterios de salida, está en
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md); las decisiones
 que sostienen el diseño, en [`docs/adr/`](docs/adr/).
 
-## Probarlo
+## Requisitos
 
-Todavía no está publicado, así que se ejecuta desde un clon. Python 3.11 o superior, y nada más:
+Hay dos cosas distintas que puedes querer, y piden cantidades muy distintas.
+
+**Para usar el comando `hvk`** — indexar un vault, hacerle preguntas, materializar vistas,
+ejecutar trabajos:
+
+| | |
+|---|---|
+| Python | **3.11 o superior**, y nada más |
+| Sistema operativo | Linux, macOS o Windows. Probado en Linux y en Windows |
+| Obsidian | **No hace falta.** hvk lee los archivos; la app no tiene que estar instalada ni abierta |
+| Un vault | Cualquier carpeta con Markdown. El directorio `.obsidian/` solo se necesita si quieres que hvk encuentre el vault por sí solo |
+
+**Para levantar el sistema 24/7 en un servidor** — sync, un agente en Telegram, trabajos
+programados— además necesitas Linux con systemd, Node.js 22+, Bun, tmux, git y una suscripción
+a Obsidian Sync. Eso es la fase 0, con [su propio runbook](deploy/README.md) y su propia
+comprobación previa. No empieces por ahí.
+
+## Instalación
+
+Todavía no está en PyPI, así que las dos vías instalan desde este repositorio. Elige una.
+
+**A. Como comando, con [uv](https://docs.astral.sh/uv/)** — recomendada si solo quieres
+usarlo. `hvk` queda en tu `PATH`, en su propio entorno aislado:
+
+```bash
+uv tool install --from git+https://github.com/angelsaez/headless-vault-kit headless-vault-kit
+```
+
+`uv tool upgrade headless-vault-kit` lo actualiza después; `uv tool uninstall headless-vault-kit`
+lo quita del todo.
+
+**B. Desde un clon** — si quieres leer el código, cambiarlo o pasar los tests:
 
 ```bash
 git clone https://github.com/angelsaez/headless-vault-kit
 cd headless-vault-kit
-uv venv && uv pip install -e ".[dev]"        # o python -m venv .venv && .venv/bin/pip install -e ".[dev]"
-
-.venv/bin/hvk --vault /ruta/al/vault scan
-.venv/bin/hvk --vault /ruta/al/vault backlinks "Una nota"
+python -m venv .venv
 ```
 
-Dentro de un vault se puede omitir `--vault`: hvk sube por el árbol hasta encontrar `.obsidian/`.
+Y después, en Linux o macOS:
+
+```bash
+.venv/bin/pip install -e ".[dev]"
+.venv/bin/hvk --version
+```
+
+En Windows (PowerShell):
+
+```powershell
+.venv\Scripts\pip install -e ".[dev]"
+.venv\Scripts\hvk --version
+```
+
+En Git Bash usa barras normales: `.venv/Scripts/pip`, `.venv/Scripts/hvk`.
+
+El `[dev]` añade pytest y nada más. Puedes omitirlo si no vas a pasar los tests.
+
+## Comprobar que funciona
+
+Apúntalo a un vault —uno real vale, hvk solo lee, y su índice se escribe fuera del vault
+([ADR-0002](docs/adr/0002-index-location.md))—:
+
+```bash
+hvk --vault /ruta/al/vault scan
+hvk --vault /ruta/al/vault info
+hvk --vault /ruta/al/vault backlinks "Una nota"
+```
+
+`scan` dice cuántos archivos indexó y cuánto tardó; con unos cientos de notas eso es bastante
+menos de un segundo. Si `backlinks` nombra las notas que esperabas, todo lo de más abajo
+funciona también.
+
+Dos cosas que conviene saber desde el principio:
+
+- **Ejecutándolo dentro de un vault puedes omitir `--vault`.** hvk sube por el árbol desde el
+  directorio actual hasta encontrar una carpeta `.obsidian/`.
+- **`hvk rebuild` siempre es seguro.** El índice se deriva de tus archivos y de nada más, así
+  que borrarlo cuesta tiempo y nada más. Nada de `scan`, `search`, `backlinks`, `links`,
+  `tags`, `tasks`, `props`, `orphans`, `base` o `info` escribe jamás en tu vault; solo lo hacen
+  `views --apply` y `jobs --run`, y ambos lo dicen en su nombre.
 
 | Comando | Qué responde |
 |---|---|
@@ -141,12 +215,9 @@ no ha cambiado nada. Falta enchufarla en `deploy/`.
 
 La unidad de systemd del watcher es trabajo de la Fase 0 y vivirá en `deploy/`.
 
-Cuando la herramienta se publique, instalarla serán dos comandos y ningún `sudo`:
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-uv tool install hvk
-```
+Cuando esto llegue a PyPI, instalarlo será `uv tool install hvk` y nada más. Eso pertenece a la
+Fase 7, que el plan mantiene detrás de semanas de estabilidad real y no de una sensación de
+estar listo.
 
 ## Hoja de ruta
 
@@ -197,9 +268,26 @@ apareciendo a medida que sus fases se implementen. La herramienta se escribe en 
 
 ## Contribuir
 
-Todavía no: el proyecto está en planificación y las primeras fases son personales. La Fase 7
-abrirá la interfaz de parsers y la documentación para que la comunidad aporte adaptadores de
-plugins. Las opiniones sobre el plan son bienvenidas desde ya.
+Todavía no: las primeras fases son personales y el sistema no ha corrido en un servidor ni un
+día. La Fase 7 abrirá la interfaz de parsers y la documentación para que la comunidad aporte
+adaptadores de plugins. Las opiniones sobre el plan son bienvenidas desde ya.
+
+Si vienes a leer el código, los tests son el mapa:
+
+```bash
+.venv/bin/pytest              # la suite, unos segundos
+.venv/bin/pytest -m slow      # los criterios numéricos del plan, sobre un vault generado de 10 000 notas
+```
+
+Cada push y cada pull request pasan la suite en Python 3.11 y 3.13, instalan el paquete
+construido y comprueban que responde contra un vault que no ha visto nunca, y parsean todos los
+scripts de shell ([el workflow](.github/workflows/ci.yml)). Solo en Linux, por decisión del
+propio plan: el servidor es Linux, y una matriz de tres sistemas operativos fue uno de los
+costes que la v2 eliminó.
+
+El despliegue no se ejercita ahí: necesita una instancia de systemd de usuario y una máquina
+desechable. Vive en [`tools/testbed/`](tools/testbed/), un contenedor Debian de usar y tirar, y
+ahí es donde hay que pasar `deploy/selftest.sh` antes de fiarse de un cambio en `deploy/`.
 
 ## Nombre y comando
 
