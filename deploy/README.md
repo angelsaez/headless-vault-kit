@@ -11,15 +11,23 @@ report that these services do not exist.** That is not a broken install.
 
 ## What gets installed
 
-| Piece | Where | What it does |
-|---|---|---|
-| `obsidian-headless.service` | `~/.config/systemd/user/` | `ob sync --continuous`, keeping the vault in step with Obsidian Sync |
-| `hvk-watch.service` | same | Indexes changes as they land |
-| `hvk-agent.service` | same | A tmux session running Claude Code with the Telegram channel |
-| `vault-autocommit.sh` | `~/.local/share/hvk/deploy-bin/` | A git checkpoint of the vault, every 30 minutes |
-| cron block | your crontab | The auto-commit, `hvk verify` nightly at 04:17, the materialised views, and the order-note runner |
-| `hvk-schedule.sh` | `~/.local/share/hvk/deploy-bin/` | Runs the views and the runner from cron, quiet unless something failed |
-| `.gitignore` | inside the vault | Only if it has none of its own |
+Five parts, and you can install any subset of them with `--only` — see
+[Installing onto a machine that already runs some of this](#installing-onto-a-machine-that-already-runs-some-of-this),
+which is the normal case rather than the exception.
+
+| Part | Piece | Where | What it does |
+|---|---|---|---|
+| `sync` | `obsidian-headless.service` | `~/.config/systemd/user/` | `ob sync --continuous`, keeping the vault in step with Obsidian Sync |
+| `watch` | `hvk-watch.service` | same | Indexes changes as they land |
+| `agent` | `hvk-agent.service` | same | A tmux session running Claude Code with the Telegram channel |
+| `git` | `vault-autocommit.sh` | `~/.local/share/hvk/deploy-bin/` | A git checkpoint of the vault, every 30 minutes |
+| `git` | `.gitignore` | inside the vault | Only if it has none of its own |
+| `schedules` | `hvk-schedule.sh` | `~/.local/share/hvk/deploy-bin/` | Runs the views and the runner from cron, quiet unless something failed |
+| `git` + `schedules` | cron block | your crontab | The auto-commit, `hvk verify` nightly at 04:17, the materialised views, and the order-note runner |
+
+With `--system` the three units go to `/etc/systemd/system` instead, and are managed with
+`sudo systemctl`. Everything else is unchanged: the scripts, the crontab and the vault's
+`.gitignore` are per-user either way.
 
 ## Prerequisites, which are not installed for you
 
@@ -117,6 +125,8 @@ Faster and more visible now than as the first thing a watcher does at boot.
 ./deploy/install.sh
 ```
 
+### Installing onto a machine that already runs some of this
+
 **If the machine already runs some of this**, install only the missing parts, or you will end
 up with two syncers on one vault and two agents on one bot. The installer will not notice: its
 "refuse to overwrite a unit that differs" check compares paths, and a system unit and a user
@@ -207,7 +217,10 @@ Removing it all:
 ./deploy/uninstall.sh
 ```
 
-Takes out exactly what was installed. The vault, its git history, the index and every runtime
+Takes out exactly what was installed, from **both scopes** — it looks in
+`~/.config/systemd/user/` and in `/etc/systemd/system/` without being told which you used,
+because whoever uninstalls has usually forgotten, and a unit left behind keeps starting at
+every boot. The vault, its git history, the index and every runtime
 on the machine are left alone.
 
 ## Verifying the machinery itself
