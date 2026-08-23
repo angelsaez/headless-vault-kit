@@ -15,7 +15,7 @@ report that these services do not exist.** That is not a broken install.
 |---|---|---|
 | `obsidian-headless.service` | `~/.config/systemd/user/` | `ob sync --continuous`, keeping the vault in step with Obsidian Sync |
 | `hvk-watch.service` | same | Indexes changes as they land |
-| `nexus-agent.service` | same | A tmux session running Claude Code with the Telegram channel |
+| `hvk-agent.service` | same | A tmux session running Claude Code with the Telegram channel |
 | `vault-autocommit.sh` | `~/.local/share/hvk/deploy-bin/` | A git checkpoint of the vault, every 30 minutes |
 | cron block | your crontab | The auto-commit, and `hvk verify` nightly at 04:17 |
 | `.gitignore` | inside the vault | Only if it has none of its own |
@@ -94,14 +94,14 @@ in a way that looks like a systemd problem and is not.
 ### 6. Start, and pair Telegram
 
 ```sh
-systemctl --user start obsidian-headless hvk-watch nexus-agent
+systemctl --user start obsidian-headless hvk-watch hvk-agent
 systemctl --user status hvk-watch
 ```
 
 Then the interactive half, which cannot be scripted and should not be:
 
 1. Create a bot: message [@BotFather](https://t.me/BotFather), `/newbot`, keep the token.
-2. Attach to the session: `tmux attach -t nexus`
+2. Attach to the session: `tmux attach -t hvk-agent`
 3. `/plugin install telegram@claude-plugins-official`
 4. `/telegram:configure <token>` — writes it to `~/.claude/channels/telegram/.env`
 5. Message your bot. It answers with a six-character code.
@@ -122,7 +122,7 @@ sudo reboot
 Then, without touching anything:
 
 ```sh
-systemctl --user status obsidian-headless hvk-watch nexus-agent
+systemctl --user status obsidian-headless hvk-watch hvk-agent
 hvk --vault ~/vault info          # last_scan should be recent
 git -C ~/vault log --oneline -5   # checkpoints from today
 ```
@@ -138,7 +138,7 @@ whole system in one question.
 | `Failed to load environment files` | `~/.config/hvk/deploy.env` is missing. The units read that exact path |
 | Service dies and restarts forever | `journalctl --user -u hvk-watch -n 50`. After five failures in a minute it stops trying and stays failed, on purpose |
 | Everything stops when you log out | Lingering is off — step 5 |
-| The bot ignores you | `tmux attach -t nexus` and check the session is alive and paired |
+| The bot ignores you | `tmux attach -t hvk-agent` and check the session is alive and paired |
 | `ob` fails on start | It needs `ob login` first; credentials are per-user and interactive |
 
 Removing it all:

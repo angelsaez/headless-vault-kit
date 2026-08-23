@@ -35,7 +35,8 @@ El v2 parte de dos observaciones que el v1 no explotaba:
 
 ## 2. Objetivo y criterios de éxito
 
-Disponer de un Nexus operativo 24/7 en el VPS, accesible por Telegram, donde el agente:
+Disponer de un vault de Obsidian operativo 24/7 en el VPS —sincronizado, indexado y accesible
+por Telegram— donde el agente:
 
 - trabaja sobre el vault sincronizado con Obsidian Sync (via Obsidian Headless),
 - consulta backlinks, tags, tareas, propiedades y texto **sin gastar tokens en leer archivos uno a uno** (el papel que cumplía Obsidian CLI con la app abierta),
@@ -121,7 +122,7 @@ Componentes y su coste real:
 
 | Componente | Qué es | Persistencia |
 |---|---|---|
-| Obsidian Headless | Sync oficial, servicio systemd (lección Nexus 5, Fase 6b) | Config propia |
+| Obsidian Headless | Sync oficial, servicio systemd (Fase 0) | Config propia |
 | Watcher + Indexador | Un proceso pequeño: escaneo inicial + eventos de archivo | SQLite, **fuera del vault** y reconstruible |
 | CLI `hvk` | Consultas: search, backlinks, links, tags, tasks, props, orphans, base | Ninguna |
 | Claude Code | Harness: permisos, hooks, skills, Telegram, MCP | `~/.claude` |
@@ -139,10 +140,10 @@ watcher se dispare por ellos.
 
 ### Fase 0 — Base operativa (medio día)
 
-El setup de la comunidad, tal cual las lecciones del Nexus 5, sin inventar nada:
+El setup que ya funciona para otros, sin inventar nada:
 
 - Obsidian Headless como servicio systemd (`ob sync --continuous`), con carpetas privadas excluidas **antes** del primer sync (`_PRIVADA`, `_SCRIPTS`, y las mismas exclusiones en todos los clientes).
-- Claude Code en tmux con el plugin de Telegram, levantado por systemd (`nexus-arranque.service`) con `EnvironmentFile` para tokens.
+- Claude Code en tmux con el plugin de Telegram, levantado por systemd (`hvk-agent.service`) con `EnvironmentFile` para tokens.
 - Firewall: solo SSH. Nada expuesto a Internet.
 - `git init` en el vault + auto-commit por cron cada 30 min (checkpoint, auditoría y recuperación en una sola pieza). `.gitignore` para `.obsidian/workspace*` y temporales.
 - Prueba de fuego: `sudo reboot` y todo vuelve solo.
@@ -315,7 +316,7 @@ Aquí se recupera lo mejor del espíritu del v1, ya con evidencia:
 
 - **Servidor MCP** como capa fina sobre el índice (mismas consultas expuestas como tools). En este punto —y solo en este— vuelve la neutralidad multiagente: cualquier cliente MCP (Codex, Hermes, otro Claude) consulta el índice sin que exista un solo adaptador específico.
 - **Interfaz de parsers** documentada + un adaptador de ejemplo, para que cada socio aporte el soporte de su plugin favorito.
-- Empaquetado: repo público, script de instalación, docs de las fases 0–6 como guía reproducible para la comunidad (que es, en la práctica, el "Nexus 5 para VPS" que hoy no existe completo).
+- Empaquetado: repo público, script de instalación, docs de las fases 0–6 como guía reproducible para la comunidad (que es, en la práctica, la guía completa de «Obsidian agéntico en un VPS» que hoy no existe).
 
 **Criterios de salida:** un segundo agente distinto de Claude consulta el índice vía MCP; al menos un adaptador escrito por alguien que no eres tú.
 
@@ -364,7 +365,7 @@ Todo derivado, todo reconstruible: `DROP` + `hvk rebuild` debe dar el mismo resu
 | Adaptadores multiagente | Un segundo agente en uso real; primero se resuelve vía MCP (Fase 7) |
 | Compatibilidad Local REST API / Obsidian CLI | Demanda concreta de migración en la comunidad |
 | Bridge de escritorio | Necesidad real de `obsidian://` o contexto activo; hasta entonces, no |
-| Multiusuario, OIDC/mTLS | Más de una persona operando el mismo Nexus |
+| Multiusuario, OIDC/mTLS | Más de una persona operando el mismo sistema |
 
 El v1 no se tira: es el plano de a dónde puede crecer esto si alguna de esas condiciones se cumple. Las ADR cortas (una página) siguen siendo obligatorias para cada decisión de las fases 2–7.
 
@@ -392,7 +393,7 @@ servidor.
 
 ### Primer ciclo recomendado, tal como se escribió (referencia histórica)
 
-1. Fase 0 completa siguiendo las lecciones del Nexus 5 (Headless systemd + Claude/Telegram + git auto-commit + prueba de reinicio).
+1. Fase 0 completa siguiendo la receta ya conocida (Headless systemd + Claude/Telegram + git auto-commit + prueba de reinicio).
 2. Inventario del vault (Fase 1) — lo puede hacer el propio agente ya corriendo.
 3. Vertical mínima de la Fase 2: escaneo inicial + `vault search` + `vault backlinks`, aunque sea sin watcher todavía.
 4. Demostración de cierre: desde el móvil, crear una nota que enlaza a otra → verla llegar al VPS → preguntar por Telegram "¿qué notas enlazan a X?" → respuesta correcta en segundos, sin que el agente haya leído el vault entero.

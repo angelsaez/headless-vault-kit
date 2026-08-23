@@ -43,7 +43,7 @@ EOF
 CRON_BACKUP=$(crontab -l 2>/dev/null || true)
 printf '%s\n' "# someone else's job" "0 3 * * * /bin/true" | crontab -
 restore() {
-    systemctl --user stop nexus-agent.service >/dev/null 2>&1
+    systemctl --user stop hvk-agent.service >/dev/null 2>&1
     tmux kill-session -t hvk-selftest >/dev/null 2>&1
     "$HERE/uninstall.sh" >/dev/null 2>&1
     if [ -n "$CRON_BACKUP" ]; then printf '%s\n' "$CRON_BACKUP" | crontab -
@@ -62,7 +62,7 @@ check "vault not turned into a repo" "[ ! -d '$LAB/vault/.git' ]"
 echo ""
 echo "installing"
 "$HERE/install.sh" >"$LAB/install.txt" 2>&1 || { echo "  FAIL  install.sh exited non-zero"; cat "$LAB/install.txt"; FAILS=$((FAILS+1)); }
-for unit in obsidian-headless hvk-watch nexus-agent; do
+for unit in obsidian-headless hvk-watch hvk-agent; do
     check "unit present: $unit"      "[ -f \"\$HOME/.config/systemd/user/$unit.service\" ]"
 done
 check "units are mode 644"           "[ \"\$(stat -c %a \"\$HOME/.config/systemd/user/hvk-watch.service\")\" = 644 ]"
@@ -106,11 +106,11 @@ check "_PRIVATE never committed"     "! git -C '$LAB/vault' ls-files | grep -q _
 
 echo ""
 echo "the agent unit really starts"
-systemctl --user start nexus-agent.service >/dev/null 2>&1
+systemctl --user start hvk-agent.service >/dev/null 2>&1
 sleep 2
-check "unit is active"               "[ \"\$(systemctl --user is-active nexus-agent.service)\" = active ]"
+check "unit is active"               "[ \"\$(systemctl --user is-active hvk-agent.service)\" = active ]"
 check "tmux session is alive"        "tmux has-session -t hvk-selftest"
-systemctl --user stop nexus-agent.service >/dev/null 2>&1
+systemctl --user stop hvk-agent.service >/dev/null 2>&1
 sleep 1
 check "stopping tears it down"       "! tmux has-session -t hvk-selftest"
 
