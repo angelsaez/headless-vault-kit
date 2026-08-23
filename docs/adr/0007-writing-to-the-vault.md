@@ -1,7 +1,7 @@
 # 0007 — Writing to the vault
 
 **Status:** accepted
-**Date:** 2026-08-21
+**Date:** 2026-08-23
 **Phase:** 4
 
 ## Context
@@ -12,25 +12,25 @@ Phase 4's materialised views and phase 5's order-notes both write into the vault
 that point a bug can destroy something that exists nowhere else.
 
 `CLAUDE.md` already fixes the principles — atomic writes, trash rather than delete, preserve
-frontmatter and line endings — but each of them hides a decision that has to be made before
-any code exists, because the vault is not an ordinary directory:
+frontmatter and line endings, never leave the vault — but each of them hides a decision that
+has to be made before any code exists, because the vault is not an ordinary directory:
 
 * **Something else is writing at the same time.** Obsidian Sync delivers changes whenever it
   likes, and the person may have the note open on their phone. A read-modify-write that takes
   a second is a second in which the file can change underneath.
 * **Something else is watching.** Our own watcher and Sync both react to every touched file. A
-  cron job that rewrites a view every thirty minutes, changing nothing, would wake both of them
-  every thirty minutes, forever.
+  cron job that rewrites a view every thirty minutes, changing nothing, would wake both of
+  them every thirty minutes, forever, on every device.
 * **Not everything survives a round trip.** Read a file as text and write it back and you can
   silently change its line endings, its final newline, or its byte-order mark. On a vault
-  synced across devices, that turns into a conflict or a diff of the whole file.
+  synced across devices, that turns into a conflict, or into a diff of the whole file.
 
 ## Alternatives
 
 - **Write in place** (open, truncate, write). Simplest, and the one thing that must never
   happen: a crash or a full disk halfway through leaves a truncated note, and truncation is
   not recoverable from the file itself.
-- **Lock the file.** Advisory locks are not honoured by Obsidian or by Sync, so a lock would
+- **Lock the file.** Advisory locks are honoured by neither Obsidian nor Sync, so a lock would
   give the comforting appearance of safety without any of it.
 - **Write a temporary file and rename it, refusing when the original moved underneath.**
   Chosen.
@@ -38,7 +38,10 @@ any code exists, because the vault is not an ordinary directory:
 ## Decision
 
 A single module, `src/hvk/write.py`, through which every write to the vault passes. Nothing
-else in the codebase opens a vault file for writing.
+else in the codebase opens a vault file for writing. Its entry point is a `Vault` object: the
+path check lives on the object you need in order to write at all, the same way the
+index-inside-the-vault check lives on `paths.Locations`. A safety rule that can be reached
+around is not a safety rule.
 
 ### Atomic, and invisible while it happens
 
@@ -69,12 +72,16 @@ the new content — never to overwrite an edit that arrived while we were thinki
 A file that did not exist is expressed as an expected digest of `None`, so "create only if
 still absent" is the same mechanism rather than a special case.
 
+This is not a lock, and it does not pretend to be one: it closes the window between reading
+and writing, not the instant of the rename itself. Closing that one would need cooperation
+from software that will not cooperate.
+
 ### Preserve what a round trip would otherwise eat
 
 The original bytes are inspected before editing and restored afterwards:
 
 - **Line endings.** Whatever the file predominantly used, it keeps. A mixed file keeps its
-  majority ending, and that fact is worth surfacing rather than silently normalising.
+  majority ending, and the fact that it was mixed is reported rather than silently normalised.
 - **The final newline**, present or absent, stays as it was.
 - **A byte-order mark**, if there was one, is written back. Obsidian tolerates them and some
   Windows editors add them; removing one rewrites the first line of a file for no reason.
@@ -82,39 +89,50 @@ The original bytes are inspected before editing and restored afterwards:
   do not know what it was meant to be, and guessing would corrupt it irreversibly.
 
 Frontmatter is preserved by never reserialising it. Editing a note means editing its text; the
-YAML is not parsed and re-emitted, so key order, comments, quoting style and indentation all
-survive because nothing ever touched them.
+YAML is not parsed and re-emitted, so key order, comments, quoting style, indentation and even
+the duplicate keys that ADR-0004 had to reason about all survive, because nothing ever touched
+them. Phase 5 will need to change a value *inside* frontmatter; when it does, it will edit
+those lines as text for the same reason, and a YAML round trip stays out of this codebase.
 
 ### Delete means trash
 
-Removing a file moves it to `.trash/` inside the vault, keeping its relative path, appending
-a timestamp if something is already there. Obsidian's own trash works this way, so the file
-appears where the user already knows to look. Nothing in this project calls `unlink` on a
-vault file.
+Removing a file moves it to `.trash/` inside the vault, **keeping its path relative to the
+vault root** and appending a timestamp if something is already there. Nothing in this project
+calls `unlink` on a vault file.
 
-### Never outside the vault
+Keeping the relative path is a deliberate divergence from what the app appears to do, which is
+to flatten everything into `.trash/`: two notes called `Index.md` in different folders would
+then collide, and a flattened file no longer says where it came from. The cost is that a
+person restoring by hand finds a folder tree rather than a flat list.
+
+### Never outside the vault, and never into the hidden files
 
 Every path is resolved — symlinks included — and checked to be inside the vault before
-anything is opened. A note is untrusted input (`CLAUDE.md`), and a link or a generated path
-that escapes the vault is the shape a prompt-injection attack would take.
+anything is opened. The path itself is resolved, not merely its parent: a *broken* symlink
+pointing outside the vault is exactly what a parent-only check waves through and then follows
+on `open()`. A note is untrusted input (`CLAUDE.md`), and a generated path that escapes the
+vault is the shape a prompt-injection attack would take.
+
+Beyond that, this module refuses to write anything under a path component starting with `.` —
+`.obsidian/`, `.git/`, `.trash/`, `.smart-env/`. It writes notes, not the machinery around
+them. Rewriting `app.json` would change link resolution under the index's feet; writing inside
+`.git/` needs no explanation. If a later phase has to touch configuration, it gets its own
+decision rather than a quiet exception here.
 
 ### Generated blocks
 
-Content this project generates lives between markers, and only what is between them is ever
-replaced:
+Content this project generates lives between two markers, and only what is between them is
+ever replaced. The splicing machinery takes both markers as arguments and knows nothing about
+what they say: naming a block belongs to the feature that generates it. Phase 4's materialised
+views use the markers the plan fixes, `<!-- vista:inicio -->` and `<!-- vista:fin -->`, and
+record that choice in their own ADR.
 
-```markdown
-<!-- hvk:begin ... -->
-generated content
-<!-- hvk:end -->
-```
+Two shapes are refused rather than guessed at: an opening marker with no closing one — the
+rest of the file is not ours to replace — and a second opening marker before the first has
+closed.
 
-English markers, unlike the `<!-- vista:inicio -->` of the plan, which predates the convention
-that everything shipped with the repository is written in English. The directive lives inside
-the opening marker rather than on a separate `%%` line above it, so a note carries one thing to
-parse instead of two and says for itself what generates its content.
-
-An unclosed marker is an error, never an invitation to replace the rest of the file.
+Replacing a block with the content it already holds returns the file byte for byte, which is
+where the "no write when nothing changed" rule above gets the chance to do its job.
 
 ## Consequences
 
@@ -123,8 +141,8 @@ that, and a cron job that fails once because Sync was mid-delivery is correct be
 fault to be silenced.
 
 **Idempotence becomes a property of the writer, not of each feature.** Materialised views,
-order-note status changes and anything else written later all get "unchanged means untouched"
-for free, and none of them can forget it.
+order-note status changes and anything written later all get "unchanged means untouched" for
+free, and none of them can forget it.
 
 **A file that is not valid UTF-8 stops the operation.** That will be somebody's scanned note
 with a stray byte, and they will have to fix it before this project will write to it. Refusing
@@ -133,3 +151,7 @@ is the right side to fail on: the alternative is silently rewriting bytes we cou
 **`.trash/` grows and nothing here empties it.** That is deliberate for now — an automatic
 cleaner is a deletion path, and deletion paths are what this ADR exists to constrain. If it
 becomes a problem, it gets its own decision.
+
+**Writing configuration is now a decision, not an oversight.** Anything that needs to touch
+`.obsidian/` will hit a refusal with a message saying so, which is the point: it should stop
+and be argued for.
