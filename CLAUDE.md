@@ -124,6 +124,7 @@ headless-vault-kit/
 │   ├── db.py          #   esquema SQLite y acceso
 │   ├── parse/         #   parsers de formatos (Niveles 0–2)
 │   ├── scan.py        #   escaneo inicial y watcher
+│   ├── write.py       #   la única vía de escritura al vault (Fase 4, ver ADR-0007)
 │   └── cli/           #   subcomandos de hvk
 ├── tests/             # pytest (desde Fase 2)
 ├── test-vaults/       # vaults sintéticos (desde Fase 2)
