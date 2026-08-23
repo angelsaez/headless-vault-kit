@@ -60,8 +60,20 @@ enlazan a X?» por Telegram de extremo a extremo depende de la Fase 0 en el serv
 **La Fase 3 está en marcha.** Los `.base` se parsean y se ejecutan: `hvk base Library.base`
 aplica filtros, fórmulas, orden y agrupación de una vista contra el índice y devuelve una tabla
 Markdown. La [ADR-0005](docs/adr/0005-bases-subset.md) registra qué parte del lenguaje de
-expresiones de Bases se soporta y qué se rechaza. Canvas y las notas periódicas por plantilla
-van después.
+expresiones de Bases se soporta y qué se rechaza. Canvas queda pospuesto hasta que un vault
+contenga de verdad un `.canvas`, y las notas periódicas esperan a una decisión, no a trabajo.
+
+**La Fase 4 ya tiene su mitad valiosa.** Una nota puede llevar dentro la respuesta de un
+`.base`, entre `<!-- vista:inicio -->` y `<!-- vista:fin -->`, de modo que la tabla se lee en el
+móvil, donde nada renderiza un Base. `hvk views` dice qué está desactualizado y
+`hvk views --apply` lo reescribe, tocando solo el texto entre los marcadores y sin escribir
+nada cuando nada ha cambiado — que es lo que impide que un refresco cada media hora despierte a
+Sync cada media hora en todos los dispositivos. Es lo primero aquí que escribe en un vault, así
+que pasa por una única capa auditada
+([ADR-0007](docs/adr/0007-writing-to-the-vault.md)); la sintaxis de la declaración está en la
+[ADR-0008](docs/adr/0008-materialised-views.md). El subconjunto DQL de Dataview que la fase
+prometía queda pospuesto indefinidamente: el vault para el que se escribió no tiene Dataview
+instalado.
 
 El plan completo, con fases y criterios de salida, está en
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md); las decisiones
@@ -95,6 +107,7 @@ Dentro de un vault se puede omitir `--vault`: hvk sube por el árbol hasta encon
 | `hvk watch` | Indexa los cambios según llegan, hasta que lo interrumpas; pensado para correr como servicio |
 | `hvk verify` | Re-calcula el hash de todo como red de seguridad; se lanza de noche desde cron |
 | `hvk base Archivo.base [--view Nombre]` | Ejecuta una vista de un `.base` contra el índice, como tabla Markdown |
+| `hvk views [Ruta] [--apply]` | Regenera las tablas de Bases materializadas dentro de notas; sin `--apply` solo lista lo que está desactualizado |
 | `hvk info` | Qué contiene el índice ahora mismo |
 
 Todos los comandos aceptan `--json` para salida legible por máquina; `hvk watch` emite JSON
@@ -103,8 +116,13 @@ Lines, un objeto por lote, para poder redirigirlo a un log.
 Para mantener el índice al día: `hvk watch` como servicio y verificación nocturna por cron:
 
 ```cron
-17 4 * * *  hvk --vault /ruta/al/vault verify
+17 4 * * *   hvk --vault /ruta/al/vault verify
+*/30 * * * *  hvk --vault /ruta/al/vault views --apply
 ```
+
+La segunda línea es la que mantiene al día las vistas materializadas. Se puede lanzar tan a
+menudo como se quiera: escribe solo lo que ha cambiado de verdad, y nada en absoluto cuando
+no ha cambiado nada. Falta enchufarla en `deploy/`.
 
 La unidad de systemd del watcher es trabajo de la Fase 0 y vivirá en `deploy/`.
 
@@ -119,11 +137,11 @@ uv tool install hvk
 
 | Fase | Qué entrega | Estado |
 |---|---|---|
-| 0 | Base operativa en el VPS: Headless + Claude Code/Telegram + git, sobrevive a reinicios | Pendiente |
-| 1 | Inventario del vault: qué plugins y usos reales hay que cubrir | Pendiente |
+| 0 | Base operativa en el VPS: Headless + Claude Code/Telegram + git, sobrevive a reinicios | Construida, sin ejecutar aún en un servidor |
+| 1 | Inventario del vault: qué plugins y usos reales hay que cubrir | **Hecha** |
 | 2 | Indexador Nivel 0 + CLI `hvk` | **Hecha** |
-| 3 | Bases, Canvas, plantillas y notas periódicas | **En curso** |
-| 4 | Dataview (DQL) + vistas materializadas | Pendiente |
+| 3 | Bases, Canvas, plantillas y notas periódicas | Bases **hecho**; el resto pospuesto |
+| 4 | Vistas materializadas (DQL de Dataview pospuesto) | **Hecha** |
 | 5 | Notas-orden: el vault como cola de trabajos | Pendiente |
 | 6 | Seguridad, healthchecks, backups ensayados | Pendiente |
 | 7 | MCP + parsers de comunidad + empaquetado | Futuro |
