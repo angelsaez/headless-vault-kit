@@ -130,7 +130,7 @@ headless-vault-kit/
 ├── tools/             # utilidades de desarrollo, no del producto (mirror_vault.py)
 ├── runner/            # notas-orden (Fase 5)
 ├── skills/            # skills de Claude Code (Fases 2–5)
-└── deploy/            # systemd, cron, instalación VPS (Fase 0)
+└── deploy/            # systemd de usuario, cron, runbook del VPS (Fase 0, ver ADR-0006)
 ```
 
 ## Verificación mínima antes de dar algo por hecho
