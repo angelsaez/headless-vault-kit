@@ -11,15 +11,23 @@ report that these services do not exist.** That is not a broken install.
 
 ## What gets installed
 
-| Piece | Where | What it does |
-|---|---|---|
-| `obsidian-headless.service` | `~/.config/systemd/user/` | `ob sync --continuous`, keeping the vault in step with Obsidian Sync |
-| `hvk-watch.service` | same | Indexes changes as they land |
-| `hvk-agent.service` | same | A tmux session running Claude Code with the Telegram channel |
-| `vault-autocommit.sh` | `~/.local/share/hvk/deploy-bin/` | A git checkpoint of the vault, every 30 minutes |
-| cron block | your crontab | The auto-commit, `hvk verify` nightly at 04:17, the materialised views, and the order-note runner |
-| `hvk-schedule.sh` | `~/.local/share/hvk/deploy-bin/` | Runs the views and the runner from cron, quiet unless something failed |
-| `.gitignore` | inside the vault | Only if it has none of its own |
+Five parts, and you can install any subset of them with `--only` — see
+[Installing onto a machine that already runs some of this](#installing-onto-a-machine-that-already-runs-some-of-this),
+which is the normal case rather than the exception.
+
+| Part | Piece | Where | What it does |
+|---|---|---|---|
+| `sync` | `obsidian-headless.service` | `~/.config/systemd/user/` | `ob sync --continuous`, keeping the vault in step with Obsidian Sync |
+| `watch` | `hvk-watch.service` | same | Indexes changes as they land |
+| `agent` | `hvk-agent.service` | same | A tmux session running Claude Code with the Telegram channel |
+| `git` | `vault-autocommit.sh` | `~/.local/share/hvk/deploy-bin/` | A git checkpoint of the vault, every 30 minutes |
+| `git` | `.gitignore` | inside the vault | Only if it has none of its own |
+| `schedules` | `hvk-schedule.sh` | `~/.local/share/hvk/deploy-bin/` | Runs the views and the runner from cron, quiet unless something failed |
+| `git` + `schedules` | cron block | your crontab | The auto-commit, `hvk verify` nightly at 04:17, the materialised views, and the order-note runner |
+
+With `--system` the three units go to `/etc/systemd/system` instead, and are managed with
+`sudo systemctl`. Everything else is unchanged: the scripts, the crontab and the vault's
+`.gitignore` are per-user either way.
 
 ## Prerequisites, which are not installed for you
 
@@ -28,10 +36,49 @@ that — apt, dnf, nvm, asdf, a tarball. `preflight.sh` checks and names what is
 
 | Needed by | What | Note |
 |---|---|---|
-| `hvk` | Python 3.11+ | `curl -LsSf https://astral.sh/uv/install.sh \| sh` then `uv tool install hvk` |
+| `hvk` | Python 3.11+ | Not on PyPI yet — see "Getting hvk onto the server" below |
 | `ob` | **Node.js 22+** | Obsidian Headless. Also needs an Obsidian Sync subscription |
 | Telegram channel | **Bun** | `curl -fsSL https://bun.sh/install \| bash` |
 | the agent session | `tmux`, `git` | |
+
+## Getting hvk onto the server
+
+`hvk` is not published to PyPI, so `uv tool install hvk` does not work yet. Both routes below
+need this repository on the server; the second also needs `deploy/`, so you want the checkout
+either way.
+
+**Copy the repository across** (works whether or not the repository is public, and needs no
+credentials on the server):
+
+```sh
+# from your own machine
+rsync -a --exclude .venv --exclude .git ./ server:~/headless-vault-kit/
+```
+
+**Or clone it** — only once the repository is public, or with credentials you have arranged:
+
+```sh
+git clone https://github.com/angelsaez/headless-vault-kit ~/headless-vault-kit
+```
+
+Then install it, either with uv:
+
+```sh
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv tool install --from ~/headless-vault-kit headless-vault-kit
+```
+
+or with nothing but Python, which every Debian has:
+
+```sh
+sudo apt install python3-venv          # if it is not there already
+python3 -m venv ~/.venv-hvk
+~/.venv-hvk/bin/pip install ~/headless-vault-kit
+ln -sf ~/.venv-hvk/bin/hvk ~/.local/bin/hvk
+```
+
+Either way, `command -v hvk` gives you the absolute path that `deploy.env` wants. The units do
+not inherit your interactive `PATH`, so that path has to be absolute.
 
 ## Runbook
 
@@ -77,6 +124,8 @@ Faster and more visible now than as the first thing a watcher does at boot.
 ./deploy/install.sh --dry-run      # says what it would change
 ./deploy/install.sh
 ```
+
+### Installing onto a machine that already runs some of this
 
 **If the machine already runs some of this**, install only the missing parts, or you will end
 up with two syncers on one vault and two agents on one bot. The installer will not notice: its
@@ -144,6 +193,10 @@ hvk --vault ~/vault info          # last_scan should be recent
 git -C ~/vault log --oneline -5   # checkpoints from today
 ```
 
+The auto-commit runs every thirty minutes, so straight after installing that last command
+says `does not have any commits yet`. That is not a fault; run
+`~/.local/share/hvk/deploy-bin/vault-autocommit.sh` once if you want to see it work now.
+
 Create a note on your phone, wait a few seconds, and ask the bot what links to it. That is the
 whole system in one question.
 
@@ -154,6 +207,8 @@ whole system in one question.
 | `Unit ... not found` | You left out `--user` |
 | `Failed to load environment files` | `~/.config/hvk/deploy.env` is missing. The units read that exact path |
 | Service dies and restarts forever | `journalctl --user -u hvk-watch -n 50`. After five failures in a minute it stops trying and stays failed, on purpose |
+| `status=127` and `not found`, naming a path that looks right | A path in `deploy.env` is not literal. systemd reads that file itself and expands nothing, so `$HOME/vault` reaches the service as those eleven characters. `preflight.sh` checks for this |
+| `Start request repeated too quickly` after fixing the cause | The failure counter is still full: `systemctl reset-failed hvk-watch` (add `--user` if user-scope), then start it |
 | Everything stops when you log out | Lingering is off — step 5 |
 | The bot ignores you | `tmux attach -t hvk-agent` and check the session is alive and paired |
 | `ob` fails on start | It needs `ob login` first; credentials are per-user and interactive |
@@ -164,7 +219,10 @@ Removing it all:
 ./deploy/uninstall.sh
 ```
 
-Takes out exactly what was installed. The vault, its git history, the index and every runtime
+Takes out exactly what was installed, from **both scopes** — it looks in
+`~/.config/systemd/user/` and in `/etc/systemd/system/` without being told which you used,
+because whoever uninstalls has usually forgotten, and a unit left behind keeps starting at
+every boot. The vault, its git history, the index and every runtime
 on the machine are left alone.
 
 ## Verifying the machinery itself
