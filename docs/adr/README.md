@@ -35,3 +35,4 @@ wrong is part of what makes the log worth keeping.
 | [0004](0004-tier-2-fields-in-the-core.md) | Tier-2 fields in the core, ahead of the parser interface | accepted | 2 |
 | [0005](0005-bases-subset.md) | Which part of Bases is supported | accepted | 3 |
 | [0006](0006-deployment-leaves-the-system-alone.md) | Deployment leaves the system alone | accepted | 0 |
+| [0007](0007-writing-to-the-vault.md) | Writing to the vault | accepted | 4 |
