@@ -1,7 +1,9 @@
-# El destino es Linux: LF en el repositorio y en el árbol de trabajo, se desarrolle donde se desarrolle.
+# The target is Linux: LF in the repository and in the working tree, wherever development
+# happens. Without this, a shell script edited on Windows reaches the server with CRLF and
+# fails at its shebang, with an error that names nothing useful.
 * text=auto eol=lf
 
-# Binarios: que Git no toque el contenido.
+# Binaries: git keeps its hands off the contents.
 *.png   binary
 *.jpg   binary
 *.jpeg  binary

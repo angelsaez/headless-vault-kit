@@ -292,7 +292,7 @@ ahí es donde hay que pasar `deploy/selftest.sh` antes de fiarse de un cambio en
 ## Nombre y comando
 
 El repositorio y la herramienta se llaman **headless-vault-kit** (descriptivo, se explica
-solo); el binario del CLI es **`hvk`** (`hvk search`, `hvk backlinks`, `hvk dv "..."`) —
+solo); el binario del CLI es **`hvk`** (`hvk search`, `hvk backlinks`, `hvk base "..."`) —
 repo largo y claro, comando corto y cómodo.
 
 ## Licencia
