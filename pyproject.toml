@@ -9,12 +9,15 @@ description = "Headless toolkit for Obsidian vaults: SQLite index, backlinks and
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Ángel Sáez de Santiago" }]
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["obsidian", "markdown", "vault", "index", "backlinks", "headless"]
 classifiers = [
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Text Processing :: Indexing",
+    "Operating System :: POSIX :: Linux",
 ]
 
 # Runtime dependencies are capped by ADR-0001: ruamel.yaml for YAML 1.2 parity with the app,
@@ -31,6 +34,7 @@ hvk = "hvk.cli:main"
 [project.urls]
 Homepage = "https://github.com/angelsaez/headless-vault-kit"
 Source = "https://github.com/angelsaez/headless-vault-kit"
+Issues = "https://github.com/angelsaez/headless-vault-kit/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hvk"]

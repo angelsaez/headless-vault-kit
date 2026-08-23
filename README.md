@@ -290,4 +290,8 @@ name, short comfortable command.
 
 ## License
 
-To be decided before the repository goes public (see `.plans/`, Annex).
+**MIT.** Do what you like with it, including commercially; keep the copyright notice, and
+there is no warranty. The full text is in [LICENSE](LICENSE).
+
+Both runtime dependencies are permissive too — `ruamel.yaml` is MIT and `watchdog` is
+Apache-2.0 — so nothing here constrains what you build on top.
