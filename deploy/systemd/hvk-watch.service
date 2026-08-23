@@ -1,0 +1,27 @@
+[Unit]
+Description=headless-vault-kit: keep the index in step with the vault
+Documentation=https://github.com/angelsaez/headless-vault-kit
+# Only an ordering preference. The watcher is useful on its own, so it does not Require it:
+# if sync is down, indexing local edits is still the right thing to do.
+After=obsidian-headless.service
+# If it dies five times in a minute it is not a blip; stop and leave the failure visible in
+# systemctl --user status rather than hiding it in a restart loop.
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/hvk/deploy.env
+# systemd will not expand a variable into the executable itself, so the shell does it. -c
+# rather than -lc: no profile is sourced, which keeps this from depending on shell files that
+# may change.
+ExecStart=/bin/sh -c 'exec "$HVK_BIN" --vault "$HVK_VAULT" watch'
+Restart=always
+RestartSec=5s
+
+# The index is derived and rebuildable, so nothing here needs to write outside its own places.
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=default.target

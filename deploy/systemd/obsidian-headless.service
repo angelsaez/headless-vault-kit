@@ -1,0 +1,24 @@
+[Unit]
+Description=Obsidian Headless: keep the vault in sync from the command line
+Documentation=https://github.com/obsidianmd/obsidian-headless
+# Sync is the only thing here that needs the network.
+After=network-online.target
+Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=120
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/hvk/deploy.env
+# `ob login` and `ob sync-setup` are interactive and run once, by hand, before this unit is
+# started for the first time. The runbook covers it.
+ExecStart=/bin/sh -c 'exec "$OB_BIN" sync --continuous'
+Restart=always
+# Longer than the watcher: a sync failure is usually the network or the service, and hammering
+# it every five seconds helps nobody.
+RestartSec=30s
+
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=default.target

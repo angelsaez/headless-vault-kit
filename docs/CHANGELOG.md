@@ -4,6 +4,36 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — Phase 0: deployment that leaves the machine alone
+
+- `deploy/` arrives: systemd **user** units for Obsidian Headless, `hvk watch` and a tmux
+  session running Claude Code with the Telegram channel, plus an auto-commit of the vault
+  every 30 minutes and `hvk verify` nightly, all in the invoking user's own crontab.
+- `docs/adr/0006-deployment-leaves-the-system-alone.md` records why none of it is system-wide.
+  The target server already runs other things: writing into `/etc/systemd/system`, dropping
+  files in `/etc/cron.d`, installing packages or changing firewall rules can all quietly break
+  something that was working, in a way that will not look like it came from here. So the
+  install needs no root except one `loginctl enable-linger`, installs no runtime, and refuses
+  to overwrite a unit it does not recognise.
+- Git on the server is local only, with no remote (plan annex, decision 5, settled today):
+  checkpoints, an audit trail and an immediate undo, without a deploy key to manage or a cron
+  job that fails on a network blip. Surviving the loss of the server is phase 6's problem.
+- `deploy/selftest.sh` exercises the whole thing against a throwaway vault and stub binaries —
+  install, re-install, refusal, auto-commit, a real tmux session under systemd, and uninstall —
+  then puts everything back. It passes on Ubuntu 26.04 with systemd 255.
+- Two things it caught that would otherwise have been found on the server: `KillMode=none`,
+  which every tmux-under-systemd recipe carries and systemd now deprecates, turns out to be
+  unnecessary — oneshot with `RemainAfterExit` keeps the session and `ExecStop` still tears it
+  down. And the units name `~/.config/hvk/deploy.env` as a literal, so a config kept anywhere
+  else made every service fail at start with a message that names the file but not the cause;
+  the installer now puts a copy where the units look.
+- Also verified rather than assumed: the Telegram plugin is official
+  (`anthropics/claude-plugins-official`) and **requires Bun**, and `ob` requires **Node 22+**.
+  Neither prerequisite appears in the plan. Both are now checked by `preflight.sh` and stated
+  in the runbook, which also spells out that pairing the bot is interactive and that leaving
+  the policy at `pairing` rather than `allowlist` leaves an agent with vault access reachable
+  by anyone who finds the bot.
+
 ## 2026-08-21 — A vault mirror, so real data can be tested against safely
 
 - `tools/mirror_vault.py` copies a vault into a working directory and keeps it in step:
