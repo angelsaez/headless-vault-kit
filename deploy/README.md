@@ -156,6 +156,14 @@ on the machine are left alone.
 ./deploy/selftest.sh
 ```
 
+Safer still, and the way it is developed, is to run it inside the throwaway container in
+[`tools/testbed/`](../tools/testbed/README.md), which needs nothing of yours at all:
+
+```sh
+./tools/testbed/testbed.sh up && ./tools/testbed/testbed.sh selftest
+./tools/testbed/testbed.sh reboot     # and check what comes back on its own
+```
+
 Installs everything against a throwaway vault and stub binaries, checks the units load, the
 agent session really starts, the auto-commit skips when nothing changed and never commits
 `_PRIVATE/`, that a second run changes nothing, that an unrecognised unit is refused rather
