@@ -1,0 +1,70 @@
+# Tests on every push and pull request. Linux only, by the plan's own decision (§1): the
+# server is Linux, and a three-OS matrix was one of the things v2 dropped as cost without
+# a matching risk. Development happens on Windows, so a few filesystem tests skip there and
+# run here -- which is the other reason this exists.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor declared in pyproject.toml, and a current release. Debian 12 -- what most
+        # VPS run, and what the testbed uses -- ships 3.11, so that one is not academic.
+        python: ["3.11", "3.13"]
+    name: pytest on Python ${{ matrix.python }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+      - name: run the suite
+        # The performance checks are marked slow and excluded by pyproject.toml. They measure
+        # the plan's numeric criteria, and a shared runner cannot measure anything.
+        run: python -m pytest
+
+  package:
+    runs-on: ubuntu-latest
+    name: installs as a package
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # A plain, non-editable install of the built wheel: this is what a user gets, and it
+      # breaks in ways an editable install never shows -- a missing package, a bad entry point.
+      - run: python -m pip install .
+      - run: hvk --version
+      - name: it answers against a vault it has never seen
+        run: |
+          mkdir -p /tmp/vault/.obsidian
+          echo '{}' > /tmp/vault/.obsidian/app.json
+          printf '# One\n\nLinks to [[Two]].\n' > /tmp/vault/One.md
+          printf '# Two\n' > /tmp/vault/Two.md
+          hvk --vault /tmp/vault scan
+          hvk --vault /tmp/vault backlinks Two --json | grep -q One.md
+
+  scripts:
+    runs-on: ubuntu-latest
+    name: shell scripts parse
+    steps:
+      - uses: actions/checkout@v4
+      # Syntax only. The deployment is exercised for real in tools/testbed/, which needs a
+      # systemd user instance and a container to throw away, and neither belongs here.
+      - name: bash -n every script
+        run: |
+          for script in deploy/*.sh deploy/bin/*.sh tools/testbed/*.sh; do
+            echo "checking $script"
+            bash -n "$script"
+          done
