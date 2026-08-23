@@ -99,7 +99,7 @@ if [ "$DRY" != 1 ] && ! mkdir -p "$BIN_DIR" 2>/dev/null; then
     say "    Everything here is user-scope, so nothing in your home should be owned by root."
     exit 4
 fi
-for script in vault-autocommit.sh; do
+for script in vault-autocommit.sh hvk-schedule.sh; do
     if [ -e "$BIN_DIR/$script" ] && cmp -s "$HERE/bin/$script" "$BIN_DIR/$script"; then
         act "unchanged: $script"
     else
@@ -140,6 +140,8 @@ $MARK_BEGIN
 # Managed by deploy/install.sh. Edit deploy.env, not these lines.
 */30 * * * * $BIN_DIR/vault-autocommit.sh >/dev/null 2>&1
 17 4 * * * $HVK_BIN --vault "$HVK_VAULT" verify >/dev/null 2>&1
+*/${VIEWS_EVERY_MINUTES:-30} * * * * $BIN_DIR/hvk-schedule.sh views
+* * * * * $BIN_DIR/hvk-schedule.sh jobs
 $MARK_END
 CRON
 )
@@ -151,7 +153,7 @@ if printf '%s\n' "$EXISTING" | grep -qF "$MARK_BEGIN" && \
    [ "$(printf '%s' "$EXISTING" | tr -d '[:space:]')" = "$(printf '%s' "$NEW" | tr -d '[:space:]')" ]; then
     act "unchanged"
 else
-    act "write the managed block (auto-commit every 30 min, verify nightly at 04:17)"
+    act "write the managed block (auto-commit, nightly verify, views, order-notes)"
     [ "$DRY" = 1 ] || printf '%s\n' "$NEW" | crontab -
 fi
 

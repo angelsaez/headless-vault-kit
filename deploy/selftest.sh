@@ -23,7 +23,12 @@ export HVK_DEPLOY_ENV="$LAB/deploy.env"
 mkdir -p "$LAB/vault/.obsidian" "$LAB/bin"
 echo '{}' > "$LAB/vault/.obsidian/app.json"
 echo '# A note' > "$LAB/vault/Note.md"
-for stub in hvk ob; do printf '#!/bin/sh\nexit 0\n' > "$LAB/bin/$stub"; chmod +x "$LAB/bin/$stub"; done
+printf '#!/bin/sh\nexit 0\n' > "$LAB/bin/ob"; chmod +x "$LAB/bin/ob"
+# The hvk stub records how it was called, so the scheduled tasks can be judged on what they
+# asked for and not only on whether they exited zero. The interesting assertion is a NEGATIVE
+# one: that the runner starts nothing until it has been told where to look.
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >> "%s/hvk-calls.log"\nexit 0\n' "$LAB" > "$LAB/bin/hvk"
+chmod +x "$LAB/bin/hvk"
 # The claude stub has to stay alive. A command that exits takes the tmux session with it, and
 # the test would then be measuring the stub rather than the unit.
 printf '#!/bin/sh\nsleep 300\n' > "$LAB/bin/claude"; chmod +x "$LAB/bin/claude"
@@ -72,6 +77,9 @@ check "vault .gitignore installed"   "[ -f '$LAB/vault/.gitignore' ]"
 check "managed cron block written"   "crontab -l | grep -q headless-vault-kit"
 check "other cron lines survived"    "crontab -l | grep -q \"someone else\""
 check "autocommit script installed"  "[ -x \"\$HOME/.local/share/hvk/deploy-bin/vault-autocommit.sh\" ]"
+check "schedule script installed"    "[ -x \"\$HOME/.local/share/hvk/deploy-bin/hvk-schedule.sh\" ]"
+check "views are scheduled"          "crontab -l | grep -q 'hvk-schedule.sh views'"
+check "the runner is scheduled"      "crontab -l | grep -q 'hvk-schedule.sh jobs'"
 
 echo ""
 echo "running it again changes nothing"
@@ -88,6 +96,27 @@ check "says so plainly"              "grep -q REFUSING '$LAB/refuse.txt'"
 check "left the file alone"          "grep -q 'edited by something else' \"\$HOME/.config/systemd/user/hvk-watch.service\""
 "$HERE/install.sh" --force >/dev/null 2>&1
 check "--force replaces it"          "! grep -q 'edited by something else' \"\$HOME/.config/systemd/user/hvk-watch.service\""
+
+echo ""
+echo "the scheduled tasks"
+SCHEDULE="$HOME/.local/share/hvk/deploy-bin/hvk-schedule.sh"
+: > "$LAB/hvk-calls.log"
+check "an unknown task is refused"   "! '$SCHEDULE' nonsense 2>/dev/null"
+
+"$SCHEDULE" views
+check "views calls hvk"              "grep -q 'views --apply' '$LAB/hvk-calls.log'"
+
+# The guarantee of ADR-0009, checked where it actually matters: with no directories declared
+# the runner is scheduled every minute and still starts nothing at all.
+: > "$LAB/hvk-calls.log"
+"$SCHEDULE" jobs
+check "no dirs declared, no runner"  "[ ! -s '$LAB/hvk-calls.log' ]"
+
+mkdir -p "$LAB/vault/Orders" "$LAB/profiles"
+printf 'HVK_JOBS_DIR="Orders"\nHVK_JOBS_PROFILES="%s/profiles"\n' "$LAB" >> "$HVK_DEPLOY_ENV"
+"$SCHEDULE" jobs
+check "declaring them turns it on"   "grep -q 'jobs --dir Orders' '$LAB/hvk-calls.log'"
+check "and the profiles go with it"  "grep -q -- '--profiles $LAB/profiles' '$LAB/hvk-calls.log'"
 
 echo ""
 echo "vault checkpoints"
