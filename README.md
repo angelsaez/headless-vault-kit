@@ -72,6 +72,19 @@ It is the first thing here that writes to a vault, so it goes through one audite
 [ADR-0008](docs/adr/0008-materialised-views.md). The Dataview DQL subset the phase originally
 promised is postponed indefinitely: the vault it was written for has no Dataview installed.
 
+**Phase 5 turns the vault into the job queue.** A note in a directory you nominate *is* a job:
+its frontmatter is the state, so its progress is readable on a phone like any other note.
+`hvk jobs --run` claims each pending job with a write that states the digest the note had when
+it was read — which is what makes a job run exactly once even if two runners race or one is
+restarted mid-flight — launches the agent, and records the outcome and the reason in the note.
+
+It is also the first thing here that *executes* something because a note said so, and a note
+can arrive from anywhere. So: every job must name a permission profile, chosen by name from a
+directory the note cannot reach; the jobs and profiles directories have **no defaults**, and
+nothing runs until somebody says where they are; and an output path inside the jobs directory
+is refused, because that is how a runner feeds itself work for ever.
+[ADR-0009](docs/adr/0009-order-notes.md) has the reasoning.
+
 The full plan, with phases and exit criteria, lives in
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md) (Spanish); the
 decisions behind the design are in [`docs/adr/`](docs/adr/).
@@ -105,6 +118,7 @@ Inside a vault, `--vault` can be omitted: hvk walks up until it finds `.obsidian
 | `hvk verify` | Re-hash every file as a safety net; run it nightly from cron |
 | `hvk base File.base [--view Name]` | Run a view from a `.base` file against the index, as a Markdown table |
 | `hvk views [Path] [--apply]` | Refresh the base tables materialised inside notes; without `--apply` it only lists what is stale |
+| `hvk jobs --dir D --profiles P [--run]` | Run the order-notes waiting in a directory; without `--run` it only reports |
 | `hvk info` | What the index currently holds |
 
 Every command takes `--json` for machine-readable output; `hvk watch` emits JSON Lines, one
@@ -139,7 +153,7 @@ uv tool install hvk
 | 2 | Tier-0 indexer + `hvk` CLI | **Done** |
 | 3 | Bases, Canvas, templates and periodic notes | Bases **done**; the rest postponed |
 | 4 | Materialized views (Dataview DQL postponed) | **Done** |
-| 5 | Order-notes: the vault as a job queue | Pending |
+| 5 | Order-notes: the vault as a job queue | **Done** (Sync and Telegram wait on phase 0) |
 | 6 | Security, healthchecks, rehearsed backups | Pending |
 | 7 | MCP server + community parsers + packaging | Future |
 

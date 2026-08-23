@@ -11,7 +11,8 @@ import sys
 import time
 from pathlib import Path
 
-from hvk import __version__, db, output, paths, query, scan as scanner
+from hvk import __version__, db, jobs, output, paths, query, views, write
+from hvk import scan as scanner
 from hvk.bases import base_file as _base_file
 from hvk.bases import values as bases_values
 from hvk.bases.expr import ExpressionError
@@ -123,6 +124,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="the note the base is embedded in, for expressions that use 'this'",
     )
 
+    jobs_cmd = add("jobs", "run the order-notes waiting in a directory")
+    jobs_cmd.add_argument("--dir", metavar="PATH", help="the jobs directory (or HVK_JOBS_DIR)")
+    jobs_cmd.add_argument(
+        "--profiles", metavar="PATH",
+        help="directory of permission profiles (or HVK_JOBS_PROFILES)",
+    )
+    jobs_cmd.add_argument(
+        "--run", action="store_true",
+        help="actually launch the agent; without it jobs are claimed and reported only",
+    )
+
     views_cmd = add("views", "regenerate the base views materialised inside notes")
     views_cmd.add_argument(
         "path", nargs="?", help="restrict to one note or one folder (default: the whole vault)"
@@ -158,6 +170,9 @@ def _run(args: argparse.Namespace) -> int:
 
     if args.command == "watch":
         return _watch(location, args)
+
+    if args.command == "jobs":
+        return _jobs(location, args)
 
     conn = db.connect(location.db_path)
     try:
@@ -315,6 +330,37 @@ def _base(conn, location: paths.Locations, args: argparse.Namespace) -> None:
     print(base_render.to_markdown(result))
 
 
+def _jobs(location: paths.Locations, args: argparse.Namespace) -> int:
+    """Run the order-notes waiting in a directory, or report what is there.
+
+    No index is opened: a job is a file and its state is its frontmatter, so this works on a
+    vault whose index is behind or missing entirely.
+    """
+    from hvk import jobs as order_notes
+
+    outcomes = order_notes.run(
+        location.vault, jobs=args.dir, profiles=args.profiles, execute=args.run
+    )
+    rows = [outcome.as_dict() for outcome in outcomes]
+    # A refusal explains itself at length, which is right in the note and in --json and
+    # unreadable as the last column of a terminal table.
+    shown = [
+        {**row, "detail": row["detail"][:97] + "..." if len(row["detail"]) > 100
+                 else row["detail"]}
+        for row in rows
+    ]
+    output.emit(
+        shown if not args.json else rows,
+        headers=("NOTE", "STATUS", "PROFILE", "OUTPUT", "SECS", "DETAIL"),
+        columns=("note", "status", "profile", "output", "seconds", "detail"),
+        as_json=args.json,
+        empty="no order-notes found",
+    )
+    # Only what this run did counts: a job that failed yesterday is already reported in its
+    # own note, and re-raising it every minute is how a cron alarm stops being read.
+    return 1 if any(row["acted"] and row["status"] in ("failed", "error") for row in rows) else 0
+
+
 def _views(conn, location: paths.Locations, args: argparse.Namespace) -> int:
     """Regenerate the views materialised in notes, or list what would change.
 
@@ -383,7 +429,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return _run(args)
     except (paths.VaultError, db.IndexError_, query.QueryError,
-            _base_file.BaseError, ExpressionError) as exc:
+            _base_file.BaseError, ExpressionError, write.WriteError,
+            jobs.JobError, views.ViewError) as exc:
         print(f"hvk: {exc}", file=sys.stderr)
         return 2
     except BrokenPipeError:
