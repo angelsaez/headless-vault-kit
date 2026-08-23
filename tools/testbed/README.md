@@ -16,8 +16,19 @@ when it cleans up after itself.
 ./tools/testbed/testbed.sh down        # throw it away
 ```
 
-Needs Docker reachable from the shell you run it in. On Windows that means enabling WSL
-integration in Docker Desktop, or running it from a Linux host.
+Needs Docker reachable from the shell you run it in.
+
+On Windows it runs from Git Bash, with one variable:
+
+```sh
+MSYS2_ARG_CONV_EXCL='*' ./tools/testbed/testbed.sh selftest
+```
+
+Without it, MSYS rewrites every argument that looks like a POSIX path — including the ones
+meant for *inside* the container — so `-e XDG_RUNTIME_DIR=/run/user/1000` arrives pointing at
+a directory under the Git installation and `systemctl --user` reports that there is no user
+instance, when there is. Host paths are converted explicitly by the script instead, so turning
+the automatic conversion off is the correct setting rather than a workaround.
 
 ## What is real and what is fake
 
