@@ -3,7 +3,6 @@
 # left untouched (ADR-0006).
 set -eu
 
-UNIT_DIR="$HOME/.config/systemd/user"
 BIN_DIR="$HOME/.local/share/hvk/deploy-bin"
 UNITS="obsidian-headless.service hvk-watch.service hvk-agent.service"
 MARK_BEGIN="# >>> headless-vault-kit >>>"
@@ -11,16 +10,25 @@ MARK_END="# <<< headless-vault-kit <<<"
 
 say() { printf '%s\n' "$*"; }
 
+# Both scopes are swept, always, without asking which was used. Whoever uninstalls has usually
+# forgotten -- and a leftover unit that still starts at boot is exactly the kind of thing that
+# gets blamed on the next thing installed.
 say "stopping and disabling units"
-for unit in $UNITS; do
-    if [ -e "$UNIT_DIR/$unit" ]; then
-        systemctl --user stop "$unit" >/dev/null 2>&1 || true
-        systemctl --user disable "$unit" >/dev/null 2>&1 || true
-        rm -f "$UNIT_DIR/$unit"
-        say "  removed $unit"
+for scope in user system; do
+    if [ "$scope" = user ]; then
+        dir="$HOME/.config/systemd/user"; ctl="systemctl --user"; remove="rm -f"
+    else
+        dir="/etc/systemd/system"; ctl="sudo systemctl"; remove="sudo rm -f"
     fi
+    for unit in $UNITS; do
+        [ -e "$dir/$unit" ] || continue
+        $ctl stop "$unit" >/dev/null 2>&1 || true
+        $ctl disable "$unit" >/dev/null 2>&1 || true
+        $remove "$dir/$unit"
+        say "  removed $unit ($scope scope)"
+    done
+    $ctl daemon-reload >/dev/null 2>&1 || true
 done
-systemctl --user daemon-reload 2>/dev/null || true
 
 say "removing the managed crontab block"
 EXISTING=$(crontab -l 2>/dev/null || true)

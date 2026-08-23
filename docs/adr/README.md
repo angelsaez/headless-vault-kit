@@ -38,3 +38,4 @@ wrong is part of what makes the log worth keeping.
 | [0007](0007-writing-to-the-vault.md) | Writing to the vault | accepted | 4 |
 | [0008](0008-materialised-views.md) | How a note declares a materialised view | accepted | 4 |
 | [0009](0009-order-notes.md) | Order-notes: what a job is, and what it is allowed to reach | accepted | 5 |
+| [0010](0010-installing-onto-a-server-that-is-already-running.md) | Installing onto a server that is already running something | accepted | 0 |
