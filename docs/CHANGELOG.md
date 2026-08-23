@@ -32,6 +32,41 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   own decision (§1); the deployment keeps being exercised in the container, which needs a
   systemd user instance that a CI runner has no business providing.
 - Both READMEs in the same commit, as `CLAUDE.md` requires.
+## 2026-08-23 — The views and the runner are actually scheduled
+
+- `deploy/bin/hvk-schedule.sh`, and two more lines in the managed cron block. Until now phases
+  4 and 5 were built and tested but nothing on a server would ever have run them: the cron
+  entry existed only as a suggestion in the README. This closes that.
+- The wrapper is silent unless something failed. cron mails every byte a job prints, so a task
+  that printed its table every thirty minutes would become a mailbox nobody reads — and then
+  the one message that mattered is the one that gets missed.
+- **The runner is scheduled every minute and still does nothing until `HVK_JOBS_DIR` and
+  `HVK_JOBS_PROFILES` are both set in `deploy.env`.** No default, per ADR-0009, and the check
+  lives in the wrapper so turning the runner on is an edit to one config file rather than a
+  reinstall. `selftest.sh` now asserts the negative case directly: with nothing declared, the
+  scheduled task invokes nothing at all.
+- The `hvk` stub in `selftest.sh` records how it was called, which is what lets that negative
+  assertion be about behaviour rather than about an exit code.
+- Verified in the container, not just by reading: 41 checks pass, and both features were then
+  run against the real `hvk` inside Debian — a base materialised into a note twice with the
+  file left byte-identical the second time, and three order-notes settling as done, refused for
+  an output inside the jobs directory, and refused for naming no profile.
+
+## 2026-08-23 — The testbed runs on Windows, and says why when it cannot
+
+- Two faults, both of which made `testbed.sh` unusable from Git Bash and neither of which was
+  the container's doing.
+- Docker Desktop speaks Windows paths and Git Bash hands it POSIX ones, so `-v /c/repo:/repo`
+  was mangled into a path list and the mount silently did not happen. The container came up
+  fine and failed later, installing from a directory that was not there. Host paths now go
+  through `cygpath -w` where it exists, and nowhere else.
+- With that fixed, the automatic conversion can be turned off entirely — which it must be,
+  because it also rewrote arguments meant for *inside* the container: `XDG_RUNTIME_DIR` arrived
+  pointing into the Git installation, and `systemctl --user` then reported no user instance
+  while one was running. The README gives the one variable that settles it.
+- The units are also handed `DBUS_SESSION_BUS_ADDRESS` explicitly. `XDG_RUNTIME_DIR` alone
+  leaves some hosts finding the directory but not the bus inside it, failing with
+  "Failed to connect to bus" while the socket sits right there.
 
 ## 2026-08-23 — Order-notes: the vault becomes the job queue
 

@@ -17,7 +17,8 @@ report that these services do not exist.** That is not a broken install.
 | `hvk-watch.service` | same | Indexes changes as they land |
 | `hvk-agent.service` | same | A tmux session running Claude Code with the Telegram channel |
 | `vault-autocommit.sh` | `~/.local/share/hvk/deploy-bin/` | A git checkpoint of the vault, every 30 minutes |
-| cron block | your crontab | The auto-commit, and `hvk verify` nightly at 04:17 |
+| cron block | your crontab | The auto-commit, `hvk verify` nightly at 04:17, the materialised views, and the order-note runner |
+| `hvk-schedule.sh` | `~/.local/share/hvk/deploy-bin/` | Runs the views and the runner from cron, quiet unless something failed |
 | `.gitignore` | inside the vault | Only if it has none of its own |
 
 ## Prerequisites, which are not installed for you
