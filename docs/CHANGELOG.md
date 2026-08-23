@@ -4,6 +4,37 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-21 — The vault-writing layer, and the first code that can destroy something
+
+- `src/hvk/write.py` and `docs/adr/0007-writing-to-the-vault.md`. Until now every line of this
+  project only read, which meant a bug could give a wrong answer but never lose anything, and
+  `hvk rebuild` fixed it. Phases 4 and 5 write into the vault, so that safety net is gone and
+  every write now goes through one module.
+- Atomic by temporary file and rename, in the same directory so the rename stays atomic. The
+  temporary is a dotfile, which the exclusion rules of ADR-0002 already hide from the watcher
+  and the index.
+- **Writing identical content does nothing at all** — the file is not opened and its mtime is
+  not touched. That is not an optimisation: it is what stops a view regenerated every half
+  hour from waking the watcher and sync every half hour on every device, and it makes the
+  plan's "regenerate twice, no diff" criterion true by construction.
+- **A file that moved underneath is never overwritten.** Every write states the digest it
+  expected; if sync delivered an edit from a phone while we were thinking, the write is
+  refused and says so. A file that did not exist is the same mechanism with an expected digest
+  of `None`, so "create only if still absent" needs no special case.
+- Line endings, the final newline and a byte-order mark all survive a round trip. Frontmatter
+  survives because it is never parsed: editing a note edits its text, so key order, comments
+  and quoting stay exactly as their author wrote them.
+- Invalid UTF-8 is refused rather than repaired, deletion means moving to `.trash/`, and every
+  path is checked to be inside the vault with symlinks resolved — a note is untrusted input,
+  and a generated path that escapes the vault is the shape a prompt injection would take.
+- Generated content lives between `<!-- hvk:begin ... -->` and `<!-- hvk:end -->`, with the
+  directive inside the opening marker so a note says for itself what generates its content.
+  English markers rather than the plan's `<!-- vista:inicio -->`, which predates the convention
+  that everything shipped with the repository is in English. An unclosed marker is an error,
+  never an invitation to replace the rest of the file.
+- 363 tests pass on Debian 12 inside the testbed, where the symlink-escape cases run that
+  Windows has to skip.
+
 ## 2026-08-23 — The docs stop borrowing a private name
 
 - Both READMEs opened by explaining the project in terms of a "Nexus" — a word from a private
