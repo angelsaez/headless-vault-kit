@@ -297,4 +297,8 @@ repo largo y claro, comando corto y cómodo.
 
 ## Licencia
 
-Pendiente de decidir antes de hacer el repositorio público (ver `.plans/`, Anexo).
+**MIT.** Haz con esto lo que quieras, incluido uso comercial; conserva el aviso de copyright, y
+no hay garantía de ningún tipo. El texto completo está en [LICENSE](LICENSE).
+
+Las dos dependencias de ejecución también son permisivas —`ruamel.yaml` es MIT y `watchdog` es
+Apache-2.0—, así que nada de aquí condiciona lo que construyas encima.
