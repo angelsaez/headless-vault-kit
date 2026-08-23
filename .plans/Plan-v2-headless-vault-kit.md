@@ -3,8 +3,8 @@
 > Sistema agéntico 24/7 sobre un vault de Obsidian en VPS, sin interfaz gráfica, replicando los **datos** que Obsidian deriva al abrirse — no su runtime.
 
 **Estado del documento:** plan de implementación v2, sustituye operativamente al v1 ("Vault Gateway Headless")
-**Fecha:** 2026-08-14 · revisado 2026-08-21 con los datos del inventario · 2026-08-23 con las Fases 4 y 5 hechas
-**Versión:** 2.3
+**Fecha:** 2026-08-14 · revisado 2026-08-21 con los datos del inventario · 2026-08-23 con las Fases 4 y 5 hechas y las decisiones 5 y 6 cerradas
+**Versión:** 2.4
 **Hardware objetivo:** VPS Linux, 2 núcleos, 12 GB RAM
 **Naturaleza:** el v1 se conserva como mapa de máximos; este documento define lo que se construye de verdad y en qué orden
 
@@ -455,10 +455,25 @@ Si esa demostración funciona, el resto del plan es acumular capas sobre algo qu
    la ambigüedad almacenada y consultable ([ADR-0003](../docs/adr/0003-link-resolution.md)).
    Corrige de paso el plan: `newLinkFormat` y `useMarkdownLinks` gobiernan cómo se **escriben**
    los enlaces, no cómo se leen.
-5. **Git en el VPS: solo local, o remoto privado además del backup.** Abierta. Se decide en la
-   Fase 0, que es cuando existe el VPS.
-6. **Licencia y modelo de publicación.** Abierta, sin urgencia: el repositorio está en privado.
-   Se decide antes de publicarlo.
+5. ~~Git en el VPS: solo local, o remoto privado además del backup~~ — DECIDIDO (2026-08-21):
+   **solo local, sin remoto** ([ADR-0006](../docs/adr/0006-deployment-leaves-the-system-alone.md)).
+   Da checkpoints, auditoría y deshacer inmediato sin una clave de despliegue que gestionar ni
+   un cron que falle por un corte de red. Sobrevivir a la pérdida del servidor es de la Fase 6.
+6. ~~Licencia y modelo de publicación~~ — DECIDIDO (2026-08-23): **MIT**. Es la de menor
+   fricción para que alguien pruebe esto y aporte un adaptador de parser (Fase 7), y las dos
+   dependencias de ejecución ya son permisivas, así que no imponían nada. Se descartó
+   Apache-2.0 —su concesión expresa de patentes no aporta casi nada a un programa que parsea
+   ficheros Markdown— y AGPL, que protege un escenario, el SaaS cerrado, que aquí es
+   improbable y que tampoco quitaría nada.
+
+   **Consecuencia que conviene no olvidar:** mientras el autor sea único, conserva el copyright
+   entero y puede relicenciar. Al aceptar el primer pull request de un tercero eso deja de ser
+   cierto sin el permiso de cada contribuidor. Si alguna vez se quiere conservar esa opción,
+   hay que pedir un CLA desde el principio.
+
+   Publicar el repositorio publica también `.plans/` y `CLAUDE.md`, escritos en español y para
+   uso interno. No hay nada sensible en ellos; que se publiquen o se retiren es una decisión
+   aparte y todavía abierta.
 7. **Plantillas y notas periódicas: carpeta, formato de nombre y plantilla.** Abierta, y
    bloquea esa parte de la Fase 3. El inventario confirma que el vault no lo dice —
    `templates.json` apunta a una carpeta inexistente, no hay `daily-notes.json` y no se usa
