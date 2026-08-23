@@ -43,7 +43,7 @@ check_bin() {
     fi
 }
 
-check_bin hvk    "${HVK_BIN:-}"    "Install with: uv tool install hvk"
+check_bin hvk    "${HVK_BIN:-}"    "Not on PyPI yet: see 'Getting hvk onto the server' in deploy/README.md"
 check_bin ob     "${OB_BIN:-}"     "Obsidian Headless needs Node 22+; see github.com/obsidianmd/obsidian-headless"
 check_bin claude "${CLAUDE_BIN:-}" "Install Claude Code, then set the absolute path"
 

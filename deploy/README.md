@@ -28,10 +28,49 @@ that — apt, dnf, nvm, asdf, a tarball. `preflight.sh` checks and names what is
 
 | Needed by | What | Note |
 |---|---|---|
-| `hvk` | Python 3.11+ | `curl -LsSf https://astral.sh/uv/install.sh \| sh` then `uv tool install hvk` |
+| `hvk` | Python 3.11+ | Not on PyPI yet — see "Getting hvk onto the server" below |
 | `ob` | **Node.js 22+** | Obsidian Headless. Also needs an Obsidian Sync subscription |
 | Telegram channel | **Bun** | `curl -fsSL https://bun.sh/install \| bash` |
 | the agent session | `tmux`, `git` | |
+
+## Getting hvk onto the server
+
+`hvk` is not published to PyPI, so `uv tool install hvk` does not work yet. Both routes below
+need this repository on the server; the second also needs `deploy/`, so you want the checkout
+either way.
+
+**Copy the repository across** (works whether or not the repository is public, and needs no
+credentials on the server):
+
+```sh
+# from your own machine
+rsync -a --exclude .venv --exclude .git ./ server:~/headless-vault-kit/
+```
+
+**Or clone it** — only once the repository is public, or with credentials you have arranged:
+
+```sh
+git clone https://github.com/angelsaez/headless-vault-kit ~/headless-vault-kit
+```
+
+Then install it, either with uv:
+
+```sh
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv tool install --from ~/headless-vault-kit headless-vault-kit
+```
+
+or with nothing but Python, which every Debian has:
+
+```sh
+sudo apt install python3-venv          # if it is not there already
+python3 -m venv ~/.venv-hvk
+~/.venv-hvk/bin/pip install ~/headless-vault-kit
+ln -sf ~/.venv-hvk/bin/hvk ~/.local/bin/hvk
+```
+
+Either way, `command -v hvk` gives you the absolute path that `deploy.env` wants. The units do
+not inherit your interactive `PATH`, so that path has to be absolute.
 
 ## Runbook
 
@@ -127,6 +166,10 @@ systemctl --user status obsidian-headless hvk-watch hvk-agent
 hvk --vault ~/vault info          # last_scan should be recent
 git -C ~/vault log --oneline -5   # checkpoints from today
 ```
+
+The auto-commit runs every thirty minutes, so straight after installing that last command
+says `does not have any commits yet`. That is not a fault; run
+`~/.local/share/hvk/deploy-bin/vault-autocommit.sh` once if you want to see it work now.
 
 Create a note on your phone, wait a few seconds, and ask the bot what links to it. That is the
 whole system in one question.

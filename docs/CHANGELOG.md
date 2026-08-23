@@ -4,6 +4,27 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-23 — The deployment runbook can actually be started
+
+- Rehearsing the runbook end to end in the container found the obvious thing nobody had tried:
+  **its first instruction cannot be followed.** Both `deploy/README.md` and `preflight.sh` said
+  to install with `uv tool install hvk`, which returns 404 — the package is not on PyPI, as the
+  main README has said all along. Anyone following the runbook stops at step 1, before checking
+  anything, unable to install the tool the whole phase is about.
+- A new section says how to get `hvk` onto a server for real: copy the repository across with
+  `rsync` (needs no credentials on the server, and works while the repository is private) or
+  clone it, then install either with `uv tool install --from <path>` or with nothing but
+  `python3 -m venv` and `pip`, which every Debian already has. The second route was run inside
+  the container, on Debian 12, and produces a working `hvk` at an absolute path — which is what
+  `deploy.env` needs, since a unit does not inherit an interactive `PATH`.
+- The runbook's own post-reboot check told people to run `git -C ~/vault log`, which right after
+  installing answers `does not have any commits yet`, because the auto-commit runs every thirty
+  minutes. It now says so, and gives the one command that shows it working immediately.
+- The rest of the rehearsal passed and is worth recording: preflight reports honestly, the
+  install is clean and its dry run writes nothing, all three services start, the tmux session
+  comes up — and after restarting the container **all three come back on their own**, with the
+  session alive and the four cron entries intact.
+
 ## 2026-08-23 — The internal working documents stop being published
 
 - `.plans/` and `CLAUDE.md` leave version control and stay on the author's machine. Both are
