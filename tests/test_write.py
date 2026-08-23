@@ -394,3 +394,115 @@ def test_regenerating_an_unchanged_block_never_touches_the_note(vault):
     before = path.read_bytes()
     assert regenerate() is False
     assert path.read_bytes() == before
+
+
+# -- frontmatter, edited as text -------------------------------------------------------------
+
+FRONT = (
+    "---\n"
+    "tipo: orden\n"
+    "# a comment ruamel would drop on a round trip\n"
+    "estado:   pendiente\n"
+    "entradas:\n"
+    "  - Marco/01.md\n"
+    "  - Marco/02.md\n"
+    "acción: 'revisar'\n"
+    "\n"
+    "creada: 2026-08-23T10:00\n"
+    "---\n"
+    "\n"
+    "Cuerpo de la orden.\n"
+)
+
+
+def test_only_the_one_line_changes():
+    result = write.set_frontmatter(FRONT, "estado", "en-curso")
+    assert result == FRONT.replace("estado:   pendiente", "estado:   en-curso")
+
+
+def test_the_spacing_after_the_colon_survives():
+    """An unnecessary change of style is still a change, and a change is a diff."""
+    assert "estado:   en-curso" in write.set_frontmatter(FRONT, "estado", "en-curso")
+
+
+def test_quoting_style_survives():
+    assert "acción: 'revisado'" in write.set_frontmatter(FRONT, "acción", "revisado")
+
+
+def test_a_plain_value_stays_plain():
+    assert "\ntipo: nota\n" in write.set_frontmatter(FRONT, "tipo", "nota")
+
+
+def test_setting_a_value_to_what_it_already_is_changes_nothing():
+    assert write.set_frontmatter(FRONT, "estado", "pendiente") == FRONT
+
+
+def test_a_multi_line_value_is_replaced_whole():
+    result = write.set_frontmatter(FRONT, "entradas", "Marco/03.md")
+    assert "entradas: Marco/03.md" in result
+    assert "Marco/01.md" not in result and "Marco/02.md" not in result
+    assert "acción: 'revisar'" in result, "the next key must survive intact"
+
+
+def test_the_last_occurrence_wins_because_that_is_the_one_the_app_reads():
+    """ADR-0004: js-yaml keeps the last value for a repeated key, so that is the live one."""
+    text = "---\nestado: pendiente\nzeta: 1\nestado: pendiente\n---\nbody\n"
+    result = write.set_frontmatter(text, "estado", "hecho")
+    assert result == "---\nestado: pendiente\nzeta: 1\nestado: hecho\n---\nbody\n"
+
+
+def test_a_key_that_is_not_there_is_appended_before_the_closing_fence():
+    result = write.set_frontmatter(FRONT, "salida", "Informes/X.md")
+    assert "salida: Informes/X.md\n---" in result
+    assert result.replace("salida: Informes/X.md\n", "") == FRONT
+
+
+def test_a_value_that_would_not_read_back_is_quoted():
+    result = write.set_frontmatter(FRONT, "tipo", "algo: con dos puntos")
+    assert 'tipo: "algo: con dos puntos"' in result
+
+
+@pytest.mark.parametrize("value", ["- guion", "#almohadilla", "", " ", "@arroba"])
+def test_values_that_yaml_would_misread_are_quoted(value):
+    result = write.set_frontmatter(FRONT, "tipo", value)
+    assert f'tipo: "{value}"' in result
+
+
+def test_indented_keys_are_not_mistaken_for_top_level_ones():
+    text = "---\nmapa:\n  estado: dentro\nestado: fuera\n---\nbody\n"
+    result = write.set_frontmatter(text, "estado", "cambiado")
+    assert "  estado: dentro" in result, "the nested key must not be touched"
+    assert "\nestado: cambiado\n" in result
+
+
+def test_a_note_without_frontmatter_is_refused():
+    with pytest.raises(WriteError, match="no frontmatter"):
+        write.set_frontmatter("# Just a note\n", "estado", "hecho")
+
+
+def test_an_unclosed_frontmatter_is_not_frontmatter():
+    with pytest.raises(WriteError, match="no frontmatter"):
+        write.set_frontmatter("---\nestado: pendiente\nno closing fence\n", "estado", "hecho")
+
+
+def test_a_multi_line_value_is_refused():
+    with pytest.raises(WriteError, match="spanning several lines"):
+        write.set_frontmatter(FRONT, "estado", "uno\ndos")
+
+
+def test_the_body_is_never_touched():
+    result = write.set_frontmatter(FRONT, "estado", "hecho")
+    assert result.split("---\n", 2)[2] == FRONT.split("---\n", 2)[2]
+
+
+def test_it_goes_through_the_writer_intact(vault):
+    """End to end: the bytes outside the one line come back exactly as they were."""
+    raw = FRONT.encode("utf-8").replace(b"\n", b"\r\n")
+    path = put(vault, "Orden.md", raw)
+
+    original = vault.read(path)
+    vault.write(original, write.set_frontmatter(original.text, "estado", "en-curso"))
+
+    written = path.read_bytes()
+    assert written == raw.replace(b"estado:   pendiente", b"estado:   en-curso")
+    assert written.count(b"\r\n") == written.count(b"\n"), "CRLF must survive"

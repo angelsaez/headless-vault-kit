@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import tempfile
 from dataclasses import dataclass
 from datetime import datetime
@@ -321,3 +322,104 @@ def replace_block(text: str, block: Block, body: str) -> str:
     tail = f"\n{block.indent}{block.close}"
     rebuilt = f"{block.open}\n{inner}{tail}" if inner else f"{block.open}{tail}"
     return text[:block.start] + rebuilt + text[block.end:]
+
+
+# -- frontmatter, edited as text ------------------------------------------------------------
+
+# A top-level key: no indentation, not a list item, not a comment. Anything indented belongs
+# to the value above it and is left alone.
+KEY_RE = re.compile(r"^(?P<key>[^\s#\-][^:]*?)(?P<sep>:)(?P<gap>[ \t]*)(?P<value>.*)$")
+FENCES = ("---", "...")
+# Characters that make a plain YAML scalar mean something other than itself.
+INDICATORS = "-?:,[]{}#&*!|>'\"%@`"
+
+
+def frontmatter_span(text: str) -> tuple[int, int] | None:
+    """Line indices ``(first, close)`` of the frontmatter, or None when there is none.
+
+    ``first`` is the first line inside it and ``close`` the line holding the closing fence.
+    The rule is the parser's (``parse.markdown.split_frontmatter``): the opening fence is on
+    line 1 and a closing fence exists, or it is not frontmatter at all.
+    """
+    lines = text.split("\n")
+    if not lines or lines[0].strip() != "---":
+        return None
+    for index in range(1, len(lines)):
+        if lines[index].strip() in FENCES:
+            return 1, index
+    return None
+
+
+def _plain_is_safe(value: str) -> bool:
+    """Whether *value* can be written unquoted and still read back as the same string."""
+    if not value or value != value.strip():
+        return False
+    if value[0] in INDICATORS:
+        return False
+    return ": " not in value and " #" not in value and "\n" not in value
+
+
+def _formatted(value: str, previous: str) -> str:
+    """Render *value*, keeping the quoting style the previous value used.
+
+    A note whose author wrote ``estado: "pendiente"`` gets ``estado: "en-curso"`` back. The
+    point is not tidiness: an unnecessary change of style is a change, and a change is a diff
+    delivered to every device.
+    """
+    old = previous.strip()
+    if len(old) >= 2 and old[0] == old[-1] and old[0] in "\"'":
+        quote = old[0]
+        if quote == "'":
+            return "'" + value.replace("'", "''") + "'"
+        return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    if _plain_is_safe(value):
+        return value
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _top_level_keys(lines: list, first: int, close: int) -> list:
+    """(index, match) for every top-level key line in the frontmatter, in order."""
+    found = []
+    for index in range(first, close):
+        match = KEY_RE.match(lines[index])
+        if match:
+            found.append((index, match))
+    return found
+
+
+def set_frontmatter(text: str, key: str, value: str) -> str:
+    """Return *text* with frontmatter *key* set to *value*, and nothing else touched.
+
+    The YAML is never parsed and re-emitted, so key order, comments, quoting, indentation and
+    blank lines all survive (ADR-0007). Only the one line holding the key is rewritten.
+
+    When a key appears more than once, the **last** occurrence is the one edited, because that
+    is the one the app reads (ADR-0004). A key that is not there is appended just above the
+    closing fence.
+    """
+    if "\n" in value:
+        raise WriteError(f"cannot set {key!r} to a value spanning several lines")
+
+    span = frontmatter_span(text)
+    if span is None:
+        raise WriteError(
+            "this note has no frontmatter, so there is no property to set. Refusing to invent "
+            "one: a note whose first line changes is a note whose whole file changed."
+        )
+
+    first, close = span
+    lines = text.split("\n")
+    keys = _top_level_keys(lines, first, close)
+    matching = [(index, match) for index, match in keys if match.group("key").strip() == key]
+
+    if not matching:
+        lines.insert(close, f"{key}: {_formatted(value, '')}")
+        return "\n".join(lines)
+
+    index, match = matching[-1]
+    # A value can run past its own line -- a list, or a folded block. Everything up to the
+    # next top-level key belongs to it and goes away with it.
+    following = next((at for at, _ in keys if at > index), close)
+    rewritten = f"{match.group('key')}{match.group('sep')}{match.group('gap') or ' '}" \
+                f"{_formatted(value, match.group('value'))}"
+    return "\n".join(lines[:index] + [rewritten] + lines[following:])
