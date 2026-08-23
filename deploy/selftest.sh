@@ -144,6 +144,17 @@ sleep 1
 check "stopping tears it down"       "! tmux has-session -t hvk-selftest"
 
 echo ""
+echo "selective install, for a machine that already runs some of this itself"
+"$HERE/uninstall.sh" >/dev/null 2>&1
+"$HERE/install.sh" --only watch,schedules >"$LAB/only.txt" 2>&1
+check "installs the unit asked for"  "[ -f \"$HOME/.config/systemd/user/hvk-watch.service\" ]"
+check "and not the ones it was not"  "[ ! -e \"$HOME/.config/systemd/user/obsidian-headless.service\" ] && [ ! -e \"$HOME/.config/systemd/user/hvk-agent.service\" ]"
+check "no auto-commit line in cron"  "! crontab -l | grep -q vault-autocommit"
+check "the schedules are there"      "crontab -l | grep -q 'hvk-schedule.sh jobs'"
+check "an unknown part is refused"   "! '$HERE/install.sh' --only nonsense >/dev/null 2>&1"
+"$HERE/uninstall.sh" >/dev/null 2>&1
+
+echo ""
 echo "uninstalling"
 "$HERE/uninstall.sh" >/dev/null 2>&1
 check "units removed"                "[ ! -e \"\$HOME/.config/systemd/user/hvk-watch.service\" ]"

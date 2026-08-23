@@ -78,6 +78,22 @@ Faster and more visible now than as the first thing a watcher does at boot.
 ./deploy/install.sh
 ```
 
+**If the machine already runs some of this**, install only the missing parts, or you will end
+up with two syncers on one vault and two agents on one bot. The installer will not notice: its
+"refuse to overwrite a unit that differs" check compares paths, and a system unit and a user
+unit of the same name are different paths ([ADR-0010](../docs/adr/0010-installing-onto-a-server-that-is-already-running.md)).
+
+```sh
+./deploy/install.sh --only watch,schedules            # the index and the timers, nothing else
+./deploy/install.sh --only watch,schedules --system   # ...as system units, if that is how the
+                                                      #    machine's own services are managed
+```
+
+The five parts are `sync`, `agent`, `watch`, `git` and `schedules`; `install.sh --help` says
+what each one covers. `--system` writes to `/etc/systemd/system` and needs `sudo`, and in
+exchange needs no lingering — a system unit is started by the machine, not by your session.
+`uninstall.sh` sweeps both scopes without being told which you used.
+
 It refuses, with exit code 3, if a unit of the same name already exists with different
 contents — something else may own it. Compare, then use `--force` if you are sure. Running it
 twice changes nothing the second time.
