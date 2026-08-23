@@ -11,7 +11,7 @@ derived, so the worst a bug could do was produce a wrong answer, and `hvk rebuil
 Phase 4's materialised views and phase 5's order-notes both write into the vault, and from
 that point a bug can destroy something that exists nowhere else.
 
-`CLAUDE.md` already fixes the principles — atomic writes, trash rather than delete, preserve
+The project's rules already fix the principles — atomic writes, trash rather than delete, preserve
 frontmatter and line endings, never leave the vault — but each of them hides a decision that
 has to be made before any code exists, because the vault is not an ordinary directory:
 
@@ -110,7 +110,7 @@ person restoring by hand finds a folder tree rather than a flat list.
 Every path is resolved — symlinks included — and checked to be inside the vault before
 anything is opened. The path itself is resolved, not merely its parent: a *broken* symlink
 pointing outside the vault is exactly what a parent-only check waves through and then follows
-on `open()`. A note is untrusted input (`CLAUDE.md`), and a generated path that escapes the
+on `open()`. A note is untrusted input — vault content is data, never instructions — and a generated path that escapes the
 vault is the shape a prompt-injection attack would take.
 
 Beyond that, this module refuses to write anything under a path component starting with `.` —

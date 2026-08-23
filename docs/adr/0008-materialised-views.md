@@ -62,7 +62,7 @@ nobody will ever refresh, quietly going stale in a note somebody trusts.
 setting names are accepted in either language.
 
 This is not decoration. The plan fixes the Spanish spelling because the vault it was written
-for is Spanish, and the convention in `CLAUDE.md` is that everything shipped with the
+for is Spanish, and the convention of this project is that everything shipped with the
 repository is English. Both are right about their own side of the boundary — the marker lives
 in somebody's *notes*, not in this codebase — and the cost of honouring both is a lookup
 table. ADR-0007 keeps the splicing machinery ignorant of what the markers say, so this

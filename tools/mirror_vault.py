@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Mirror a vault into a working copy, so real data can be tested against safely.
 
-``CLAUDE.md`` forbids pointing anything at the production vault during development, and that
+A standing rule forbids pointing anything at the production vault during development, and that
 rule is worth keeping even though ``hvk`` only ever reads. This makes the sanctioned
 alternative one command: a mirror that leaves the original untouched, drops what must never be
 copied, and refuses the destinations that would turn a convenience into an incident.
