@@ -75,6 +75,20 @@ que pasa por una única capa auditada
 prometía queda pospuesto indefinidamente: el vault para el que se escribió no tiene Dataview
 instalado.
 
+**La Fase 5 convierte el vault en la cola de trabajos.** Una nota en un directorio que tú
+designas *es* un trabajo: su frontmatter es el estado, así que su progreso se lee en el móvil
+como cualquier otra nota. `hvk jobs --run` reclama cada trabajo pendiente con una escritura que
+declara el hash que la nota tenía al leerla —que es lo que hace que se ejecute exactamente una
+vez aunque dos runners compitan o uno se reinicie a mitad—, lanza al agente y deja en la nota
+el resultado y su causa.
+
+Es además lo primero aquí que **ejecuta** algo porque lo diga una nota, y una nota puede llegar
+de cualquier sitio. Por eso: todo trabajo nombra un perfil de permisos, elegido por nombre en
+un directorio al que la nota no llega; los directorios de trabajos y de perfiles **no tienen
+valor por defecto**, y nada se ejecuta hasta que alguien dice dónde están; y una salida dentro
+del directorio de trabajos se rechaza, porque así es como un runner se da trabajo a sí mismo
+para siempre. El razonamiento está en la [ADR-0009](docs/adr/0009-order-notes.md).
+
 El plan completo, con fases y criterios de salida, está en
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md); las decisiones
 que sostienen el diseño, en [`docs/adr/`](docs/adr/).
@@ -108,6 +122,7 @@ Dentro de un vault se puede omitir `--vault`: hvk sube por el árbol hasta encon
 | `hvk verify` | Re-calcula el hash de todo como red de seguridad; se lanza de noche desde cron |
 | `hvk base Archivo.base [--view Nombre]` | Ejecuta una vista de un `.base` contra el índice, como tabla Markdown |
 | `hvk views [Ruta] [--apply]` | Regenera las tablas de Bases materializadas dentro de notas; sin `--apply` solo lista lo que está desactualizado |
+| `hvk jobs --dir D --profiles P [--run]` | Ejecuta las notas-orden que esperan en un directorio; sin `--run` solo informa |
 | `hvk info` | Qué contiene el índice ahora mismo |
 
 Todos los comandos aceptan `--json` para salida legible por máquina; `hvk watch` emite JSON
@@ -142,7 +157,7 @@ uv tool install hvk
 | 2 | Indexador Nivel 0 + CLI `hvk` | **Hecha** |
 | 3 | Bases, Canvas, plantillas y notas periódicas | Bases **hecho**; el resto pospuesto |
 | 4 | Vistas materializadas (DQL de Dataview pospuesto) | **Hecha** |
-| 5 | Notas-orden: el vault como cola de trabajos | Pendiente |
+| 5 | Notas-orden: el vault como cola de trabajos | **Hecha** (Sync y Telegram esperan a la Fase 0) |
 | 6 | Seguridad, healthchecks, backups ensayados | Pendiente |
 | 7 | MCP + parsers de comunidad + empaquetado | Futuro |
 

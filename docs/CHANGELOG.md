@@ -4,6 +4,46 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-23 — Order-notes: the vault becomes the job queue
+
+- `hvk jobs --dir D --profiles P [--run]`, plus the surgical frontmatter edit it needed. A note
+  in a directory you nominate *is* a job and its frontmatter *is* the state, so a job's progress
+  syncs to every device without anything being built to show it.
+  `docs/adr/0009-order-notes.md` records the decisions.
+- **Exactly once is a conditional write, not a lock.** Claiming a job writes `status: running`
+  through the layer of ADR-0007, which states the digest the note had when it was read. Two
+  runners racing, or one restarted mid-flight, lose the race instead of running the job twice.
+  No lease table, no clock, no lock that sync would not honour anyway.
+  Its honest limit is in the ADR: a runner killed *after* claiming leaves the job stuck, which
+  is deliberate — stuck and visible beats repeated and invisible.
+- **Frontmatter is edited as text, never reserialised.** `write.set_frontmatter` rewrites the
+  one line holding a key: the spacing after the colon, the quoting style, the comments, the key
+  order and the blank lines all survive. When a key appears twice it edits the **last** one,
+  because that is the one the app reads (ADR-0004).
+- **Nothing has a default and nothing runs unless asked.** Neither the jobs directory nor the
+  profiles directory has a default value; without both, the command refuses. A runner that
+  starts executing an agent because a folder happened to have the right name is the failure the
+  whole feature exists to prevent — and the name would be someone else's word anyway.
+- **A note chooses limits by name; it never supplies them.** Every job must name a permission
+  profile, and one that does not is refused before anything is touched. The profile is a JSON
+  file outside the note's reach holding the command to run; the note supplies only a name,
+  validated against a pattern with no separators and no traversal. So the untrusted side picks
+  among options the trusted side defined, and can express nothing else. No shell anywhere.
+- Putting the command in the profile is also what keeps this agnostic: the runner never learns
+  a single Claude Code flag, so another agent works and a CLI change is a config edit.
+- **The anti-loop rule is structural**: an output path inside the jobs directory is refused, and
+  nothing outside that directory is ever watched. Outside the vault is refused too, by the
+  write layer.
+- The note keeps its own language. Keys and states are read in English and Spanish, and written
+  back in the spelling the note already used — a note saying `estado:` gets `iniciada:`, not
+  `started:`. Same bargain as ADR-0008.
+- A failed job records the reason in its frontmatter and one line in its body. The command exits
+  non-zero for what **this run** failed, not for a job that failed yesterday: an alarm that
+  fires every minute for ever is one nobody reads.
+- 31 tests cover it, none of which launch a real agent — the profile names the command, so they
+  name a small Python program and measure the runner. `tools/testbed/README.md` shows how to do
+  the same in the container, including the test a laptop cannot do: restart it mid-job.
+
 ## 2026-08-23 — Materialised views: a base's answer, readable on a phone
 
 - `hvk views [PATH] [--apply]` regenerates the table a `.base` produces *inside* a note,

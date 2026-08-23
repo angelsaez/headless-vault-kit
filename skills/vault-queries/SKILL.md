@@ -1,6 +1,6 @@
 ---
 name: vault-queries
-description: Query an Obsidian vault through the hvk index instead of reading files. Use whenever a question is about the vault as a whole - what links to a note, what mentions a topic, which tasks are due, which notes have a property, what is orphaned or broken - and before opening notes one by one to find something. Covers hvk search, backlinks, links, tags, tasks, props, orphans, base, views, info, scan and verify.
+description: Query an Obsidian vault through the hvk index instead of reading files. Use whenever a question is about the vault as a whole - what links to a note, what mentions a topic, which tasks are due, which notes have a property, what is orphaned or broken - and before opening notes one by one to find something. Covers hvk search, backlinks, links, tags, tasks, props, orphans, base, views, jobs, info, scan and verify.
 ---
 
 # Querying the vault with hvk
@@ -131,6 +131,26 @@ Read the report before assuming a dashboard is current: `up to date` means it is
 `stale` means the note on disk no longer matches what the base returns, and `error` names the
 note and the reason. `<!-- view:start -->` / `<!-- view:end -->` with `%% view: %%` are the
 same thing in English. [ADR-0008](../../docs/adr/0008-materialised-views.md) has the details.
+
+### Order-notes
+
+A note in a designated directory can *be* a job: its frontmatter is the state, so a job's
+progress is readable on a phone like any other note.
+
+`hvk jobs --dir <jobs directory> --profiles <profiles directory>` lists what is waiting and
+**touches nothing**. Both paths are deliberately without defaults — nothing runs unless
+somebody said where — so the exact invocation belongs to whoever set the server up, not here. Adding `--run` claims each pending job and
+launches the agent named by its permission profile; it normally runs from cron, not from you.
+
+You will mostly meet this as a reader: if someone asks why a job did not run, the answer is in
+the note itself — `status` says where it got to, and the last line of the body says why. Common
+refusals are a job with no `profile` (every job must name one), an output path inside the jobs
+directory (that would make the runner feed itself), and a job stuck in `running` because the
+runner was killed after claiming it. [ADR-0009](../../docs/adr/0009-order-notes.md) explains
+each one.
+
+**Never edit a job's `status` to make it run again** without reading why it stopped. It is the
+only thing standing between "ran once" and "ran twice".
 
 ## When the answer looks wrong
 
