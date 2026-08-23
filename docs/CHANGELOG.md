@@ -4,6 +4,27 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-23 — The docs stop borrowing a private name
+
+- Both READMEs opened by explaining the project in terms of a "Nexus" — a word from a private
+  circle, which says nothing to anyone outside it and, worse, hides what the tool is actually
+  for. They now say it plainly: this puts Obsidian's own functionality back on a vault that
+  lives on a headless server, where the app never opens. `README.es.md` also drops "hablar con
+  tu Nexus" and the aside addressed to people arriving from the club.
+- The plan loses the same borrowed vocabulary: the goal is a vault operating 24/7 on the VPS,
+  and phase 0 follows a recipe that already works for other people, rather than "the lessons of
+  Nexus 5". Scope, phases and exit criteria are untouched — only the words.
+- `nexus-agent.service` becomes **`hvk-agent.service`**, and the tmux session `nexus` becomes
+  `hvk-agent`, matching `hvk-watch.service`. Nothing is deployed anywhere yet, so the rename
+  costs a `git mv`; discovering it after installing on a server would have cost a migration.
+- `.gitignore` drops `.nexus-index/`, left over from before ADR-0002 moved the index out of the
+  repository entirely.
+- ADR-0002 keeps the word, because rejecting it as a path name is the decision it records. Only
+  the clause describing it was corrected: it is a name borrowed from the author's own circle,
+  not the name of a personal vault.
+- Why: the repository is meant to go public. A reader who has to already know what a Nexus is
+  cannot tell what this project does from its first paragraph.
+
 ## 2026-08-21 — Phase 0: deployment that leaves the machine alone
 
 - `deploy/` arrives: systemd **user** units for Obsidian Headless, `hvk watch` and a tmux

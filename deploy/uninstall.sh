@@ -5,7 +5,7 @@ set -eu
 
 UNIT_DIR="$HOME/.config/systemd/user"
 BIN_DIR="$HOME/.local/share/hvk/deploy-bin"
-UNITS="obsidian-headless.service hvk-watch.service nexus-agent.service"
+UNITS="obsidian-headless.service hvk-watch.service hvk-agent.service"
 MARK_BEGIN="# >>> headless-vault-kit >>>"
 MARK_END="# <<< headless-vault-kit <<<"
 

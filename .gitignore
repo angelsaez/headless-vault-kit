@@ -13,7 +13,6 @@ secrets/
 *.sqlite
 *.sqlite3
 *.db
-.nexus-index/
 
 # Node / TypeScript (si la ADR-001 elige TS)
 node_modules/
