@@ -91,7 +91,14 @@ done
 
 say ""
 say "scripts -> $BIN_DIR"
-[ "$DRY" = 1 ] || mkdir -p "$BIN_DIR"
+# A bare "Permission denied" from mkdir under set -e says nothing about which of the two
+# usual causes it is, and both are common on a machine someone else set up.
+if [ "$DRY" != 1 ] && ! mkdir -p "$BIN_DIR" 2>/dev/null; then
+    say "  cannot create $BIN_DIR."
+    say "    Check that you own the directories above it: ls -ld $HOME/.local $HOME/.local/share"
+    say "    Everything here is user-scope, so nothing in your home should be owned by root."
+    exit 4
+fi
 for script in vault-autocommit.sh; do
     if [ -e "$BIN_DIR/$script" ] && cmp -s "$HERE/bin/$script" "$BIN_DIR/$script"; then
         act "unchanged: $script"

@@ -25,6 +25,30 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
 - Why: the repository is meant to go public. A reader who has to already know what a Nexus is
   cannot tell what this project does from its first paragraph.
 
+## 2026-08-21 — A throwaway container to test the deployment in
+
+- `tools/testbed/`: a disposable Debian 12 box with systemd, so `deploy/selftest.sh` can
+  install units, write a crontab and start services without doing any of that on the
+  developer's own machine. Until now it did, and cleaned up afterwards — which works but is
+  not something to ask of a contributor.
+- Debian 12 on purpose: it is what most VPS run, and its Python 3.11 is exactly the minimum
+  ADR-0001 targets, so a pass there means something.
+- `ob` and `claude` are stubbed rather than installed. Both need credentials, and the project
+  is built so that it does not care how files arrive on disk — a fake syncer exercises the
+  indexer just as well as a real one and needs nobody's password. `--runtimes`, `--vault` and
+  `--claude` are there for when the thing under test really is the agent.
+- **The fire test now passes for real.** Restart the container and all three services come
+  back on their own, with the tmux session alive, the cron block in place and the index
+  answering. That is a phase 0 exit criterion that WSL could not check.
+- Three things it found, all of which would otherwise have surfaced on the server: Docker's
+  default `tmpfs` is `noexec` and systemd's user manager has to execute from `/run`;
+  `libpam-systemd` and `dbus-user-session` are what set `XDG_RUNTIME_DIR` and create
+  `/run/user/<uid>`, without which `systemctl --user` cannot connect to anything; and
+  `docker exec` opens no login session, so that variable has to be handed over by hand.
+- `deploy/install.sh` now explains itself when it cannot create its directories, instead of
+  dying on a bare "Permission denied" from `mkdir` under `set -e`. Found by making that
+  mistake in the testbed.
+
 ## 2026-08-21 — Phase 0: deployment that leaves the machine alone
 
 - `deploy/` arrives: systemd **user** units for Obsidian Headless, `hvk watch` and a tmux
