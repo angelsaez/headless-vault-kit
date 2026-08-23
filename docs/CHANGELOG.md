@@ -4,6 +4,35 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-23 — A README somebody else can follow, and CI
+
+- The `## Status` section still opened with "Phase 2 is done, phase 3 is under way" while four
+  phases had landed underneath it. The first thing a new reader saw was two phases out of date,
+  which is worse than saying nothing. It now leads with what is done **and with what is not**:
+  the system has never run on a server for a day, and the README says so before the feature list.
+- The header and the solution list promised "Dataview queries". That subset is postponed
+  indefinitely — the vault it was written for has no Dataview installed — so promising it in the
+  first paragraph was selling something nobody can have.
+- `## Try it` becomes `## Requirements`, `## Install` and `## Check it worked`, because "try it"
+  was one code block that assumed uv, assumed Linux paths, and never said what was needed first.
+  Requirements now separate the two very different asks: **Python 3.11 and nothing else** to use
+  the CLI, against Linux with systemd, Node 22+, Bun, tmux, git and an Obsidian Sync
+  subscription to run the whole thing on a server.
+- Two install routes, both verified from a clean clone rather than written from memory:
+  `uv tool install --from git+…`, which puts `hvk` on the PATH in its own environment, and a
+  checkout with a venv for anyone who wants to read or change the code. Windows gets its own
+  commands, and the Git Bash caveat that backslashes do not work there.
+- "Check it worked" is new and says which commands can and cannot touch a vault: everything is
+  read-only except `views --apply` and `jobs --run`, and `rebuild` is always safe because the
+  index is derived. That is the question a stranger actually has before pointing this at notes
+  they cannot replace.
+- `.github/workflows/ci.yml`: the suite on Python 3.11 and 3.13, a **non-editable** install of
+  the built package checked against a vault it has never seen — which catches packaging faults
+  an editable install hides — and `bash -n` over every shell script. Linux only, by the plan's
+  own decision (§1); the deployment keeps being exercised in the container, which needs a
+  systemd user instance that a CI runner has no business providing.
+- Both READMEs in the same commit, as `CLAUDE.md` requires.
+
 ## 2026-08-23 — Order-notes: the vault becomes the job queue
 
 - `hvk jobs --dir D --profiles P [--run]`, plus the surgical frontmatter edit it needed. A note
