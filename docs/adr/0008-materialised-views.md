@@ -1,0 +1,134 @@
+# 0008 — How a note declares a materialised view
+
+**Status:** accepted
+**Date:** 2026-08-23
+**Phase:** 4
+
+## Context
+
+Obsidian renders a base on screen. On a phone that is only syncing files, and on a server with
+no screen at all, that rendering never happens — so the answer a base gives is invisible
+exactly where the plan wants it to be visible (§5, phase 4). A materialised view writes the
+table into a note, and Sync carries it everywhere like any other note.
+
+The plan fixes the shape of the thing:
+
+```markdown
+%% vista: base "000 BASE habilidades.base" vista "Tabla" cada 30m %%
+<!-- vista:inicio -->
+(regenerated)
+<!-- vista:fin -->
+```
+
+and one exit criterion that decides most of the design: **regenerating twice with no changes
+must produce no diff.** On a synced vault a view that rewrites itself on every run is not a
+cosmetic problem — it is a change delivered to every device every half hour, forever, and a
+conflict waiting for the first time two devices are offline.
+
+What the plan does not settle: whether the declaration's vocabulary is Spanish or English in a
+repository whose code is English and whose first vault is Spanish; how a directive is paired
+with its markers; where the schedule lives; and what the generated table should contain.
+
+## Alternatives
+
+- **Declare the view in frontmatter.** Tidier to parse, and wrong: a note can hold more than
+  one view, and frontmatter has no way to say *where in the body* each one goes. The plan's
+  inline directive says both things at once.
+- **Store a "last generated at" stamp in the block**, and use it to honour `cada 30m`. This is
+  the obvious way to implement an interval, and it makes the exit criterion impossible: every
+  regeneration changes the stamp, so every regeneration is a diff.
+- **Keep the last-render time in the index**, so nothing is written into the note. Possible,
+  but the index is derived and rebuildable (principle 1), so a rebuild would silently reset
+  every schedule — and the thing it would save is a query that costs milliseconds.
+- **Regenerate everything on every run, and let cron decide the frequency.** Chosen.
+
+## Decision
+
+### The directive names the base; the markers hold the answer
+
+Exactly as the plan writes it. Settings are `base`, `vista`/`view` and `cada`/`every`, in any
+order; only `base` is required. An unrecognised setting is an **error**, not something to skip:
+a typo that is quietly ignored renders the wrong table, which is worse than rendering none.
+
+Pairing is positional — a directive owns the first block that follows it — and everything
+ambiguous is refused: a directive with no block before the next directive, and a block with no
+directive at all. That second one matters more than it looks: an unclaimed block is a table
+nobody will ever refresh, quietly going stale in a note somebody trusts.
+
+### Two dialects, because the repository and the vault speak different languages
+
+`%% vista: %%` with `<!-- vista:inicio -->` / `<!-- vista:fin -->`, and `%% view: %%` with
+`<!-- view:start -->` / `<!-- view:end -->`. A note picks one and its markers must match it;
+setting names are accepted in either language.
+
+This is not decoration. The plan fixes the Spanish spelling because the vault it was written
+for is Spanish, and the convention in `CLAUDE.md` is that everything shipped with the
+repository is English. Both are right about their own side of the boundary — the marker lives
+in somebody's *notes*, not in this codebase — and the cost of honouring both is a lookup
+table. ADR-0007 keeps the splicing machinery ignorant of what the markers say, so this
+decision lives here alone.
+
+### The schedule is documentation; cron is the schedule
+
+`cada 30m` is parsed, validated and reported, and **nothing skips work because of it**. One
+run regenerates everything, which costs one index query per base — milliseconds — and writes
+only what actually changed. The alternatives above are the reason: any mechanism that honours
+the interval needs state, and every place to put that state is either a permanent diff or
+something a rebuild throws away.
+
+So the interval says what the author intends, and the cron entry says what happens. When one
+vault has enough views for that to stop being true, this decision gets revisited with a real
+measurement instead of a guess.
+
+### What goes in the block
+
+The same Markdown table `hvk base` prints, from the same renderer, so the two cannot drift.
+Two differences, both deliberate:
+
+- **The file column becomes a wikilink**, `[[folder/note\|Note.md]]`, targeting the full path
+  so two notes with the same name never send the reader to the wrong one. The app renders that
+  column as a link and a table you cannot tap is not much use on a phone. The escaped pipe is
+  how a wikilink alias is written inside a table cell.
+- **`this` is the note holding the view**, which is what a base embedded in a note sees.
+
+And one thing that is deliberately absent: **no timestamp, no "generated by", no counter**.
+Anything that varies between two runs over unchanged data breaks the exit criterion on the
+second run and every run after it.
+
+### Discovery walks the vault, not the index
+
+The index would be cheaper and would make a note written thirty seconds ago invisible until
+the next scan. Walking uses the scanner's own iterator, so ADR-0002's exclusions still come
+from one place. A note the index has not caught up with still renders; what it loses is
+`this`, and the report says so rather than failing.
+
+### Read-only by default
+
+`hvk views` lists what would change and touches nothing; `hvk views --apply` writes. It exits
+non-zero when any note failed, because it is meant to run from cron, where a failure nobody
+prints is a failure nobody sees. One note failing never stops the others: a job that abandons
+the whole vault over one typo is a job that quietly stops working.
+
+## Consequences
+
+**A view can be a feedback loop, and we can only warn.** A base ordered by `file.mtime` that
+includes its own note will never settle: writing the table changes the value it sorts by. The
+command flags a view that appears among its own rows; it does not refuse it, because the same
+shape is harmless for a table of properties. This is the one case where the "no write when
+nothing changed" rule of ADR-0007 does not save us, and it is worth naming.
+
+**Everything regenerates on every run.** On this vault — 273 notes, one `.base` — that is
+nothing. On a vault with hundreds of views it would be a full re-render every cron tick, and
+the interval would have to start meaning something.
+
+**Hand-editing inside the markers is silently discarded.** That is what generated content is,
+but somebody will do it once. The directive sits directly above the block, in the note, which
+is the best warning available without adding noise to every view.
+
+**The dialects double the surface a reader has to know.** Somebody will eventually write
+`%% vista: %%` with `<!-- view:start -->` and get "no block follows this directive". The
+message names the marker it was looking for, which is the cheapest fix available.
+
+**The two `dataview` blocks in the real vault are still not migrated.** That is the other half
+of phase 4's exit criteria, and it is an edit to somebody's own notes, not to this repository.
+The machinery they need now exists.

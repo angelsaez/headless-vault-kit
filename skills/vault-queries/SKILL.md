@@ -1,6 +1,6 @@
 ---
 name: vault-queries
-description: Query an Obsidian vault through the hvk index instead of reading files. Use whenever a question is about the vault as a whole - what links to a note, what mentions a topic, which tasks are due, which notes have a property, what is orphaned or broken - and before opening notes one by one to find something. Covers hvk search, backlinks, links, tags, tasks, props, orphans, info, scan and verify.
+description: Query an Obsidian vault through the hvk index instead of reading files. Use whenever a question is about the vault as a whole - what links to a note, what mentions a topic, which tasks are due, which notes have a property, what is orphaned or broken - and before opening notes one by one to find something. Covers hvk search, backlinks, links, tags, tasks, props, orphans, base, views, info, scan and verify.
 ---
 
 # Querying the vault with hvk
@@ -43,6 +43,7 @@ inside the vault.
 | "Which notes are unreachable?" | `hvk orphans` |
 | "Which attachments are unused?" | `hvk orphans --attachments` |
 | "What does this Base show?" | `hvk base "Some.base"` |
+| "Are the dashboards up to date?" | `hvk views` |
 
 ### Search
 
@@ -103,6 +104,33 @@ If the base is embedded in a note and its filters mention `this`, pass `--this P
 which note. Not every Bases feature is supported — [ADR-0005](../../docs/adr/0005-bases-subset.md)
 lists what is — and anything unsupported fails naming itself rather than silently returning a
 table with a filter missing. Warnings about unknown keys go to stderr; the table is still good.
+
+### Materialised views
+
+A note can carry the answer to a base *inside itself*, between markers, so it is readable on a
+phone where nothing renders a base. The note declares what it wants:
+
+```markdown
+%% vista: base "Habilidades.base" vista "Tabla" cada 30m %%
+<!-- vista:inicio -->
+(regenerated - do not edit by hand, it is overwritten)
+<!-- vista:fin -->
+```
+
+```bash
+hvk views                     # what is declared, and which views are stale. Writes nothing
+hvk views --json              # the same, structured
+```
+
+`hvk views --apply` is what actually rewrites the notes, and normally runs from cron rather
+than from you. Only the text between the markers is ever touched; everything else in the note,
+frontmatter included, is returned byte for byte. Running it twice over unchanged data writes
+nothing at all, so it never wakes sync for nothing.
+
+Read the report before assuming a dashboard is current: `up to date` means it is,
+`stale` means the note on disk no longer matches what the base returns, and `error` names the
+note and the reason. `<!-- view:start -->` / `<!-- view:end -->` with `%% view: %%` are the
+same thing in English. [ADR-0008](../../docs/adr/0008-materialised-views.md) has the details.
 
 ## When the answer looks wrong
 
