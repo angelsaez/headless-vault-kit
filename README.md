@@ -2,15 +2,17 @@
 
 # headless-vault-kit
 
-> Headless toolkit for Obsidian vaults: SQLite index, backlinks, Dataview/Bases queries
-> and agent-driven automation on a 24/7 server — no app required. The CLI installs as **`hvk`**.
+> Puts Obsidian's own functionality back on a vault that lives on a headless server, where the
+> app never opens: a SQLite index, backlinks, Dataview and Bases queries, and agent-driven
+> automation running 24/7. The CLI installs as **`hvk`**.
 
 ## The problem
 
-A "digital brain" (an Obsidian vault + AI agent + automations) needs to live on an
-always-on machine. On a headless server, Obsidian Headless keeps the vault in sync, but
-without the app running you lose everything Obsidian computes on startup: backlinks,
-Dataview queries, Bases, the CLI, plugins. The result: synced notes, switched-off brain.
+Move an Obsidian vault to a headless server — a machine with no screen, so an agent and its
+automations can work on the notes around the clock — and the files arrive fine: Obsidian
+Headless keeps them in sync. What never happens is Obsidian itself opening, and with it you
+lose everything the app computes at startup: backlinks, Dataview queries, Bases, the CLI,
+plugins. The result: synced notes, and nothing that can answer a question about them.
 
 ## The solution
 

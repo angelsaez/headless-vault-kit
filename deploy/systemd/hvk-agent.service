@@ -1,0 +1,33 @@
+[Unit]
+Description=Claude Code in tmux, answering Telegram
+Documentation=https://github.com/anthropics/claude-plugins-official/tree/main/external_plugins/telegram
+After=network-online.target hvk-watch.service
+Wants=network-online.target
+StartLimitBurst=3
+StartLimitIntervalSec=300
+
+[Service]
+# tmux daemonises, so the session outlives ExecStart. RemainAfterExit keeps systemd's view of
+# the unit honest: active means the session is there, and stopping the unit kills it.
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=%h/.config/hvk/deploy.env
+WorkingDirectory=%h
+
+# Kill any leftover session of the same name first, so a restart is a restart and not a
+# second session quietly holding the old code. `|| true` because "no such session" is the
+# normal case and not a failure.
+ExecStartPre=/bin/sh -c 'tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true'
+ExecStart=/bin/sh -c 'tmux new-session -d -s "$TMUX_SESSION" -c "$HVK_VAULT" \
+    "$CLAUDE_BIN" --channels "$CLAUDE_CHANNELS"'
+ExecStop=/bin/sh -c 'tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true'
+
+# No KillMode=none here, although the tmux recipes on the internet all have it: systemd marks
+# it deprecated, and it turns out not to be needed. Verified on systemd 255 -- with oneshot
+# plus RemainAfterExit the session survives ExecStart returning, and `systemctl --user stop`
+# still tears it down cleanly through ExecStop.
+
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=default.target

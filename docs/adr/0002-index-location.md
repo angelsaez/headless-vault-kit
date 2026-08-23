@@ -12,8 +12,8 @@ as "`~/.nexus-index/` by convention" and the exclusion list unspecified (annex, 
 
 Three things force this to be pinned down before the scanner is written:
 
-1. `nexus` is the name of the author's personal vault, not of this project. A tool meant to be
-   published cannot scatter someone else's vault name across its users' home directories.
+1. `nexus` is a name borrowed from the author's own circle, not from this project. A tool meant
+   to be published cannot scatter a private name across its users' home directories.
 2. A user may have **several vaults**. A single index directory collides them.
 3. "Exclusions" is really **two different lists** that the plan mentions as one: what is not
    indexed as content, and what is not watched. They do not coincide — `.obsidian/` is never

@@ -1,0 +1,30 @@
+# Checkpoints of the vault, not of Obsidian's moods.
+#
+# Copied into the vault by install.sh when it has no .gitignore of its own. An existing one is
+# never touched.
+
+# Changes every time a pane moves, and means nothing to anyone later.
+.obsidian/workspace
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# Obsidian's own recovery snapshots: already a backup, and large.
+.obsidian/file-recovery*
+
+# Deleted notes still live here. Committing them would defeat the point of a trash.
+.trash/
+
+# Half-written saves, which sync and editors leave behind.
+*.tmp
+*.partial
+~$*
+
+# Operating-system litter.
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets live outside sync and outside git. Both spellings, because vaults use both.
+_PRIVATE/
+_PRIVADA/
+*.env

@@ -2,15 +2,18 @@
 
 # headless-vault-kit
 
-> Kit de herramientas para operar vaults de Obsidian sin interfaz: índice, consultas y
-> automatización agéntica en un servidor 24/7. El CLI se instala como **`hvk`**.
+> Devuelve la funcionalidad propia de Obsidian a un vault que vive en un servidor headless,
+> donde la app nunca se abre: índice SQLite, backlinks, consultas Dataview y Bases, y
+> automatización agéntica 24/7. El CLI se instala como **`hvk`**.
 
 ## El problema
 
-Un Nexus (vault de Obsidian + agente de IA + automatizaciones) necesita vivir en una máquina
-siempre encendida. En un VPS sin pantalla, Obsidian Headless sincroniza el vault, pero al no
-correr la aplicación se pierde todo lo que esta calcula al abrirse: backlinks, consultas
-Dataview, Bases, el CLI, los plugins. Resultado: notas sincronizadas, cerebro apagado.
+Lleva un vault de Obsidian a un servidor headless —una máquina sin pantalla, para que un
+agente y sus automatizaciones trabajen sobre las notas a todas horas— y los archivos llegan
+sin problema: Obsidian Headless los mantiene sincronizados. Lo que no ocurre nunca es que
+Obsidian se abra, y con ello se pierde todo lo que la app calcula al arrancar: backlinks,
+consultas Dataview, Bases, el CLI, los plugins. Resultado: notas sincronizadas y nada que
+sepa responder sobre ellas.
 
 ## La solución
 
@@ -134,7 +137,7 @@ Depende de la capa — el proyecto se usa por trozos, con dependencias distintas
 | Índice + CLI (Fases 2–4) | Búsqueda, backlinks, tareas, propiedades, consultas Bases/DQL, vistas materializadas | **Solo tus archivos** (cualquier vault de Obsidian o carpeta de Markdown) + el runtime. Sin IA, sin app, sin suscripciones. No consume ni un token |
 | Sincronización | Vault actualizado en el servidor | Obsidian Sync + Obsidian Headless, **o** git como transporte. El índice no distingue cómo llegan los archivos |
 | Automatización inteligente (Fase 5) | Notas-orden que requieren criterio ("revisa", "resume", "detecta") | Un agente CLI. **Claude Code es la opción soportada de serie**; los formatos (YAML, Markdown, SQLite) son neutrales y cambiar de agente es tocar una línea del runner. Las órdenes deterministas (regenerar vistas, crear la diaria) no necesitan agente |
-| Acceso 24/7 por chat | Hablar con tu Nexus desde el móvil | Claude Code + plugin de Telegram (o equivalente) |
+| Acceso 24/7 por chat | Hablar con el vault desde el móvil | Claude Code + plugin de Telegram (o equivalente) |
 
 Obsidian como aplicación solo hace falta donde siempre: en tus dispositivos, para leer
 y escribir como humano.
@@ -163,7 +166,7 @@ apareciendo a medida que sus fases se implementen. La herramienta se escribe en 
 
 Todavía no: el proyecto está en planificación y las primeras fases son personales. La Fase 7
 abrirá la interfaz de parsers y la documentación para que la comunidad aporte adaptadores de
-plugins. Si llegas desde el club, opiniones sobre el plan son bienvenidas desde ya.
+plugins. Las opiniones sobre el plan son bienvenidas desde ya.
 
 ## Nombre y comando
 
