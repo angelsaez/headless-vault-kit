@@ -68,3 +68,18 @@ jobs:
             echo "checking $script"
             bash -n "$script"
           done
+      # Development happens on Windows, where the executable bit does not exist, so a new
+      # script arrives at 100644 unless somebody remembers. Nobody remembers, and the symptom
+      # is "Permission denied" on the first line of the runbook, for a stranger, on Linux.
+      - name: every script is executable
+        run: |
+          # Checked on disk rather than through git, because what matters is the file a
+          # stranger ends up with after cloning, and because a check that depends on the
+          # runner's git state fails for reasons that have nothing to do with the bit.
+          not_executable=$(find . -path ./.git -prune -o -name '*.sh' -type f ! -perm -u+x -print)
+          if [ -n "$not_executable" ]; then
+            echo "not executable after checkout; fix with: git update-index --chmod=+x <file>"
+            echo "$not_executable"
+            exit 1
+          fi
+          echo "every .sh is executable after a clone"
