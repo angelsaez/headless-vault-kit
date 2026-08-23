@@ -135,10 +135,21 @@ case "$cmd" in
     shell) running || die "not up"; docker exec -it -u "$USER_IN" "${RUNTIME_ENV[@]}" "$NAME" bash ;;
     reboot)
         running || die "not up"
+        # selftest uninstalls everything as its last act, so a reboot right after it has
+        # nothing to bring back. Saying that is better than printing an empty unit list,
+        # which reads as a failure of the thing being tested.
+        if ! docker exec -u "$USER_IN" "${RUNTIME_ENV[@]}" "$NAME" \
+                test -e "$HOME_IN/.config/systemd/user/hvk-watch.service"; then
+            echo "nothing is installed in the container, so nothing can come back."
+            echo "  selftest leaves it clean on purpose. To try a reboot, install first:"
+            echo "    $0 shell   then   ~/deploy/install.sh && systemctl --user start hvk-watch"
+            exit 0
+        fi
         docker restart "$NAME" >/dev/null
         sleep 5
         echo "restarted. What came back on its own:"
-        docker exec -u "$USER_IN" "${RUNTIME_ENV[@]}" "$NAME" systemctl --user list-units 'hvk*' 'obsidian*' --no-pager || true
+        docker exec -u "$USER_IN" "${RUNTIME_ENV[@]}" "$NAME" \
+            systemctl --user is-active obsidian-headless hvk-watch hvk-agent || true
         ;;
     selftest)
         running || die "not up"
