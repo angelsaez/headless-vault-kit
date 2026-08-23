@@ -18,9 +18,21 @@ USER_IN=hvk
 UID_IN=1000
 # docker exec opens no login session, so the variable that points systemctl --user at its
 # bus has to be handed over explicitly.
-RUNTIME_ENV=(-e XDG_RUNTIME_DIR=/run/user/1000)
+# XDG_RUNTIME_DIR alone is not enough on every host: systemctl --user then finds the directory
+# but not the bus inside it, and fails with "Failed to connect to bus" while the socket is
+# sitting right there. Naming the socket explicitly costs nothing and removes the difference.
+RUNTIME_ENV=(-e XDG_RUNTIME_DIR=/run/user/1000
+             -e DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus)
 HOME_IN="/home/$USER_IN"
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+
+# Docker Desktop on Windows speaks Windows paths, and Git Bash hands it POSIX ones. Left alone,
+# `-v /c/repo:/repo` is mangled into a path list and the mount silently does not happen -- the
+# container comes up and only fails later, on an install from a directory that is not there.
+# cygpath exists only on Git Bash and MSYS, so everywhere else this is a no-op.
+host_path() {
+    if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi
+}
 
 VAULT_MOUNT=""
 CLAUDE_MOUNT=""
@@ -42,7 +54,7 @@ done
 build() {
     docker build --quiet \
         --build-arg "WITH_RUNTIMES=$WITH_RUNTIMES" \
-        -t "$IMAGE" "$REPO/tools/testbed" >/dev/null
+        -t "$IMAGE" "$(host_path "$REPO/tools/testbed")" >/dev/null
 }
 
 up() {
@@ -62,20 +74,20 @@ up() {
         -v /sys/fs/cgroup:/sys/fs/cgroup:rw
         # The repository is read-only inside: the tests run deploy/ from here, and nothing in
         # the container has any business writing to your working tree.
-        -v "$REPO:/repo:ro"
+        -v "$(host_path "$REPO"):/repo:ro"
     )
 
     if [ -n "$VAULT_MOUNT" ]; then
         [ -d "$VAULT_MOUNT" ] || die "no such vault: $VAULT_MOUNT"
         # Read-write on purpose: phases 4 and 5 write to the vault, and that has to be tested.
         # Point this at a mirror (tools/mirror_vault.py), never at a real vault.
-        args+=(-v "$VAULT_MOUNT:$HOME_IN/vault")
+        args+=(-v "$(host_path "$VAULT_MOUNT"):$HOME_IN/vault")
         echo "mounting vault read-write: $VAULT_MOUNT"
         echo "  make sure that is a mirror, not the vault you actually use."
     fi
     if [ -n "$CLAUDE_MOUNT" ]; then
         [ -d "$CLAUDE_MOUNT" ] || die "no such directory: $CLAUDE_MOUNT"
-        args+=(-v "$CLAUDE_MOUNT:$HOME_IN/.claude:ro")
+        args+=(-v "$(host_path "$CLAUDE_MOUNT"):$HOME_IN/.claude:ro")
         echo "mounting Claude credentials read-only: $CLAUDE_MOUNT"
         echo "  anything running inside can use them. Only do this deliberately."
     fi
