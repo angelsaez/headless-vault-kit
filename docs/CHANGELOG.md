@@ -4,6 +4,28 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-23 — MIT, and the two decisions the plan had left open
+
+- `LICENSE`, and the licence declared in `pyproject.toml` as `license = "MIT"` with
+  `license-files = ["LICENSE"]` (PEP 639, so no `License ::` classifier — the two must not be
+  combined). Verified by building and installing: the metadata reports `License: MIT` and the
+  file ships inside the wheel at `dist-info/licenses/LICENSE`.
+- **Why MIT.** It is the lowest-friction choice for the thing phase 7 wants — somebody trying
+  this and contributing a parser adapter — and both runtime dependencies are already permissive
+  (`ruamel.yaml` MIT, `watchdog` Apache-2.0), so nothing constrained the choice. Apache-2.0 was
+  weighed and dropped: its express patent grant adds close to nothing for a program that parses
+  Markdown files. AGPL protects against a scenario — a closed SaaS built on this — that is both
+  unlikely and harmless here.
+- Recorded alongside the decision, because it is easy to lose: **while the author is the only
+  contributor he holds the whole copyright and can relicense.** Accepting the first pull request
+  from anyone else ends that without every contributor's permission. Keeping the option open
+  would need a CLA from the start.
+- Annex decision 5 was closed in practice back on 2026-08-21 — git on the server is local only,
+  per ADR-0006 — and the plan never said so. Corrected, so the annex stops disagreeing with the
+  ADR next to it.
+- `pyproject.toml` also gains an `Issues` URL and the Linux classifier. Only decision 7,
+  templates and periodic notes, is still open.
+
 ## 2026-08-23 — Shipping the repository so a stranger's first command works
 
 - **Every `.sh` was committed at mode 100644**, so a clone on Linux produced files nobody can
