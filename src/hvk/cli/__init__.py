@@ -7,6 +7,7 @@ instead of reading files one by one.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -434,4 +435,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"hvk: {exc}", file=sys.stderr)
         return 2
     except BrokenPipeError:
+        # Catching it is not enough: Python flushes stdout again on the way out, the write
+        # fails a second time, and the interpreter prints "Exception ignored in ...
+        # BrokenPipeError" to stderr. Harmless in a terminal, and noise to an agent reading
+        # the output of `hvk tasks | head`, which is exactly how the skill says to use it.
+        # Pointing stdout at /dev/null leaves that final flush nothing to fail on.
+        try:
+            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        except OSError:                                  # pragma: no cover - platform-specific
+            pass
         return 0

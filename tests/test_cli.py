@@ -120,3 +120,4 @@ def test_querying_without_an_index_says_so(tmp_path, capsys):
     )
     assert code == 2
     assert "Run 'hvk scan' first" in capsys.readouterr().err
+
