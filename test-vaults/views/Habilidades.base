@@ -1,0 +1,18 @@
+filters:
+  and:
+    - categoría == "habilidad"
+properties:
+  file.name:
+    displayName: Habilidad
+  autor:
+    displayName: Autor
+views:
+  - type: table
+    name: Tabla
+    order:
+      - file.name
+      - autor
+      - delegable
+    sort:
+      - property: file.name
+        direction: ASC

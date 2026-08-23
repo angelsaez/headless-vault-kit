@@ -19,22 +19,28 @@ antes de ejecutarla; si el plan cambia, se edita el plan primero.
 
 ## Estado actual
 
-**Fase 2 completa en desarrollo.** El indexador de Nivel 0 y el CLI `hvk` funcionan:
-escaneo, watcher incremental, verificación nocturna y los comandos `search`, `backlinks`,
-`links`, `tags`, `tasks`, `props`, `orphans` e `info`. Decisiones en `docs/adr/` (0001–0004),
+**Fases 1, 2 y 4 hechas en desarrollo, más Bases de la 3.** El indexador de Nivel 0 y el CLI
+`hvk` funcionan: escaneo, watcher incremental, verificación nocturna y los comandos `search`,
+`backlinks`, `links`, `tags`, `tasks`, `props`, `orphans` e `info`. Decisiones en `docs/adr/` (0001–0004),
 suite en `tests/` contra `test-vaults/`, y los criterios numéricos del plan medidos con
 `pytest -m slow` sobre un vault generado de 10 000 notas.
 
 **Fase 1 hecha** (inventario del vault real, 2026-08-21) y **Bases de la Fase 3 hecha**:
 `hvk base` ejecuta vistas de `.base` contra el índice (ADR-0005).
 
-El inventario cambió el orden del plan, que está revisado a v2.1 con esos datos: el vault no
+El inventario cambió el orden del plan, revisado a v2.2 con esos datos: el vault no
 tiene **ningún plugin de comunidad**, cero archivos `.canvas` y solo dos bloques `dataview`
 triviales. Por eso Canvas queda pospuesto, el subconjunto DQL de la Fase 4 degradado a
 opcional, y las vistas materializadas pasan a construirse sobre Bases.
 
-**Lo siguiente es la Fase 0**, el despliegue en el VPS: es lo único que impide que todo lo
-construido funcione de verdad, y cierra el último criterio de salida de la Fase 2.
+**Fase 4 hecha** (2026-08-23): la capa de escritura al vault (`src/hvk/write.py`, ADR-0007) y
+las vistas materializadas (`hvk views`, ADR-0008), que regeneran la salida de `hvk base` entre
+`<!-- vista:inicio -->` y `<!-- vista:fin -->` sin producir diff al repetirse.
+
+**Lo siguiente es la Fase 5**, las notas-orden, que ya tienen construida la capa de escritura
+que comparten con la 4. Sigue pendiente **ejecutar la Fase 0 en el VPS**: no bloquea el
+desarrollo, pero es lo único que hace que todo lo construido funcione de verdad, y cierra el
+último criterio de salida de la Fase 2.
 
 ## Entornos de trabajo
 

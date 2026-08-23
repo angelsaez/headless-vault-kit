@@ -3,8 +3,8 @@
 > Sistema agéntico 24/7 sobre un vault de Obsidian en VPS, sin interfaz gráfica, replicando los **datos** que Obsidian deriva al abrirse — no su runtime.
 
 **Estado del documento:** plan de implementación v2, sustituye operativamente al v1 ("Vault Gateway Headless")
-**Fecha:** 2026-08-14 · revisado 2026-08-21 con los datos del inventario
-**Versión:** 2.1
+**Fecha:** 2026-08-14 · revisado 2026-08-21 con los datos del inventario · 2026-08-23 con la Fase 4 hecha
+**Versión:** 2.2
 **Hardware objetivo:** VPS Linux, 2 núcleos, 12 GB RAM
 **Naturaleza:** el v1 se conserva como mapa de máximos; este documento define lo que se construye de verdad y en qué orden
 
@@ -261,8 +261,19 @@ un `.base` en diez minutos, o que ya responde `hvk props --where`.
   reglas de `CLAUDE.md`: escritura atómica, preservar frontmatter y finales de línea, papelera
   antes que borrado.
 
-**Criterios de salida:** los dos bloques dataview del inventario están migrados a Bases;
-regenerar dos veces sin cambios no produce diff; las vistas llegan al móvil vía Sync.
+  ✅ **Hecho (2026-08-23).** La capa de escritura es `src/hvk/write.py` (ADR-0007) y las vistas
+  son `hvk views [RUTA] [--apply]` (ADR-0008), con la sintaxis de arriba tal cual, más su
+  equivalente en inglés. `cada 30m` se parsea pero no se obedece: honrar un intervalo exige
+  estado, y todos los sitios donde guardarlo son o un diff permanente o algo que `hvk rebuild`
+  tira. El cron decide la frecuencia.
+
+**Criterios de salida:**
+
+| Criterio | Estado |
+|---|---|
+| Regenerar dos veces sin cambios no produce diff | ✅ Verificado sobre `test-vaults/` y sobre una copia del espejo del vault real: el único `.base` da las mismas 26 filas del inventario y la segunda pasada deja el fichero byte a byte |
+| Las vistas llegan al móvil vía Sync | Pendiente de ejecutar la Fase 0 en el VPS |
+| Los dos bloques dataview del inventario están migrados a Bases | Pendiente: es una edición de las notas de Ángel, no del repositorio. La maquinaria que necesitan ya existe |
 
 ### Fase 5 — Automatización: el vault como cola (1 semana)
 
@@ -383,15 +394,14 @@ se desarrollaron en local contra vaults sintéticos, porque no necesitan servido
 | 2 · Indexador Nivel 0 + CLI | ✅ Hecha salvo la demo por Telegram, que depende de la Fase 0 |
 | 3 · Nivel 1 | Bases ✅ · Canvas pospuesto (sin usuarios) · plantillas bloqueadas por la decisión 7 |
 | 0 · Base operativa | ✅ **La mitad que se construye**: `deploy/` con units de usuario, cron y runbook (ADR-0006), verificado en contenedor Debian 12 incluida la prueba de reinicio. Falta **ejecutarlo en el VPS**, que es trabajo de Ángel |
-| 4 · Vistas materializadas | **Lo siguiente.** DQL degradado a opcional |
+| 4 · Vistas materializadas | ✅ **Hecha** (2026-08-23), sobre la capa de escritura de ADR-0007. DQL sigue pospuesto |
 | 5–7 | Sin empezar |
 
-**Lo siguiente es la Fase 4**, y concretamente su mitad valiosa: las vistas materializadas
-sobre Bases. Antes que ellas hay que construir la **capa de escritura al vault**, que hoy no
-existe —todo lo escrito hasta ahora solo lee— y que comparten las fases 4 y 5: escritura
-atómica, papelera en vez de borrado, preservar frontmatter y finales de línea, y jamás salir
-del vault. Es el primer código del proyecto capaz de destruir algo, así que va con su propia
-ADR y se prueba contra un espejo, nunca contra el vault real.
+**Lo siguiente es la Fase 5**, las notas-orden. La capa de escritura que las fases 4 y 5
+comparten ya está construida y auditada (ADR-0007), así que la Fase 5 empieza con la mitad
+difícil hecha: lo que le falta es la transición atómica de `estado:` dentro del frontmatter,
+que se hará editando esas líneas como texto —nunca reserializando el YAML, por lo mismo que
+la ADR-0007 explica— y el runner que la usa.
 
 La ejecución de la Fase 0 en el VPS sigue pendiente y no bloquea nada de lo anterior: cierra el
 último criterio de salida de la Fase 2 y hace que todo lo construido corra de verdad, pero se

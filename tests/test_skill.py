@@ -24,7 +24,7 @@ NOT_RUNNABLE = {"watch"}
 
 # Which synthetic vault an example needs. Everything answers against the realistic vault
 # except the .base examples, which need a vault that has base files in it.
-VAULT_FOR = {"base": "bases"}
+VAULT_FOR = {"base": "bases", "views": "views"}
 DEFAULT_VAULT = "basic"
 
 

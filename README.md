@@ -59,7 +59,18 @@ X?" over Telegram end to end depends on phase 0 running on the server.
 **Phase 3 is under way.** `.base` files parse and run: `hvk base Library.base` executes a
 view's filters, formulas, sorting and grouping against the index and prints a Markdown table.
 [ADR-0005](docs/adr/0005-bases-subset.md) records exactly which part of the Bases expression
-language is supported and what is refused. Canvas and template-driven periodic notes are next.
+language is supported and what is refused. Canvas is postponed until a vault actually contains
+a `.canvas` file, and periodic notes wait on a decision rather than on work.
+
+**Phase 4 has its valuable half.** A note can carry a base's answer inside itself, between
+`<!-- vista:inicio -->` and `<!-- vista:fin -->`, so the table is readable on a phone where
+nothing renders a base. `hvk views` reports what is stale and `hvk views --apply` rewrites it,
+touching only the text between the markers and writing nothing at all when nothing changed —
+which is what keeps a half-hourly refresh from waking sync every half hour on every device.
+It is the first thing here that writes to a vault, so it goes through one audited layer
+([ADR-0007](docs/adr/0007-writing-to-the-vault.md)); the declaration syntax is
+[ADR-0008](docs/adr/0008-materialised-views.md). The Dataview DQL subset the phase originally
+promised is postponed indefinitely: the vault it was written for has no Dataview installed.
 
 The full plan, with phases and exit criteria, lives in
 [`.plans/Plan-v2-headless-vault-kit.md`](.plans/Plan-v2-headless-vault-kit.md) (Spanish); the
@@ -93,6 +104,7 @@ Inside a vault, `--vault` can be omitted: hvk walks up until it finds `.obsidian
 | `hvk watch` | Index changes as they land, until interrupted; meant to run as a service |
 | `hvk verify` | Re-hash every file as a safety net; run it nightly from cron |
 | `hvk base File.base [--view Name]` | Run a view from a `.base` file against the index, as a Markdown table |
+| `hvk views [Path] [--apply]` | Refresh the base tables materialised inside notes; without `--apply` it only lists what is stale |
 | `hvk info` | What the index currently holds |
 
 Every command takes `--json` for machine-readable output; `hvk watch` emits JSON Lines, one
@@ -101,8 +113,13 @@ object per batch, so it can be piped into a log.
 To keep the index current, run `hvk watch` as a service and re-hash nightly from cron:
 
 ```cron
-17 4 * * *  hvk --vault /path/to/vault verify
+17 4 * * *   hvk --vault /path/to/vault verify
+*/30 * * * *  hvk --vault /path/to/vault views --apply
 ```
+
+The second line is what keeps materialised views current. It is safe to run as often as you
+like: it writes only what actually changed, and nothing at all when nothing did. Wiring it
+into `deploy/` is still to do.
 
 The systemd unit for the watcher belongs to phase 0 and will live in `deploy/`.
 
@@ -117,11 +134,11 @@ uv tool install hvk
 
 | Phase | Deliverable | Status |
 |---|---|---|
-| 0 | Server baseline: Headless sync + Claude Code/Telegram + git, reboot-proof | Pending |
-| 1 | Vault inventory: which plugins and real-world usages need covering | Pending |
+| 0 | Server baseline: Headless sync + Claude Code/Telegram + git, reboot-proof | Built, not yet run on a server |
+| 1 | Vault inventory: which plugins and real-world usages need covering | **Done** |
 | 2 | Tier-0 indexer + `hvk` CLI | **Done** |
-| 3 | Bases, Canvas, templates and periodic notes | **In progress** |
-| 4 | Dataview (DQL) + materialized views | Pending |
+| 3 | Bases, Canvas, templates and periodic notes | Bases **done**; the rest postponed |
+| 4 | Materialized views (Dataview DQL postponed) | **Done** |
 | 5 | Order-notes: the vault as a job queue | Pending |
 | 6 | Security, healthchecks, rehearsed backups | Pending |
 | 7 | MCP server + community parsers + packaging | Future |

@@ -123,6 +123,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="the note the base is embedded in, for expressions that use 'this'",
     )
 
+    views_cmd = add("views", "regenerate the base views materialised inside notes")
+    views_cmd.add_argument(
+        "path", nargs="?", help="restrict to one note or one folder (default: the whole vault)"
+    )
+    views_cmd.add_argument(
+        "--apply", action="store_true",
+        help="actually write the notes; without it nothing is touched and stale views are listed",
+    )
+
     return parser
 
 
@@ -236,6 +245,9 @@ def _run(args: argparse.Namespace) -> int:
         elif args.command == "base":
             _base(conn, location, args)
 
+        elif args.command == "views":
+            return _views(conn, location, args)
+
     finally:
         conn.close()
     return 0
@@ -252,7 +264,7 @@ def _jsonable(value):
 
 def _base(conn, location: paths.Locations, args: argparse.Namespace) -> None:
     """Run one view of a .base file and print it as a Markdown table, or as JSON."""
-    from hvk.bases import base_file, run as base_run
+    from hvk.bases import base_file, render as base_render, run as base_run
 
     # is_file, not exists: on a case-insensitive filesystem a folder named "library" answers
     # to "Library" and would be opened as if it were the base.
@@ -300,30 +312,31 @@ def _base(conn, location: paths.Locations, args: argparse.Namespace) -> None:
     counted = f"{shown} of {result.total} rows" if shown != result.total else f"{shown} rows"
     print(f"{candidate.name} - view {result.view.name!r} ({counted})")
     print()
+    print(base_render.to_markdown(result))
 
-    def table(rows) -> str:
-        return output.markdown_table(
-            result.headers,
-            [[bases_values.as_text(row["values"].get(column)) for column in result.columns]
-             for row in rows],
-        )
 
-    if result.groups:
-        for name, rows in result.groups:
-            print(f"### {name}")
-            print()
-            print(table(rows))
-            print()
-    elif result.rows:
-        print(table(result.rows))
-    else:
-        print("no rows match")
+def _views(conn, location: paths.Locations, args: argparse.Namespace) -> int:
+    """Regenerate the views materialised in notes, or list what would change.
 
-    if result.summaries:
+    Exits non-zero when any note failed, because this is meant to run from cron: a typo in
+    one note has to be visible without reading the log by hand. One note failing never stops
+    the others.
+    """
+    from hvk import views as materialised
+
+    report = materialised.refresh(conn, location, path=args.path, apply=args.apply)
+    rows = [outcome.as_dict() for outcome in report.outcomes]
+    output.emit(
+        rows,
+        headers=("NOTE", "LINE", "BASE", "VIEW", "ROWS", "STATUS", "DETAIL"),
+        columns=("note", "line", "base", "view", "rows", "status", "detail"),
+        as_json=args.json,
+        empty="no note declares a view",
+    )
+    if not args.json and rows and not args.apply and report.changed:
         print()
-        for column, value in result.summaries.items():
-            label = result.view.summaries[column]
-            print(f"{label} of {column}: {bases_values.as_text(value)}")
+        print(f"{report.changed} view(s) would change. Run hvk views --apply to write them.")
+    return 1 if report.errors else 0
 
 
 def _watch(location: paths.Locations, args: argparse.Namespace) -> int:
