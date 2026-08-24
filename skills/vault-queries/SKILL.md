@@ -112,11 +112,15 @@ A note can carry the answer to a base *inside itself*, between markers, so it is
 phone where nothing renders a base. The note declares what it wants:
 
 ```markdown
-%% vista: base "Habilidades.base" vista "Tabla" cada 30m %%
-<!-- vista:inicio -->
+%% view: base "Projects.base" view "Table" every 30m %%
+<!-- view:start -->
 (regenerated - do not edit by hand, it is overwritten)
-<!-- vista:fin -->
+<!-- view:end -->
 ```
+
+The Spanish spellings mean the same thing and are equally supported: `%% vista: base "..."
+vista "..." cada 30m %%` with `<!-- vista:inicio -->` and `<!-- vista:fin -->`. A note picks
+one dialect and keeps to it.
 
 ```bash
 hvk views                     # what is declared, and which views are stale. Writes nothing

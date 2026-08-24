@@ -160,6 +160,11 @@ La unit de systemd del watcher, y todo lo demás para levantar esto en un servid
 
 Cuando esto llegue a PyPI, instalarlo será `uv tool install hvk` y nada más.
 
+## La guía completa
+
+Cada comando, para qué sirve cada pieza, los casos de uso y el vocabulario en dos idiomas:
+**[docs/GUIDE.es.md](docs/GUIDE.es.md)** — in English, [docs/GUIDE.md](docs/GUIDE.md).
+
 ## Estructura del repositorio
 
 ```text

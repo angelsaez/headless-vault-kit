@@ -53,14 +53,15 @@ def test_a_note_with_nothing_declared_yields_nothing():
     assert views.declarations("# Just a note\n") == []
 
 
-def test_the_plan_s_own_example_parses():
+def test_the_documented_example_parses():
+    """The declaration exactly as ADR-0008 writes it, spaces in the filename included."""
     text = (
-        '%% vista: base "000 BASE habilidades.base" vista "Tabla" cada 30m %%\n'
+        '%% vista: base "000 BASE Proyectos.base" vista "Tabla" cada 30m %%\n'
         f"{BEGIN}\n{END}\n"
     )
     declared = views.declarations(text)
     assert len(declared) == 1
-    assert declared[0].base == "000 BASE habilidades.base"
+    assert declared[0].base == "000 BASE Proyectos.base"
     assert declared[0].view == "Tabla"
     assert declared[0].every == "30m"
     assert declared[0].every_minutes == 30
