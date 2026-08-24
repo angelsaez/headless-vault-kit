@@ -136,6 +136,7 @@ Dos cosas que conviene saber desde el principio:
 | `hvk base Archivo.base [--view Nombre]` | Ejecuta una vista de un `.base` contra el índice, como tabla Markdown |
 | `hvk views [Ruta] [--apply]` | Regenera las tablas de Bases materializadas dentro de notas; sin `--apply` solo lista lo que está desactualizado |
 | `hvk canvas Tablero.canvas [--edges]` | Qué hay en un lienzo: sus cajas, o las flechas entre ellas |
+| `hvk dql "LIST FROM #x"` \| `--note N.md` | Ejecuta una consulta Dataview, o cada bloque `dataview` de una nota, contra el índice |
 | `hvk jobs --dir D --profiles P [--run]` | Ejecuta las notas-orden que esperan en un directorio; sin `--run` solo informa |
 | `hvk doctor [--jobs-dir D]` | ¿Está sana esta instalación? Para llamarlo desde la monitorización que ya tengas |
 | `hvk guard [--protect F]` | Hook `PreToolUse`: rechaza `rm` en favor de `.trash/`, las escrituras que caen fuera del vault, y las carpetas que designes. Los rechazos quedan registrados |

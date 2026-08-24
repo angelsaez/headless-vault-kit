@@ -269,7 +269,52 @@ Two more things worth knowing: links from a canvas are stored at **line 0**, bec
 whiteboard has no lines; and **writing** canvases is not supported — placing boxes means
 deciding coordinates, sizes and what to do when they overlap, and nothing has needed that yet.
 
-## 7. Materialised views — a base's answer, inside a note
+---
+
+## 7. Dataview queries — the supported subset
+
+Vaults arrive from elsewhere full of ```` ```dataview ```` blocks. `hvk` answers the ones it
+understands, from the index, with no plugin installed and nothing rendered
+([ADR-0016](adr/0016-a-subset-of-a-query-language.md)).
+
+```sh
+hvk dql 'LIST FROM #project WHERE status = "open"'
+hvk dql 'TABLE status, rating AS "Score" FROM "Projects" SORT rating DESC LIMIT 5'
+hvk dql --note "Dashboard.md"        # run every dataview block in a note
+hvk dql 'LIST FROM #project' --json
+```
+
+```
+TABLE (3 rows)
+
+| File | rating |
+|---|---|
+| Alpha | 5 |
+| Beta | 2 |
+| Gamma |  |
+```
+
+**What is supported**, and nothing else: `LIST` and `TABLE` (with `WITHOUT ID` and
+`AS "Header"`), `FROM` a single `#tag` or `"folder"` — optionally negated with `-` — `WHERE`,
+`SORT … ASC|DESC` and `LIMIT`. Write `=` for equality and `and`/`or`/`not` the way Dataview
+does; `contains(field, x)` works too.
+
+**Everything else refuses with its own name in the message** — `TASK`, `CALENDAR`, `GROUP BY`,
+`FLATTEN`, `FROM [[link]]`, sources joined with `and`. That is the point rather than a
+limitation: a query language that silently drops the clause it did not understand hands you a
+table that looks right and is not.
+
+### The difference from Bases, which is not cosmetic
+
+`hvk base` sees **Obsidian properties** — frontmatter, and nothing else. A DQL query sees
+frontmatter **and inline fields**: `owner:: Ana` written in the body of a note. Dataview writes
+those and reads them, so a query that ignored them would answer a different question from the
+one the block is asking. Same index, two dialects, two ideas of what a field is.
+
+**DataviewJS is not read at all**, not even to report it. Executing plugin code is permanently
+out of scope, and a half-answer about a script is worse than silence.
+
+## 8. Materialised views — a base's answer, inside a note
 
 A base renders on a screen. On a phone that only syncs files, and on a server with no screen,
 that rendering never happens. A materialised view writes the table *into a note*, and sync
@@ -315,7 +360,7 @@ name are refused rather than picked between.
 
 ---
 
-## 8. Order-notes — the vault as a job queue
+## 9. Order-notes — the vault as a job queue
 
 Write a note, and something runs. The state lives in the note's own frontmatter, so you watch
 it happen from your phone, in the app you already have open
@@ -414,7 +459,7 @@ the whole feature exists to prevent — which is also why `--dir` has no default
 
 ---
 
-## 9. The guard — a boundary in front of the agent
+## 10. The guard — a boundary in front of the agent
 
 Some rules cannot be enforced from inside `hvk`, because the tool that would break them belongs
 to the agent. `hvk guard` is a `PreToolUse` hook: it reads the tool call as JSON on stdin and
@@ -458,7 +503,7 @@ malicious note might have asked for.
 
 ---
 
-## 10. `hvk doctor` — for monitoring you already have
+## 11. `hvk doctor` — for monitoring you already have
 
 Most servers already watch their own services. This answers only the questions nothing else
 can, and stays quiet otherwise:
@@ -479,7 +524,7 @@ that raises an alarm about them is a check people learn to ignore.
 
 ---
 
-## 11. Backups, and the restore
+## 12. Backups, and the restore
 
 The deployment scripts include a dated archive of the whole vault and the script that puts one
 back. The full procedure, including what each copy you already have actually protects against,
@@ -498,7 +543,7 @@ of files.
 
 ---
 
-## 12. Worked cases
+## 13. Worked cases
 
 **A morning briefing without reading the vault.** One query per question, all from the index:
 
@@ -538,7 +583,7 @@ recognise. It installs into your own account and touches nothing else on the mac
 
 ---
 
-## 13. For agents
+## 14. For agents
 
 The reason this exists. An agent asked *"what links to this note?"* without an index either
 reads the whole vault or greps it — both expensive, both slower, and one of them wrong. With
@@ -553,7 +598,7 @@ command to reach for. Two things it is told, and that you should keep telling it
 
 ---
 
-## 14. What it does not do, and why
+## 15. What it does not do, and why
 
 - **Writing canvases.** Reading is done (section 6); placing boxes is a set of decisions
   nobody has needed yet.

@@ -4,6 +4,35 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-24 — A Dataview subset, and the parts that say no
+
+- Reopened on a criterion that changed rather than evidence that did: not *"does anyone here
+  use it"* but *"is this a format the community writes"*. Vaults arrive from elsewhere full of
+  `dataview` blocks, and a tool whose claim is that it reads a vault without the app should be
+  able to say what they mean. The recommendation in the room was to leave it dropped; the
+  reasoning that overruled it was better, and [ADR-0016](adr/0016-a-subset-of-a-query-language.md)
+  says so.
+- **Nothing here re-implements a language.** The clauses are parsed here; every expression goes
+  through the engine Bases already uses, after two rewrites: `=` becomes `==` (with a lookaround
+  so `!=`, `>=` and `<=` cannot be damaged), and `contains(field, x)` becomes
+  `field.contains(x)` for a **named list** of functions. Anything outside that list reaches the
+  engine as a bare call and is refused there, by name.
+- `LIST` and `TABLE` with `WITHOUT ID` and `AS "Header"`, `FROM` one `#tag` or `"folder"`
+  (negatable), `WHERE`, `SORT … ASC|DESC`, `LIMIT`. `hvk dql --note "N.md"` runs every
+  `dataview` block in a note. `dataviewjs` blocks are not read at all — executing plugin code
+  is permanently out of scope and a half-answer about a script is worse than silence.
+- **`TASK`, `CALENDAR`, `GROUP BY`, `FLATTEN`, `FROM [[link]]` and combined sources refuse with
+  their own name in the message.** A query language that silently drops the clause it did not
+  understand hands you a table that looks right and is not.
+- The genuine difference from Bases, and it is not cosmetic: `hvk base` sees Obsidian properties
+  — frontmatter, nothing else — while a DQL query also sees **inline fields**, `owner:: Ana` in
+  the body. Dataview writes those and reads them, so ignoring them would answer a different
+  question from the one the block asks. Same index, two dialects, two ideas of what a field is.
+- Found by writing the first example that contained a `#`: `test_skill.py` stripped trailing
+  comments by cutting at the first hash, so `hvk dql "LIST FROM #project"` became an unbalanced
+  quote. It now lets `shlex` find the comment, which is what shlex is for. The test was right to
+  fail; it was failing for the wrong reason.
+
 ## 2026-08-24 — Canvas, and the note a whiteboard was hiding
 
 - The condition written down when Canvas was postponed — *it gets built when a vault actually

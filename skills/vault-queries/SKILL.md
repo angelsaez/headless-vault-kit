@@ -44,6 +44,7 @@ inside the vault.
 | "Which attachments are unused?" | `hvk orphans --attachments` |
 | "What does this Base show?" | `hvk base "Some.base"` |
 | "What is on this canvas?" | `hvk canvas "Board.canvas"` — `--edges` for the arrows |
+| "What does this dataview block say?" | `hvk dql --note "Note.md"`, or `hvk dql "LIST FROM #x"` |
 | "Are the dashboards up to date?" | `hvk views` |
 | "Is the index still trustworthy?" | `hvk doctor` |
 
@@ -97,6 +98,9 @@ A `.base` file is a saved query the user built in Obsidian. Running it gives the
 app would show, as Markdown:
 
 ```bash
+hvk dql "LIST FROM #project"                  # the Dataview subset, answered from the index
+hvk dql --note "Dashboard.md"                 # every dataview block in a note
+
 hvk canvas "Board.canvas"                     # the boxes on a whiteboard
 hvk canvas "Board.canvas" --edges             # the arrows, with the files they join
 
@@ -207,3 +211,19 @@ task text as much as for whole notes.
 **Report what the index says, not what you assume.** If a query returns nothing, say it
 returned nothing rather than guessing. If `last_scan` is stale, say so. The whole point of
 the index is that answers are checkable.
+
+## What will refuse you, and what to do instead
+
+A vault may have `hvk guard` in front of the agent as a `PreToolUse` hook. It is not something
+to call; it is something that answers back. Three refusals, and each names its alternative:
+
+- **Deleting.** `rm`, `rmdir`, `shred`, `unlink`, `find -delete` — in any spelling, anywhere in
+  a pipeline. Removing a note means `mv "<file>" .trash/`, which is what Obsidian does and what
+  this project's write layer does. The file stays recoverable.
+- **Writing outside the vault.** A `Write`/`Edit` whose path resolves outside it. Anything that
+  has to leave the vault is a job for whoever runs the server, by hand.
+- **A protected folder**, reads included. The vault's owner named it; there is no arguing with
+  it from inside a note.
+
+Every refusal is recorded. If one surprises you, say what you were trying to do and why rather
+than looking for another way to do the same thing.

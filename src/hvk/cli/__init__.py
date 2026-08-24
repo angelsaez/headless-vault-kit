@@ -125,6 +125,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="the note the base is embedded in, for expressions that use 'this'",
     )
 
+    dql_cmd = add("dql", "run a Dataview query against the index (the supported subset)")
+    dql_cmd.add_argument("query", nargs="?", help="the query, e.g. 'LIST FROM #project'")
+    dql_cmd.add_argument(
+        "--note", metavar="PATH",
+        help="run every ```dataview block in this note instead of a query given here",
+    )
+
     canvas_cmd = add("canvas", "what is on a .canvas: its nodes and the arrows between them")
     canvas_cmd.add_argument("file", help="path to the .canvas file, absolute or inside the vault")
     canvas_cmd.add_argument(
@@ -294,6 +301,9 @@ def _run(args: argparse.Namespace) -> int:
         elif args.command == "canvas":
             _canvas(location, args)
 
+        elif args.command == "dql":
+            _dql(conn, location, args)
+
         elif args.command == "views":
             return _views(conn, location, args)
 
@@ -362,6 +372,46 @@ def _base(conn, location: paths.Locations, args: argparse.Namespace) -> None:
     print(f"{candidate.name} - view {result.view.name!r} ({counted})")
     print()
     print(base_render.to_markdown(result))
+
+
+def _dql(conn, location: paths.Locations, args: argparse.Namespace) -> None:
+    """Answer one Dataview query, or every block in a note, in the shape `hvk base` returns."""
+    from hvk import dql as dataview
+    from hvk.bases import render as base_render
+    from hvk.write import Vault
+
+    if args.note:
+        text = Vault(location.vault).read(args.note).text
+        queries = dataview.blocks_in(text)
+        if not queries:
+            print(f"no dataview blocks in {args.note}")
+            return
+    elif args.query:
+        queries = [args.query]
+    else:
+        raise dataview.DqlError("give a query, or --note to run the blocks in one")
+
+    payload = []
+    for source in queries:
+        result = dataview.run(dataview.parse(source), conn)
+        if args.json:
+            payload.append({
+                "query": source,
+                "type": result.view.type,
+                "columns": result.columns,
+                "headers": result.headers,
+                "total": result.total,
+                "rows": [{"path": row["path"], "values": row["values"]} for row in result.rows],
+            })
+            continue
+        if len(queries) > 1:
+            print(f"# {source}")
+        print(f"{result.view.type.upper()} ({result.total} rows)")
+        print()
+        print(base_render.to_markdown(result))
+        print()
+    if args.json:
+        output.emit_object(payload[0] if len(payload) == 1 else payload, as_json=True)
 
 
 def _canvas(location: paths.Locations, args: argparse.Namespace) -> None:
