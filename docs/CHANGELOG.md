@@ -4,6 +4,17 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-25 — The restore was rehearsed again, from off the machine this time
+
+- The first rehearsal restored an archive from the disk that had written it, and said so: the
+  off-site half was untested because no destination existed yet. With one configured, it was
+  done the way it would really happen — archive and checksum fetched back from off-site into a
+  clean directory, verified there, restored beside the live vault in 2.4 s. 588 files, 16
+  checkpoints, history intact, `diff -rq` finding nothing, and the same index numbers as the
+  live vault for the second day running.
+- Worth keeping the reason in view: an upload's exit code is a statement about a command. Only
+  a restore is a statement about a backup.
+
 ## 2026-08-25 — An install with no units at all stopped failing
 
 - `install.sh --only schedules,backup` did everything it was asked to — copied the scripts,
