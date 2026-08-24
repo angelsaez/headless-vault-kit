@@ -211,6 +211,10 @@ check "no auto-commit line in cron"  "! crontab -l | grep -q vault-autocommit"
 check "no backup script either"      "[ ! -e \"\$HOME/.local/share/hvk/deploy-bin/vault-backup.sh\" ]"
 check "the schedules are there"      "crontab -l | grep -q 'hvk-schedule.sh jobs'"
 check "an unknown part is refused"   "! '$HERE/install.sh' --only nonsense >/dev/null 2>&1"
+# The shape a server whose own services are already there actually installs: no units at all.
+"$HERE/install.sh" --only schedules,backup >"$LAB/nounits.txt" 2>&1; rc=$?
+check "an install with no units at all works" "[ $rc -eq 0 ]"
+check "and says so rather than failing"       "grep -q 'none requested' '$LAB/nounits.txt'"
 # --only rewrites the cron block, so narrowing it drops entries that were working a moment ago.
 "$HERE/install.sh" --only watch >"$LAB/narrow.txt" 2>&1
 check "it says what it is dropping" "grep -q 'scheduled now and will not be' '$LAB/narrow.txt'"
