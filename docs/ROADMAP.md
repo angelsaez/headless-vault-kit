@@ -8,7 +8,7 @@ does and how to use it; this is where "how far along is it" lives.
 | 0 | Server baseline: Headless sync + an agent on Telegram + git, reboot-proof | **Done** |
 | 1 | Vault inventory: which plugins and real-world usages need covering | **Done** |
 | 2 | Tier-0 indexer + `hvk` CLI | **Done** |
-| 3 | Obsidian's own formats: Bases, Canvas, templates | Bases and Canvas **done**; templates blocked on a decision, see below |
+| 3 | Obsidian's own formats, plus a Dataview subset | Bases, Canvas and DQL **done**; templates dropped, see below |
 | 4 | Materialized views | **Done** |
 | 5 | Order-notes: the vault as a job queue | **Done** |
 | 6 | Security, healthchecks, rehearsed backups | **Done** |
@@ -56,14 +56,19 @@ Canvas used to be on this list, with the condition "when a vault actually contai
 did, so it was built ([ADR-0015](adr/0015-what-a-whiteboard-puts-in-the-index.md)): reading, not
 writing, and edges stay out of the index on purpose.
 
-- **A Dataview (DQL) subset.** Planned, then dropped: the vault this was written for has no
-  Dataview installed, and its two `dataview` blocks are dead code that nothing renders. The
-  Bases expression engine exists, so starting later is cheaper than starting now. It comes
-  back if a vault with real DQL use appears.
+So did the Dataview subset, on a criterion that changed rather than evidence that did: not "does
+anyone here use it" but "is this a format the community writes"
+([ADR-0016](adr/0016-a-subset-of-a-query-language.md)). `LIST` and `TABLE` with `FROM`, `WHERE`,
+`SORT` and `LIMIT`; everything else refuses with its own name in the message. **DataviewJS
+remains permanently out of scope** — its blocks are not even read.
+
 - **DataviewJS**, and executing any plugin code. Permanently out of scope: this project
   replicates file formats, never a runtime.
-- **Templates and periodic notes.** Blocked on a decision rather than on work — which folder,
-  which filename format, which template.
+- **Templates and periodic notes.** Dropped: creating tomorrow's daily note is a desktop
+  feature, done in the app where you are already typing. It comes back if someone wants
+  periodic notes created *without* the app in front of them.
+- **Materialising a `dataview` block into a note.** `hvk views` does it for Bases; `hvk dql
+  --note` reads the blocks and prints the answers. Nothing has asked for the writing half.
 
 ## Where the rest of the reasoning is
 

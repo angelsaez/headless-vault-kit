@@ -27,17 +27,26 @@ NOT_RUNNABLE = {"watch", "jobs"}
 
 # Which synthetic vault an example needs. Everything answers against the realistic vault
 # except the .base examples, which need a vault that has base files in it.
-VAULT_FOR = {"base": "bases", "views": "views", "canvas": "canvas"}
+VAULT_FOR = {"base": "bases", "views": "views", "canvas": "canvas", "dql": "dataview"}
 DEFAULT_VAULT = "basic"
 
 
 def documented_commands() -> list[str]:
+    """Every `hvk` line in the skill's shell blocks, with its trailing comment removed.
+
+    The comment is stripped by shlex rather than by splitting on the first `#`, because a
+    query is allowed to contain one: `hvk dql "LIST FROM #project"` cut at the hash leaves an
+    unbalanced quote, and the example that exposed it was correct.
+    """
     commands = []
     for block in BLOCK_RE.findall(SKILL.read_text(encoding="utf-8")):
         for line in block.splitlines():
-            line = line.split("#", 1)[0].strip()
-            if line.startswith("hvk "):
-                commands.append(line)
+            if not line.strip().startswith("hvk "):
+                continue
+            lexer = shlex.shlex(line, posix=True, punctuation_chars=False)
+            lexer.whitespace_split = True
+            lexer.commenters = "#"
+            commands.append(shlex.join(list(lexer)))
     return commands
 
 

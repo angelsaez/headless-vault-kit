@@ -270,7 +270,53 @@ Dos cosas más: los enlaces que salen de un canvas se guardan en la **línea 0**
 tablero no tiene líneas; y **escribir** canvas no está soportado — colocar cajas es decidir
 coordenadas, tamaños y qué hacer cuando se solapan, y eso todavía no lo ha pedido nadie.
 
-## 7. Vistas materializadas — la respuesta de una base, dentro de una nota
+---
+
+## 7. Consultas Dataview — el subconjunto soportado
+
+Los vaults llegan de fuera llenos de bloques ```` ```dataview ````. `hvk` contesta los que
+entiende, desde el índice, sin el plugin instalado y sin pintar nada
+([ADR-0016](adr/0016-a-subset-of-a-query-language.md)).
+
+```sh
+hvk dql 'LIST FROM #proyecto WHERE estado = "abierto"'
+hvk dql 'TABLE estado, nota AS "Puntuación" FROM "Proyectos" SORT nota DESC LIMIT 5'
+hvk dql --note "Panel.md"            # ejecuta cada bloque dataview de una nota
+hvk dql 'LIST FROM #proyecto' --json
+```
+
+```
+TABLE (3 rows)
+
+| File | rating |
+|---|---|
+| Alpha | 5 |
+| Beta | 2 |
+| Gamma |  |
+```
+
+**Lo soportado**, y nada más: `LIST` y `TABLE` (con `WITHOUT ID` y `AS "Cabecera"`), `FROM` con
+una sola `#etiqueta` o `"carpeta"` —negable con `-`—, `WHERE`, `SORT … ASC|DESC` y `LIMIT`. La
+igualdad se escribe con un `=` y valen `and`/`or`/`not`, como en Dataview; `contains(campo, x)`
+también.
+
+**Todo lo demás se rechaza con su propio nombre en el mensaje** — `TASK`, `CALENDAR`,
+`GROUP BY`, `FLATTEN`, `FROM [[enlace]]`, fuentes unidas con `and`—. Eso es el objetivo, no una
+limitación: un lenguaje de consulta que se salta en silencio la cláusula que no entendió te
+entrega una tabla que parece correcta y no lo es.
+
+### La diferencia con Bases, que no es cosmética
+
+`hvk base` ve **propiedades de Obsidian**: frontmatter y nada más. Una consulta DQL ve el
+frontmatter **y los campos en línea**: `owner:: Ana` escrito en el cuerpo de una nota. Dataview
+los escribe y los lee, así que una consulta que los ignorara estaría contestando a una pregunta
+distinta de la que hace el bloque. El mismo índice, dos dialectos, dos ideas de qué es un campo.
+
+**DataviewJS no se lee en absoluto**, ni siquiera para informar de él. Ejecutar código de un
+plugin está permanentemente fuera de alcance, y una media respuesta sobre un script es peor que
+el silencio.
+
+## 8. Vistas materializadas — la respuesta de una base, dentro de una nota
 
 Una base se pinta en una pantalla. En un móvil que solo sincroniza ficheros, y en un servidor sin
 pantalla, ese pintado no ocurre nunca. Una vista materializada escribe la tabla *dentro de una
@@ -319,7 +365,7 @@ con el mismo nombre se rechazan en vez de elegir una.
 
 ---
 
-## 8. Notas-orden — el vault como cola de trabajos
+## 9. Notas-orden — el vault como cola de trabajos
 
 Escribes una nota y algo se ejecuta. El estado vive en el frontmatter de la propia nota, así que
 lo ves ocurrir desde el móvil, en la aplicación que ya tienes abierta
@@ -420,7 +466,7 @@ que `--dir` tampoco tiene valor por defecto.
 
 ---
 
-## 9. El guard — una frontera delante del agente
+## 10. El guard — una frontera delante del agente
 
 Hay reglas que no se pueden imponer desde dentro de `hvk`, porque la herramienta que las
 rompería es del agente. `hvk guard` es un hook `PreToolUse`: lee la llamada a la herramienta como
@@ -465,7 +511,7 @@ hubiera pedido.
 
 ---
 
-## 10. `hvk doctor` — para la monitorización que ya tengas
+## 11. `hvk doctor` — para la monitorización que ya tengas
 
 Casi todos los servidores ya vigilan sus propios servicios. Esto contesta solo a las preguntas
 que no puede contestar nadie más, y calla el resto del tiempo:
@@ -487,7 +533,7 @@ del vault, y una alarma por eso es una alarma que la gente aprende a ignorar.
 
 ---
 
-## 11. Copias de seguridad, y la restauración
+## 12. Copias de seguridad, y la restauración
 
 Los scripts de despliegue incluyen un archivo fechado del vault entero y el script que lo
 devuelve a su sitio. El procedimiento completo, incluido contra qué protege de verdad cada copia
@@ -506,7 +552,7 @@ de ficheros.
 
 ---
 
-## 12. Casos de uso
+## 13. Casos de uso
 
 **Un parte matinal sin leerse el vault.** Una consulta por pregunta, todas desde el índice:
 
@@ -547,7 +593,7 @@ reconozca. Instala dentro de tu propia cuenta y no toca nada más de la máquina
 
 ---
 
-## 13. Para agentes
+## 14. Para agentes
 
 La razón de que esto exista. Un agente al que le preguntan *«¿qué enlaza a esta nota?»* sin un
 índice o se lee el vault entero o lo greppea: las dos cosas caras, las dos lentas, y una de ellas
@@ -563,7 +609,7 @@ comando echar mano. Dos cosas que se le dicen, y que conviene seguir diciéndole
 
 ---
 
-## 14. Lo que no hace, y por qué
+## 15. Lo que no hace, y por qué
 
 - **Escribir canvas.** Leerlos está hecho (sección 6); colocar cajas es un conjunto de
   decisiones que todavía no ha pedido nadie.
