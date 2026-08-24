@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "defaultMode": "default",
+    "allow": ["Read", "Glob", "Grep"],
+    "deny": ["Bash", "Write", "Edit", "NotebookEdit", "WebFetch", "WebSearch", "Task"]
+  },
+  "disableAllHooks": true
+}

@@ -23,6 +23,7 @@ which is the normal case rather than the exception.
 | `git` | `vault-autocommit.sh` | `~/.local/share/hvk/deploy-bin/` | A git checkpoint of the vault, every 30 minutes |
 | `git` | `.gitignore` | inside the vault | Only if it has none of its own |
 | `schedules` | `hvk-schedule.sh` | `~/.local/share/hvk/deploy-bin/` | Runs the views and the runner from cron, quiet unless something failed |
+| — | permission profiles | **outside the vault**, wherever `HVK_JOBS_PROFILES` points | Not installed: copy them from [`profiles/`](profiles/) and edit. They decide what an order-note's agent may do |
 | `git` + `schedules` | cron block | your crontab | The auto-commit, `hvk verify` nightly at 04:17, the materialised views, and the order-note runner |
 
 With `--system` the three units go to `/etc/systemd/system` instead, and are managed with
