@@ -22,6 +22,11 @@ delivers changes. That is days of production on one machine, by one person. Noth
 been through a second installation, and phase 7 — publishing it properly — deliberately waits
 for weeks of stability rather than for a feeling of readiness.
 
+Restoring that vault from a backup has been rehearsed once, on that machine, on 2026-08-24:
+the archive went back into a directory beside the live vault and indexed to the same numbers,
+file for file. What has not been rehearsed is a restore from off the machine, because no
+off-site destination is configured yet — see [deploy/RESTORE.md](../deploy/RESTORE.md).
+
 ## Measured, on a generated 10,000-note vault
 
 The numbers the plan set as its exit criteria for phase 2:

@@ -23,8 +23,8 @@ MARK_END="# <<< headless-vault-kit <<<"
 FORCE=0
 DRY=0
 SYSTEM=0
-ONLY="sync agent watch git schedules"
-ALL_PARTS="sync agent watch git schedules"
+ONLY="sync agent watch git schedules backup"
+ALL_PARTS="sync agent watch git schedules backup"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -44,7 +44,8 @@ usage: install.sh [--only LIST] [--system] [--force] [--dry-run]
                  watch      hvk-watch.service (the index, kept current)
                  git        checkpoints of the vault: git init, .gitignore, auto-commit
                  schedules  nightly verify, materialised views, the order-note runner
-               Default: all five.
+                 backup     the daily archive of the vault, and the restore script
+               Default: all six.
   --system     install units into /etc/systemd/system rather than the user scope. Needs sudo,
                and survives a reboot without lingering. For machines whose own services are
                system units (ADR-0010).
@@ -174,6 +175,9 @@ fi
 SCRIPTS=""
 wants git       && SCRIPTS="$SCRIPTS vault-autocommit.sh"
 wants schedules && SCRIPTS="$SCRIPTS hvk-schedule.sh"
+# The restore script is installed even though nothing calls it, and that is the point: the day
+# it is wanted, going to fetch it from a repository is the last thing anyone wants to be doing.
+wants backup    && SCRIPTS="$SCRIPTS vault-backup.sh vault-restore.sh"
 for script in $SCRIPTS; do
     if [ -e "$BIN_DIR/$script" ] && cmp -s "$HERE/bin/$script" "$BIN_DIR/$script"; then
         act "unchanged: $script"
@@ -221,6 +225,31 @@ wants schedules && LINES="$LINES
 17 4 * * * $HVK_BIN --vault \"$HVK_VAULT\" verify >/dev/null 2>&1
 */${VIEWS_EVERY_MINUTES:-30} * * * * $BIN_DIR/hvk-schedule.sh views
 * * * * * $BIN_DIR/hvk-schedule.sh jobs"
+# Declaring a destination is what turns the backup on, the way declaring a jobs directory turns
+# the runner on (ADR-0009). Nobody gets a daily archive of a 40 GB vault onto a disk they did
+# not choose, and nobody gets a cron entry that fails every night for want of one.
+wants backup && [ -n "${BACKUP_DIR:-}" ] && LINES="$LINES
+${BACKUP_CRON:-41 3 * * *} $BIN_DIR/vault-backup.sh"
+# --only rewrites this block from scratch rather than merging into it, so a part left out of
+# the list loses its entries -- silently, on a machine where they were already working. Adding
+# one part to a server means naming the others too. Say what is about to disappear.
+CURRENT=$(printf '%s
+' "$EXISTING" | awk -v b="$MARK_BEGIN" -v e="$MARK_END" '
+    $0 == b { inside = 1; next } $0 == e { inside = 0 } inside && $0 !~ /^#/ && NF { print }')
+DROPPED=""
+OLDIFS=$IFS; IFS='
+'
+for line in $CURRENT; do
+    case "$LINES" in *"$line"*) ;; *) DROPPED="$DROPPED$line
+" ;; esac
+done
+IFS=$OLDIFS
+if [ -n "$DROPPED" ]; then
+    say "  NOTE: these entries are scheduled now and will not be after this run:"
+    printf '%s' "$DROPPED" | sed 's/^/    /'
+    say "    Name every part you want, not only the new one: --only watch,schedules,backup"
+fi
+
 BLOCK=$(printf '%s
 %s%s
 %s

@@ -4,6 +4,47 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-24 — A backup, and the restore that proves it
+
+- The server had three copies of the vault and no backup. Obsidian Sync holds it, every other
+  device holds it, and a git checkpoint lands every thirty minutes — and **all three answer
+  hardware, none of them answers a deletion.** Sync replicates one as faithfully as it
+  replicates a note, in seconds, to every device; the checkpoints do answer it, and only until
+  the machine is gone, because ADR-0006 chose a local repository with no remote. Three copies
+  with three addresses is one copy.
+- `deploy/bin/vault-backup.sh` writes `vault-YYYY-MM-DD.tar.gz` and a checksum beside it: the
+  notes, the attachments, `.obsidian/`, `.trash/`, the git history and the private folders.
+  `.trash/` and `_PRIVATE/` are in it on purpose, and that is the deliberate difference from
+  the checkpoints — git leaves them out because a commit is an audit trail, and a backup that
+  quietly omits a folder is a trap sprung at the worst possible moment. What it leaves out is
+  Obsidian's UI state, its own recovery snapshots and half-written saves.
+- **The destination is the switch.** No `BACKUP_DIR`, no cron entry at all — the shape ADR-0009
+  used for the jobs directory. The asymmetry is deliberate and [ADR-0013](adr/0013-a-backup-is-what-you-restored.md)
+  says why: a runner that does not run is safe, a backup that does not run is discovered on the
+  day it was needed. So once a destination exists, every failure is loud.
+- `deploy/bin/vault-restore.sh` puts an archive back **anywhere except the vault**. It refuses
+  the vault, anything inside it, any directory containing it, and any directory that is not
+  empty — normalising the path first, because `.` and `vault/..` walked straight past a string
+  comparison in the first version. Then it verifies the checksum, checks the history with
+  `git fsck`, compares the result against the live vault, and indexes it with `hvk`, which is
+  the only step that asserts a *vault* came back rather than a directory of files.
+- **Rehearsed on the server, against the live vault, with sync and the watcher running.** A
+  39 MB archive of 1745 entries in 2.1 s; restored into a directory beside the vault in 2.4 s;
+  588 files and 16 checkpoints back, history intact; `diff -rq` over both trees reporting no
+  difference at all; and the restored copy indexing to 278 notes, 307 attachments, 928 links
+  and 170 tasks — the live index's numbers to the digit, including the nine broken links and
+  the one bad frontmatter the vault has had all along. Nothing was left behind: the copy and
+  the archive were removed, the crontab and the configuration untouched.
+- 26 checks in `deploy/selftest.sh` cover it in the container, including the ones that matter
+  more than the happy path: a destination inside the vault refused, a corrupted archive caught
+  before anything is extracted, old archives swept with their checksums, and `_PRIVATE`
+  present in the archive while still absent from git.
+- **What this does not close.** No destination is configured on the server yet, so the archive
+  was restored from the same disk that wrote it and the off-site half of the phase 6 criterion
+  is still open — that needs a decision about where a full copy of the vault may land, and it
+  is not one to make on someone's behalf. Obsidian Sync's own version history stays unrehearsed
+  too, and is recorded as untested rather than counted as a copy that works.
+
 ## 2026-08-23 — The deployment runbook can actually be started
 
 - Rehearsing the runbook end to end in the container found the obvious thing nobody had tried:

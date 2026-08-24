@@ -134,6 +134,64 @@ mkdir -p "$LAB/vault/_PRIVATE" && echo secret > "$LAB/vault/_PRIVATE/token.md"
 check "_PRIVATE never committed"     "! git -C '$LAB/vault' ls-files | grep -q _PRIVATE"
 
 echo ""
+echo "backup and restore"
+BACKUP="$HOME/.local/share/hvk/deploy-bin/vault-backup.sh"
+RESTORE="$HOME/.local/share/hvk/deploy-bin/vault-restore.sh"
+BACKUPS="$LAB/backups"
+ARCHIVE="$BACKUPS/vault-$(date +%F).tar.gz"
+echo '{"pane":"whatever"}' > "$LAB/vault/.obsidian/workspace.json"
+
+check "backup script installed"      "[ -x '$BACKUP' ]"
+check "restore script installed"     "[ -x '$RESTORE' ]"
+# Nobody gets a nightly archive of their vault onto a disk they did not choose (ADR-0013).
+check "no destination, no cron line" "! crontab -l | grep -q vault-backup.sh"
+check "and running it says why"      "! '$BACKUP' 2>/dev/null"
+
+{ echo "BACKUP_DIR=\"$BACKUPS\""; echo "BACKUP_KEEP=2"; } >> "$HVK_DEPLOY_ENV"
+"$HERE/install.sh" >/dev/null 2>&1
+check "declaring one schedules it"   "crontab -l | grep -q vault-backup.sh"
+
+sed "s|^BACKUP_DIR=.*|BACKUP_DIR=\"$LAB/vault/inside\"|" "$HVK_DEPLOY_ENV" > "$LAB/inside.env"
+check "a destination inside the vault is refused" "! HVK_DEPLOY_ENV='$LAB/inside.env' '$BACKUP' 2>/dev/null"
+
+"$BACKUP"
+check "an archive appears"           "[ -s '$ARCHIVE' ]"
+check "with a checksum beside it"    "[ -s '$ARCHIVE.sha256' ]"
+check "and the checksum verifies"    "cd '$BACKUPS' && sha256sum -c --status 'vault-$(date +%F).tar.gz.sha256'"
+check "no half-written file left"    "! ls -a '$BACKUPS' | grep -q '.part'"
+check "the notes are in it"          "tar -tzf '$ARCHIVE' | grep -q '^./Note.md'"
+check "the history is in it"         "tar -tzf '$ARCHIVE' | grep -q '^./.git/'"
+# The deliberate difference from the checkpoints: git leaves _PRIVATE out because a commit is
+# an audit trail, the backup takes it because a backup is everything or it is a surprise.
+check "_PRIVATE is in it, unlike git" "tar -tzf '$ARCHIVE' | grep -q _PRIVATE"
+check "the UI state is not"          "! tar -tzf '$ARCHIVE' | grep -q workspace.json"
+
+"$RESTORE" "$ARCHIVE" "$LAB/restored" >"$LAB/restore.txt" 2>&1
+check "the notes come back"          "[ -f '$LAB/restored/Note.md' ]"
+check "the history comes back"       "git -C '$LAB/restored' log --oneline | grep -q checkpoint"
+check "_PRIVATE comes back"          "[ -f '$LAB/restored/_PRIVATE/token.md' ]"
+check "it verified the checksum"     "grep -q 'checksum ok' '$LAB/restore.txt'"
+check "it verified the history"      "grep -q 'intact' '$LAB/restore.txt'"
+check "it compared with the vault"   "grep -q 'against the live vault' '$LAB/restore.txt'"
+check "the vault was left alone"     "[ -f '$LAB/vault/Note.md' ] && [ -d '$LAB/vault/.git' ]"
+# The refusals matter more than the restore: this runs while the real vault is one path away.
+check "restoring onto the vault is refused"  "! '$RESTORE' '$ARCHIVE' '$LAB/vault' >/dev/null 2>&1"
+check "onto a directory holding it, too"      "! '$RESTORE' '$ARCHIVE' '$LAB' >/dev/null 2>&1"
+check "and onto anything with files in it"    "! '$RESTORE' '$ARCHIVE' '$LAB/restored' >/dev/null 2>&1"
+
+for old in 2020-01-01 2020-01-02; do
+    : > "$BACKUPS/vault-$old.tar.gz"; : > "$BACKUPS/vault-$old.tar.gz.sha256"
+    touch -d "$old" "$BACKUPS/vault-$old.tar.gz"
+done
+"$BACKUP"
+check "old archives are swept"       "[ \"\$(ls -1 '$BACKUPS'/vault-*.tar.gz | wc -l)\" = 2 ]"
+check "and their checksums with them" "[ ! -e '$BACKUPS/vault-2020-01-01.tar.gz.sha256' ]"
+
+printf 'rot' >> "$ARCHIVE"
+check "a corrupted archive is caught" "! '$RESTORE' '$ARCHIVE' '$LAB/restored2' >/dev/null 2>&1"
+check "and nothing was extracted"    "[ ! -d '$LAB/restored2' ]"
+
+echo ""
 echo "the agent unit really starts"
 systemctl --user start hvk-agent.service >/dev/null 2>&1
 sleep 2
@@ -150,8 +208,13 @@ echo "selective install, for a machine that already runs some of this itself"
 check "installs the unit asked for"  "[ -f \"$HOME/.config/systemd/user/hvk-watch.service\" ]"
 check "and not the ones it was not"  "[ ! -e \"$HOME/.config/systemd/user/obsidian-headless.service\" ] && [ ! -e \"$HOME/.config/systemd/user/hvk-agent.service\" ]"
 check "no auto-commit line in cron"  "! crontab -l | grep -q vault-autocommit"
+check "no backup script either"      "[ ! -e \"\$HOME/.local/share/hvk/deploy-bin/vault-backup.sh\" ]"
 check "the schedules are there"      "crontab -l | grep -q 'hvk-schedule.sh jobs'"
 check "an unknown part is refused"   "! '$HERE/install.sh' --only nonsense >/dev/null 2>&1"
+# --only rewrites the cron block, so narrowing it drops entries that were working a moment ago.
+"$HERE/install.sh" --only watch >"$LAB/narrow.txt" 2>&1
+check "it says what it is dropping" "grep -q 'scheduled now and will not be' '$LAB/narrow.txt'"
+check "and names the entry itself"  "grep -q 'hvk-schedule.sh jobs' '$LAB/narrow.txt'"
 "$HERE/uninstall.sh" >/dev/null 2>&1
 
 echo ""
