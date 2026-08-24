@@ -41,3 +41,4 @@ wrong is part of what makes the log worth keeping.
 | [0010](0010-installing-onto-a-server-that-is-already-running.md) | Installing onto a server that is already running something | accepted | 0 |
 | [0011](0011-a-profile-has-to-be-a-limit.md) | A profile has to be a limit | accepted | 6 |
 | [0012](0012-a-hook-in-front-of-the-agent.md) | A hook in front of the agent | accepted | 6 |
+| [0013](0013-a-backup-is-what-you-restored.md) | A backup is what you restored | accepted | 6 |

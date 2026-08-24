@@ -11,7 +11,7 @@ report that these services do not exist.** That is not a broken install.
 
 ## What gets installed
 
-Five parts, and you can install any subset of them with `--only` — see
+Six parts, and you can install any subset of them with `--only` — see
 [Installing onto a machine that already runs some of this](#installing-onto-a-machine-that-already-runs-some-of-this),
 which is the normal case rather than the exception.
 
@@ -23,8 +23,9 @@ which is the normal case rather than the exception.
 | `git` | `vault-autocommit.sh` | `~/.local/share/hvk/deploy-bin/` | A git checkpoint of the vault, every 30 minutes |
 | `git` | `.gitignore` | inside the vault | Only if it has none of its own |
 | `schedules` | `hvk-schedule.sh` | `~/.local/share/hvk/deploy-bin/` | Runs the views and the runner from cron, quiet unless something failed |
+| `backup` | `vault-backup.sh`, `vault-restore.sh` | same | A dated archive of the whole vault, and the script that puts one back. Scheduled only once `BACKUP_DIR` says where ([RESTORE.md](RESTORE.md)) |
 | — | permission profiles | **outside the vault**, wherever `HVK_JOBS_PROFILES` points | Not installed: copy them from [`profiles/`](profiles/) and edit. They decide what an order-note's agent may do |
-| `git` + `schedules` | cron block | your crontab | The auto-commit, `hvk verify` nightly at 04:17, the materialised views, and the order-note runner |
+| `git` + `schedules` + `backup` | cron block | your crontab | The auto-commit, `hvk verify` nightly at 04:17, the materialised views, the order-note runner, and the nightly archive |
 
 With `--system` the three units go to `/etc/systemd/system` instead, and are managed with
 `sudo systemctl`. Everything else is unchanged: the scripts, the crontab and the vault's
@@ -139,7 +140,7 @@ unit of the same name are different paths ([ADR-0010](../docs/adr/0010-installin
                                                       #    machine's own services are managed
 ```
 
-The five parts are `sync`, `agent`, `watch`, `git` and `schedules`; `install.sh --help` says
+The six parts are `sync`, `agent`, `watch`, `git`, `schedules` and `backup`; `install.sh --help` says
 what each one covers. `--system` writes to `/etc/systemd/system` and needs `sudo`, and in
 exchange needs no lingering — a system unit is started by the machine, not by your session.
 `uninstall.sh` sweeps both scopes without being told which you used.
@@ -225,6 +226,12 @@ The freshness check counts notes rather than reading the last-scan timestamp, an
 deliberate: the watcher only writes when something changes, so a vault nobody has touched for
 a week has a week-old timestamp and is perfectly healthy.
 
+## When the vault itself is what went wrong
+
+Backups, and the restore that was rehearsed against the live vault, are in
+[RESTORE.md](RESTORE.md) — including which of the copies you already have answers which
+failure, because they do not all answer the one people assume.
+
 ## When something is wrong
 
 | Symptom | Where to look |
@@ -274,6 +281,9 @@ everything back. Safe to run on the target machine before trusting it.
 
 - **The firewall.** The plan asks for SSH only. Nothing installed here opens a port, so there
   is nothing to open; closing what is already there is your decision, not a script's.
-- **Backups off the server.** Git here is local only, with no remote (plan annex, decision 5).
-  It gives checkpoints and an undo, not survival of the machine. That is phase 6.
-- **Healthchecks and alerting.** Also phase 6.
+- **Choose where the backup goes.** The machinery is here and the restore has been rehearsed
+  ([RESTORE.md](RESTORE.md)), but nothing is scheduled until `BACKUP_DIR` names a destination,
+  and nothing leaves the machine until `BACKUP_OFFSITE_HOOK` says how. Until then the vault has
+  checkpoints and an undo, which is not survival of the machine.
+- **Alerting.** `hvk doctor` answers what is wrong; who gets told is your monitoring's job, and
+  the section above says how to ask it.
