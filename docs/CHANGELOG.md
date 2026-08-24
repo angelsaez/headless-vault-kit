@@ -42,6 +42,58 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-25 — Phase 7, entered two days early on purpose
+
+- **The entry condition was weeks of stability, and it has had days.** Ángel decided to build
+  the phase anyway. That is recorded in `docs/ROADMAP.md` rather than quietly satisfied, along
+  with what it costs: nothing is published, the MCP server has never met a client that was not
+  a test, and the parser interface has exactly one adapter, written here.
+- **A parser interface, extracted rather than designed** (ADR-0017). `scan.py` chose a parser
+  with a dictionary of three extensions and an `if` with two branches; it now asks a registry,
+  and the two `_store_*` functions are one, because the second was the first with four of its
+  six inserts deleted. The row shapes moved to `hvk/parse/model.py`, so a parser written by
+  somebody else has somewhere to import them from that is not the Markdown parser.
+- **The claim is the part that was not obvious.** Dispatching on the extension alone would have
+  been enough for Markdown, Canvas and `.base` — and would have had nothing to say about the one
+  adapter the plan named, because a Kanban board is a `.md` file marked by a line in its own
+  frontmatter. So a parser can also be asked, cheaply, whether a particular file is its business.
+- **Kanban, as the worked example.** It contributes which list a card sits in, and the date
+  Kanban writes as `@{2026-09-01}` in its own syntax and nobody else's. The second is the one
+  that earns its place: `hvk tasks --due-before`, written in phase 2, was blind to every card on
+  every board and now is not — with no new column, no new flag and no change to the core.
+  Deleting the file removes the feature and breaks nothing, which is the claim the interface
+  makes and the only way to check it.
+- **Schema version 5.** An index built yesterday has boards in it with no list and no date, and
+  their hashes have not changed, so nothing would ever go back for them. `hvk rebuild`.
+- **`hvk mcp`** (ADR-0018), which exposes writing, and is therefore mostly a decision about what
+  stands in front of it. Five things, none of them new: stdio and no network listener; the
+  writing tools opt-in per instance and *absent from `tools/list`* without `--write`, so a
+  client cannot call what it was never told about; every write through the layer of ADR-0007;
+  the guard's own `decide()` called here, because a hook is a Claude Code feature and a client
+  from anywhere else never passes through one; and a line in `hvk.log` for every write and every
+  refusal.
+- **`note_read` returns a digest and `note_write` takes it as `if_unchanged`.** That is how
+  ADR-0007's refusal to clobber survives a protocol where the client cannot hold a file open:
+  an edit that arrived from a phone while the model was thinking loses the race instead of
+  losing outright.
+- **The protocol is written by hand**, about a hundred lines of JSON-RPC over stdio. A server
+  with tools and no resources, prompts or HTTP transport needs a line reader and a dispatch
+  table, not a dependency — and the runtime list stays at two.
+- **`CONTRIBUTING.md`**, and with it the licensing question the plan said to settle *before* the
+  first outside pull request rather than after: **contributions are MIT, inbound as outbound,
+  and there is no CLA**. Keeping the option to relicense would have meant friction on every
+  contribution to protect an option worth little, since the code is already MIT and anyone can
+  build anything on it today. It also carries the parser adapter reference, so the interface is
+  documented where somebody writing one would look.
+- **CI now installs the way the README tells strangers to.** It proved the pip route and not
+  `uv tool install`, which is the one the documentation actually recommends; they fail
+  differently, and now both are checked, along with the MCP server answering a handshake as an
+  installed command.
+- Two documentation bugs found while editing around them: both guides still listed "Dataview
+  DQL" as dropped in their own last section, four sections after documenting it; and the Spanish
+  README still said the source folders "will appear as their phases are implemented", naming a
+  `runner/` that never existed.
+
 ## 2026-08-24 — A Dataview subset, and the parts that say no
 
 - Reopened on a criterion that changed rather than evidence that did: not *"does anyone here

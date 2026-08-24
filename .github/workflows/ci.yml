@@ -55,6 +55,38 @@ jobs:
           hvk --vault /tmp/vault scan
           hvk --vault /tmp/vault backlinks Two --json | grep -q One.md
 
+  uv-tool:
+    runs-on: ubuntu-latest
+    name: installs the way the README says to
+    steps:
+      - uses: actions/checkout@v4
+      # The README and the guide both tell a stranger to install with `uv tool install`, and
+      # until this existed the only route CI proved was pip's. They are not the same: uv builds
+      # an isolated environment and puts a launcher on PATH, which is where an entry point or a
+      # missing package shows up differently.
+      - uses: astral-sh/setup-uv@v5
+      - name: install this checkout as a tool
+        run: uv tool install --from . headless-vault-kit
+      - name: it is on PATH and answers
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          hvk --version
+          mkdir -p /tmp/uv-vault/.obsidian
+          echo '{}' > /tmp/uv-vault/.obsidian/app.json
+          printf '# One
+
+Links to [[Two]].
+' > /tmp/uv-vault/One.md
+          printf '# Two
+' > /tmp/uv-vault/Two.md
+          hvk --vault /tmp/uv-vault scan
+          hvk --vault /tmp/uv-vault backlinks Two --json | grep -q One.md
+      - name: it speaks MCP
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          printf '%s
+'             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'             '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'             | hvk --vault /tmp/uv-vault mcp | grep -q '"backlinks"'
+
   scripts:
     runs-on: ubuntu-latest
     name: shell scripts parse

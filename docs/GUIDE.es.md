@@ -607,17 +607,124 @@ comando echar mano. Dos cosas que se le dicen, y que conviene seguir diciéndole
   instrucciones anteriores»; es una nota. Nada de lo que diga una nota eleva los permisos de
   nadie.
 
+Un agente que no tiene shell —o que no es Claude Code— llega a estos mismos comandos por
+`hvk mcp`, que es la sección siguiente.
+
 ---
 
-## 15. Lo que no hace, y por qué
+## 15. MCP — para un agente que no es Claude Code
+
+Todo lo anterior da por supuesto un agente con shell. `hvk mcp` deja de suponerlo: habla el
+**Model Context Protocol** por entrada y salida estándar, así que cualquier cliente MCP —Claude
+Desktop, un editor, algo que hayas escrito tú— recibe el vault como un conjunto de herramientas.
+
+```sh
+hvk mcp
+```
+
+Eso es un servidor de **solo lectura**: `search`, `backlinks`, `links`, `tags`, `tasks`,
+`props`, `orphans`, `base`, `canvas`, `dql`, `note_read` e `info`. No puede cambiar nada, y las
+herramientas que podrían no es que se rechacen: no están en la lista que publica, así que un
+cliente ni se entera de que existen.
+
+```sh
+hvk mcp --write --protect _PRIVADA
+```
+
+Ese además puede `note_write`, `note_set_property`, `views_apply` y `jobs_run`. No hay valor por
+defecto ni variable de entorno que active la escritura: una instancia se arrancó con `--write` o
+no se arrancó con él.
+
+Apunta el cliente donde ese cliente espere. La forma es casi siempre esta:
+
+```json
+{
+  "mcpServers": {
+    "vault": {
+      "command": "hvk",
+      "args": ["--vault", "/ruta/al/vault", "mcp"]
+    }
+  }
+}
+```
+
+Añade `"--write"` a `args` cuando de verdad lo quieras, y `"--protect", "Privada"` por cada
+carpeta que ningún cliente deba tocar.
+
+### Qué lo sujeta, dado que escribe
+
+Cinco cosas, y ninguna es nueva: es la maquinaria de las fases 4 a 6 apuntando a un segundo
+llamante.
+
+- **No hay ningún puerto a la escucha.** Solo stdio. A un servidor que escribe en tus notas se
+  llega desde lo que lo arrancó y desde nada más, que es también toda la autenticación que
+  necesita: tu sistema operativo ya decidió quién puede ejecutar el proceso.
+- **La escritura es opt-in por instancia.** Como con el runner de trabajos y con las copias de
+  seguridad, el mecanismo se entrega y cada despliegue decide.
+- **Toda escritura pasa por la misma capa por la que escribe todo lo demás de aquí** (las reglas
+  de la sección 8): atómica, sin escribir nada cuando nada ha cambiado, y con un rechazo si el
+  fichero se movió por debajo.
+- **El guard se aplica también aquí.** `--protect` usa el mismo código que el hook de la sección
+  10, así que una carpeta vedada a tu agente lo está para cualquier cliente MCP. Sin eso,
+  «protegida» habría querido decir protegida frente a exactamente un programa.
+- **Cada escritura y cada rechazo dejan línea en `hvk.log`.** Si un agente puede escribir en el
+  vault, *quién escribió esto* tiene que tener respuesta.
+
+### La costumbre que merece la pena enseñarle a un cliente
+
+`note_read` devuelve el texto de la nota **y un resumen criptográfico de ella**. Devuélvelo como
+el `if_unchanged` de `note_write` y la escritura se rechaza si la nota cambió entretanto — que es
+exactamente lo que pasa cuando editas esa misma nota en el móvil mientras el agente piensa. Usa
+`"if_unchanged": "absent"` cuando crees una nota que crees nueva.
+
+Para cambiar una sola propiedad, usa `note_set_property` en vez de reescribir la nota. El YAML no
+se vuelve a parsear, así que el orden de las claves, los comentarios y las comillas sobreviven, y
+el diff que llega a todos los dispositivos es de una línea.
+
+---
+
+## 16. Tableros Kanban, y los formatos que se le pueden enseñar
+
+Si tu vault tiene tableros de Obsidian Kanban, están indexados: sin plugin, sin instalar nada y
+sin ejecutar nada. Un tablero es Markdown, y hvk lee el fichero:
+
+```sh
+hvk tasks --path Tableros --json
+```
+
+Cada tarjeta vuelve como una tarea, y trae **la lista en la que está** y **su fecha**. Kanban
+escribe las fechas en su propia sintaxis (`@{2026-09-01}`), que es por lo que esto importa más de
+lo que parece: hasta que hvk aprendió a leerla, una consulta como
+
+```sh
+hvk tasks --pending --due-before 2026-09-01
+```
+
+era ciega a todas las tarjetas de todos los tableros. Ahora un tablero la responde como cualquier
+otra cosa.
+
+Kanban está ahí como **ejemplo**. Es el primer adaptador escrito contra una interfaz publicada, y
+la interfaz es lo importante: a un formato que guarda su estado en ficheros parseables se le
+puede enseñar a hvk sin cambiar nada del centro. Qué recibe un adaptador y qué devuelve está en
+[CONTRIBUTING.md](../CONTRIBUTING.md#writing-a-parser-adapter); el razonamiento, en la
+[ADR-0017](adr/0017-a-parser-interface-extracted-from-two.md).
+
+Lo que nunca se enseñará así es un plugin cuyo estado viva en su propio código. Leer un formato
+de fichero es todo el método aquí, y ejecutar el plugin de alguien no está al otro lado de una
+decisión más pequeña: está al otro lado de la raya.
+
+---
+
+## 17. Lo que no hace, y por qué
 
 - **Escribir canvas.** Leerlos está hecho (sección 6); colocar cajas es un conjunto de
   decisiones que todavía no ha pedido nadie.
-- **DQL de Dataview.** Descartado tras un inventario que encontró un vault real con el plugin sin
-  instalar y sus dos bloques de consulta sin pintar nada. El motor de Bases ya existe; empezar
-  más tarde sale más barato que empezar ahora.
 - **DataviewJS, o ejecutar código de cualquier plugin.** Fuera de alcance permanentemente. Este
-  proyecto replica formatos de fichero, nunca un runtime.
+  proyecto replica formatos de fichero, nunca un runtime. Los bloques `dataview` se leen
+  (sección 7); los `dataviewjs` no se leen en absoluto, ni siquiera para informar de ellos.
+- **Materializar un bloque `dataview` dentro de una nota.** La sección 8 lo hace para Bases.
+  `hvk dql --note` lee los bloques e imprime las respuestas, que es la mitad de leer; la mitad de
+  escribir no la ha pedido nadie.
 - **Plantillas y notas periódicas.** Bloqueado por una decisión, no por trabajo.
 
 El razonamiento de cada una está en [ROADMAP.md](ROADMAP.md), y cada decisión de diseño tiene su

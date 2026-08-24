@@ -29,12 +29,16 @@ state that can be rebuilt from the files themselves. This project rebuilds it on
 - **The vault as a job queue**: order-notes with their state in frontmatter; a runner
   executes them with Claude Code and the results sync back to all your devices.
 - **Harness**: permissions, hooks and auditing via Claude Code's native features + git.
+- **MCP server**: `hvk mcp` serves the vault to any MCP client over stdio — read-only by
+  default, and able to write only when the instance was started with `--write`.
 
 The scope is governed by a three-tier model: the app's native behavior is replicated
 exactly; Obsidian's official formats (Bases, Canvas, templates) get full support; and the
 most popular community plugins are included only when their state lives in parseable files
-— everything else goes through an extensible parser interface so anyone can contribute an
-adapter. Plugin code is never executed and the UI is never reproduced.
+— everything else goes through an [extensible parser
+interface](CONTRIBUTING.md#writing-a-parser-adapter) so anyone can contribute an adapter.
+Obsidian Kanban boards are read through that interface as the worked example. Plugin code is
+never executed and the UI is never reproduced.
 
 ## Requirements
 
@@ -137,6 +141,7 @@ Two things worth knowing straight away:
 | `hvk jobs --dir D --profiles P [--run]` | Run the order-notes waiting in a directory; without `--run` it only reports |
 | `hvk doctor [--jobs-dir D]` | Is this installation healthy? For calling from monitoring you already have |
 | `hvk guard [--protect F]` | A `PreToolUse` hook: refuses `rm` in favour of `.trash/`, writes that land outside the vault, and folders you nominate. Refusals are recorded |
+| `hvk mcp [--write] [--protect F]` | Serve the vault to any MCP client over stdio. Read-only unless `--write`, in which case the writing tools appear; the same guard rules apply and every write is recorded |
 | `hvk info` | What the index currently holds |
 
 Every command takes `--json` for machine-readable output; `hvk watch` emits JSON Lines, one
@@ -166,7 +171,7 @@ Every command, what each part is for, the worked cases, and the two-language voc
 ## Repository layout
 
 ```text
-src/hvk/      The package: indexer, parsers, the write layer, and the hvk CLI
+src/hvk/      The package: indexer, parsers, the write layer, the MCP server and the CLI
 tests/        pytest, run against the synthetic vaults below
 test-vaults/  Synthetic vaults, including the awkward cases: Unicode, odd YAML,
               duplicate headings, ambiguous and broken links
@@ -182,8 +187,12 @@ and `watchdog` as its only runtime dependencies.
 
 ## Contributing
 
-Not taking pull requests yet — the parser interface that would make them useful is not
-published. Bug reports and questions are welcome.
+Pull requests are welcome, and so are bug reports and questions.
+**[CONTRIBUTING.md](CONTRIBUTING.md)** has the whole of it: how to run the suite, the rules that
+are not negotiable, the one-ADR-per-decision working rule, and how to write a parser adapter for
+a format this does not read yet.
+
+Contributions are licensed under this project's own MIT, and there is no CLA.
 
 If you are reading the code, the tests are the map:
 
@@ -193,8 +202,9 @@ If you are reading the code, the tests are the map:
 ```
 
 Every push and pull request runs the suite on Python 3.11 and 3.13, installs the built package
-and checks it answers against a vault it has never seen, and parses every shell script
-([the workflow](.github/workflows/ci.yml)). Linux only: Linux is where this is meant to run.
+both with pip and with `uv tool install` and checks each answers against a vault it has never
+seen, and parses every shell script ([the workflow](.github/workflows/ci.yml)). Linux only:
+Linux is where this is meant to run.
 
 The deployment is not exercised in CI — it needs a systemd user instance and a machine to throw
 away. It lives in [`tools/testbed/`](tools/testbed/), a disposable Debian container, and that is
