@@ -43,3 +43,4 @@ wrong is part of what makes the log worth keeping.
 | [0012](0012-a-hook-in-front-of-the-agent.md) | A hook in front of the agent | accepted | 6 |
 | [0013](0013-a-backup-is-what-you-restored.md) | A backup is what you restored | accepted | 6 |
 | [0014](0014-blocked-and-written-down.md) | Blocked, and written down | accepted | 6 |
+| [0015](0015-what-a-whiteboard-puts-in-the-index.md) | What a whiteboard puts in the index | accepted | 3 |

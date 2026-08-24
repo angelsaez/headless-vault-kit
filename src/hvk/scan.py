@@ -158,6 +158,36 @@ def _store_note(conn: sqlite3.Connection, file_id: int, path: str, text: str) ->
     return note.error
 
 
+def _store_canvas(conn: sqlite3.Connection, file_id: int, path: str, text: str) -> str | None:
+    """Parse a canvas and write what it contributes: its links, its tags and its text.
+
+    A canvas is the one file type that points at notes without mentioning them in prose. If
+    this did not run, a note placed on a whiteboard would have no backlinks and look orphaned
+    -- which is the state in which people delete things.
+    """
+    from hvk.parse.canvas import parse_canvas
+
+    canvas = parse_canvas(text)
+    conn.executemany(
+        "INSERT INTO tags(file_id, tag, source, line) VALUES(?, ?, ?, ?)",
+        [(file_id, t.tag, t.source, t.line) for t in canvas.tags],
+    )
+    conn.executemany(
+        "INSERT INTO links(file_id, target_raw, target_file_id, subpath, kind, embed, "
+        "candidates, line) VALUES(?, ?, NULL, ?, ?, ?, 0, ?)",
+        [
+            (file_id, ln.target_raw, ln.subpath, ln.kind, int(ln.embed), ln.line)
+            for ln in canvas.links
+        ],
+    )
+    title = path.rsplit("/", 1)[-1].removesuffix(".canvas")
+    conn.execute(
+        "INSERT INTO fts(rowid, path, title, body) VALUES(?, ?, ?, ?)",
+        (file_id, path, title, canvas.body),
+    )
+    return canvas.error
+
+
 def _build_index(conn: sqlite3.Connection) -> FileIndex:
     rows = conn.execute("SELECT id, path, parent, name, stem, ext FROM files").fetchall()
     return FileIndex(
@@ -247,12 +277,15 @@ def index_file(
         file_id = cursor.lastrowid
         stats.added += 1
 
+    error = None
     if fields["kind"] == "note":
         stats.notes += 1
         error = _store_note(conn, file_id, rel, data.decode("utf-8", errors="replace"))
-        if error:
-            stats.errors += 1
-            conn.execute("UPDATE files SET parse_error = ? WHERE id = ?", (error, file_id))
+    elif fields["kind"] == "canvas":
+        error = _store_canvas(conn, file_id, rel, data.decode("utf-8", errors="replace"))
+    if error:
+        stats.errors += 1
+        conn.execute("UPDATE files SET parse_error = ? WHERE id = ?", (error, file_id))
 
 
 def forget_file(conn: sqlite3.Connection, row: sqlite3.Row | dict, stats: ScanStats) -> None:

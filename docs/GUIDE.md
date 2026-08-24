@@ -224,7 +224,52 @@ missing. That distinction is the whole point: a wrong table is worse than no tab
 
 ---
 
-## 6. Materialised views — a base's answer, inside a note
+---
+
+## 6. Canvas — the whiteboard
+
+A `.canvas` is JSON, and it does something no note does: it points at notes **without
+mentioning them**. Put a note on a board and no file's text refers to it — so before this was
+built, that note had no backlinks and `hvk orphans` listed it. An orphan that is not an orphan
+is the state in which people delete things.
+
+What a canvas puts in the index ([ADR-0015](adr/0015-what-a-whiteboard-puts-in-the-index.md)):
+
+| On the board | In the index |
+|---|---|
+| a **file** node | a link to that note, marked as an embed, with its `#heading` if it had one |
+| a **text** node | its Markdown parsed like any note's: wikilinks resolve, `#tags` count, the text is searchable |
+| a **link** node | an external link |
+| a **group** label | searchable text |
+| an **arrow** | *nothing* — see below |
+
+So the queries you already know just work: `hvk backlinks` names the canvas, `hvk tags` counts
+the tag you wrote in a box, `hvk search` finds the phrase, and `hvk orphans` stops lying.
+
+To look at one board:
+
+```sh
+hvk canvas "Boards/Roadmap.canvas"           # the boxes: id, type, and what each holds
+hvk canvas "Boards/Roadmap.canvas" --edges   # the arrows, with the files they join
+hvk canvas "Boards/Roadmap" --json
+```
+
+```
+FROM            LABEL       TO
+--------------  ----------  -------------
+Notes/Alpha.md  depends on  Notes/Beta.md
+```
+
+**Arrows are not links between notes**, and that is a decision rather than an omission:
+Obsidian does not derive one either, and teaching the index that two boxes joined by a line
+means two notes are related would be inventing a relationship. `--edges` reads the file at the
+moment you ask, which is the honest way to answer a question about the shape of one board.
+
+Two more things worth knowing: links from a canvas are stored at **line 0**, because a
+whiteboard has no lines; and **writing** canvases is not supported — placing boxes means
+deciding coordinates, sizes and what to do when they overlap, and nothing has needed that yet.
+
+## 7. Materialised views — a base's answer, inside a note
 
 A base renders on a screen. On a phone that only syncs files, and on a server with no screen,
 that rendering never happens. A materialised view writes the table *into a note*, and sync
@@ -270,7 +315,7 @@ name are refused rather than picked between.
 
 ---
 
-## 7. Order-notes — the vault as a job queue
+## 8. Order-notes — the vault as a job queue
 
 Write a note, and something runs. The state lives in the note's own frontmatter, so you watch
 it happen from your phone, in the app you already have open
@@ -369,7 +414,7 @@ the whole feature exists to prevent — which is also why `--dir` has no default
 
 ---
 
-## 8. The guard — a boundary in front of the agent
+## 9. The guard — a boundary in front of the agent
 
 Some rules cannot be enforced from inside `hvk`, because the tool that would break them belongs
 to the agent. `hvk guard` is a `PreToolUse` hook: it reads the tool call as JSON on stdin and
@@ -413,7 +458,7 @@ malicious note might have asked for.
 
 ---
 
-## 9. `hvk doctor` — for monitoring you already have
+## 10. `hvk doctor` — for monitoring you already have
 
 Most servers already watch their own services. This answers only the questions nothing else
 can, and stays quiet otherwise:
@@ -434,7 +479,7 @@ that raises an alarm about them is a check people learn to ignore.
 
 ---
 
-## 10. Backups, and the restore
+## 11. Backups, and the restore
 
 The deployment scripts include a dated archive of the whole vault and the script that puts one
 back. The full procedure, including what each copy you already have actually protects against,
@@ -453,7 +498,7 @@ of files.
 
 ---
 
-## 11. Worked cases
+## 12. Worked cases
 
 **A morning briefing without reading the vault.** One query per question, all from the index:
 
@@ -493,7 +538,7 @@ recognise. It installs into your own account and touches nothing else on the mac
 
 ---
 
-## 12. For agents
+## 13. For agents
 
 The reason this exists. An agent asked *"what links to this note?"* without an index either
 reads the whole vault or greps it — both expensive, both slower, and one of them wrong. With
@@ -508,10 +553,10 @@ command to reach for. Two things it is told, and that you should keep telling it
 
 ---
 
-## 13. What it does not do, and why
+## 14. What it does not do, and why
 
-- **Canvas** (`.canvas`). The format is published and stable, so waiting costs nothing. It gets
-  built when a vault actually contains one.
+- **Writing canvases.** Reading is done (section 6); placing boxes is a set of decisions
+  nobody has needed yet.
 - **Dataview DQL.** Dropped after an inventory found a real vault with the plugin not installed
   and its two query blocks rendering nothing. The Bases engine exists; starting later is
   cheaper than starting now.

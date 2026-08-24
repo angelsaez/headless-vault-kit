@@ -1,0 +1,68 @@
+{
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "file",
+      "file": "Notes/Alpha.md",
+      "x": 0,
+      "y": 0,
+      "width": 400,
+      "height": 400
+    },
+    {
+      "id": "n2",
+      "type": "file",
+      "file": "Notes/Beta.md",
+      "subpath": "#Somewhere",
+      "x": 420,
+      "y": 0,
+      "width": 400,
+      "height": 400
+    },
+    {
+      "id": "n3",
+      "type": "text",
+      "text": "Ideas for #roadmap, see [[Notes/Alpha]] and [an external](https://example.org).",
+      "x": 0,
+      "y": 420,
+      "width": 400,
+      "height": 200
+    },
+    {
+      "id": "n4",
+      "type": "link",
+      "url": "https://obsidian.md/canvas",
+      "x": 420,
+      "y": 420,
+      "width": 400,
+      "height": 200
+    },
+    {
+      "id": "n5",
+      "type": "group",
+      "label": "Second quarter",
+      "x": -20,
+      "y": -20,
+      "width": 900,
+      "height": 900
+    },
+    {
+      "id": "n6",
+      "type": "newfangled",
+      "x": 0,
+      "y": 900,
+      "width": 10,
+      "height": 10
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "n1",
+      "fromSide": "right",
+      "toNode": "n2",
+      "toSide": "left",
+      "label": "depends on"
+    }
+  ]
+}

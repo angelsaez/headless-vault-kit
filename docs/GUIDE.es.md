@@ -224,7 +224,53 @@ distinción es todo el asunto: una tabla equivocada es peor que ninguna tabla.
 
 ---
 
-## 6. Vistas materializadas — la respuesta de una base, dentro de una nota
+---
+
+## 6. Canvas — el lienzo
+
+Un `.canvas` es JSON, y hace algo que ninguna nota hace: apunta a notas **sin mencionarlas**.
+Pon una nota en un tablero y el texto de ningún fichero se refiere a ella, así que antes de
+construir esto esa nota no tenía backlinks y `hvk orphans` la listaba. Una huérfana que no es
+huérfana es el estado en el que la gente borra cosas.
+
+Lo que un canvas mete en el índice ([ADR-0015](adr/0015-what-a-whiteboard-puts-in-the-index.md)):
+
+| En el tablero | En el índice |
+|---|---|
+| un nodo **file** | un enlace a esa nota, marcado como embed, con su `#encabezado` si lo tenía |
+| un nodo **text** | su Markdown parseado como el de cualquier nota: los wikilinks resuelven, las `#etiquetas` cuentan, el texto se busca |
+| un nodo **link** | un enlace externo |
+| la etiqueta de un **group** | texto buscable |
+| una **flecha** | *nada* — mira abajo |
+
+Así que las consultas que ya conoces funcionan sin más: `hvk backlinks` nombra el canvas,
+`hvk tags` cuenta la etiqueta que escribiste en una caja, `hvk search` encuentra la frase y
+`hvk orphans` deja de mentir.
+
+Para mirar un tablero concreto:
+
+```sh
+hvk canvas "Tableros/Hoja de ruta.canvas"           # las cajas: id, tipo y qué contiene cada una
+hvk canvas "Tableros/Hoja de ruta.canvas" --edges   # las flechas, con los ficheros que unen
+hvk canvas "Tableros/Hoja de ruta" --json
+```
+
+```
+FROM            LABEL       TO
+--------------  ----------  -------------
+Notas/Alfa.md   depende de  Notas/Beta.md
+```
+
+**Las flechas no son enlaces entre notas**, y eso es una decisión, no un olvido: Obsidian
+tampoco las deriva, y enseñarle al índice que dos cajas unidas por una línea significan que dos
+notas están relacionadas sería inventarse una relación. `--edges` lee el fichero en el momento
+en que preguntas, que es la forma honesta de contestar sobre la forma de un tablero.
+
+Dos cosas más: los enlaces que salen de un canvas se guardan en la **línea 0**, porque un
+tablero no tiene líneas; y **escribir** canvas no está soportado — colocar cajas es decidir
+coordenadas, tamaños y qué hacer cuando se solapan, y eso todavía no lo ha pedido nadie.
+
+## 7. Vistas materializadas — la respuesta de una base, dentro de una nota
 
 Una base se pinta en una pantalla. En un móvil que solo sincroniza ficheros, y en un servidor sin
 pantalla, ese pintado no ocurre nunca. Una vista materializada escribe la tabla *dentro de una
@@ -273,7 +319,7 @@ con el mismo nombre se rechazan en vez de elegir una.
 
 ---
 
-## 7. Notas-orden — el vault como cola de trabajos
+## 8. Notas-orden — el vault como cola de trabajos
 
 Escribes una nota y algo se ejecuta. El estado vive en el frontmatter de la propia nota, así que
 lo ves ocurrir desde el móvil, en la aplicación que ya tienes abierta
@@ -374,7 +420,7 @@ que `--dir` tampoco tiene valor por defecto.
 
 ---
 
-## 8. El guard — una frontera delante del agente
+## 9. El guard — una frontera delante del agente
 
 Hay reglas que no se pueden imponer desde dentro de `hvk`, porque la herramienta que las
 rompería es del agente. `hvk guard` es un hook `PreToolUse`: lee la llamada a la herramienta como
@@ -419,7 +465,7 @@ hubiera pedido.
 
 ---
 
-## 9. `hvk doctor` — para la monitorización que ya tengas
+## 10. `hvk doctor` — para la monitorización que ya tengas
 
 Casi todos los servidores ya vigilan sus propios servicios. Esto contesta solo a las preguntas
 que no puede contestar nadie más, y calla el resto del tiempo:
@@ -441,7 +487,7 @@ del vault, y una alarma por eso es una alarma que la gente aprende a ignorar.
 
 ---
 
-## 10. Copias de seguridad, y la restauración
+## 11. Copias de seguridad, y la restauración
 
 Los scripts de despliegue incluyen un archivo fechado del vault entero y el script que lo
 devuelve a su sitio. El procedimiento completo, incluido contra qué protege de verdad cada copia
@@ -460,7 +506,7 @@ de ficheros.
 
 ---
 
-## 11. Casos de uso
+## 12. Casos de uso
 
 **Un parte matinal sin leerse el vault.** Una consulta por pregunta, todas desde el índice:
 
@@ -501,7 +547,7 @@ reconozca. Instala dentro de tu propia cuenta y no toca nada más de la máquina
 
 ---
 
-## 12. Para agentes
+## 13. Para agentes
 
 La razón de que esto exista. Un agente al que le preguntan *«¿qué enlaza a esta nota?»* sin un
 índice o se lee el vault entero o lo greppea: las dos cosas caras, las dos lentas, y una de ellas
@@ -517,10 +563,10 @@ comando echar mano. Dos cosas que se le dicen, y que conviene seguir diciéndole
 
 ---
 
-## 13. Lo que no hace, y por qué
+## 14. Lo que no hace, y por qué
 
-- **Canvas** (`.canvas`). El formato está publicado y es estable, así que esperar no cuesta nada.
-  Se construirá cuando un vault contenga uno de verdad.
+- **Escribir canvas.** Leerlos está hecho (sección 6); colocar cajas es un conjunto de
+  decisiones que todavía no ha pedido nadie.
 - **DQL de Dataview.** Descartado tras un inventario que encontró un vault real con el plugin sin
   instalar y sus dos bloques de consulta sin pintar nada. El motor de Bases ya existe; empezar
   más tarde sale más barato que empezar ahora.

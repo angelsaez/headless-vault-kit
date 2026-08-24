@@ -10,7 +10,13 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 3
+# Bumped whenever what gets *derived* changes, not only when a table does. Canvas support
+# (ADR-0015) added no column and still made every existing index wrong-by-omission: the files
+# were already there with their hashes, so nothing would have re-parsed them and a note on a
+# board would have stayed orphaned until someone happened to touch the canvas. Refusing to run
+# until 'hvk rebuild' is the mechanism that already exists for exactly this, and a rebuild is
+# seconds.
+SCHEMA_VERSION = 4
 
 # FTS5 with diacritics folded, so that searching "cafe" finds "café" -- which matters in a
 # vault written in Spanish.

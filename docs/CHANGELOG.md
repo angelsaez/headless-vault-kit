@@ -4,6 +4,38 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-24 — Canvas, and the note a whiteboard was hiding
+
+- The condition written down when Canvas was postponed — *it gets built when a vault actually
+  contains one* — was met, so it is built. Not "canvas support" in the abstract: the thing that
+  was **wrong** is that a canvas points at notes without mentioning them, so a note placed on a
+  board had no backlinks and `hvk orphans` listed it. An orphan that is not an orphan is the
+  state in which people delete things.
+- A `.canvas` now contributes its **links** (a `file` node is an embed of that note, keeping its
+  `#heading`; a `link` node is external), its **tags**, and its **text** for search — including
+  group and edge labels. Markdown written in a text node is parsed as Markdown, so a wikilink on
+  a whiteboard resolves by exactly the rules of ADR-0003. Unknown node types are skipped rather
+  than guessed at, and invalid JSON is a parse error on that file while the rest of the vault
+  indexes.
+- **Arrows are deliberately not links between notes** ([ADR-0015](adr/0015-what-a-whiteboard-puts-in-the-index.md)).
+  Obsidian does not derive that either. `hvk canvas --edges` prints them instead, resolving node
+  ids to the files they hold — read from the file at the moment you ask, inventing nothing.
+- `hvk info` stops counting canvases and bases as **attachments**, which was saying the index
+  holds less than it does, and `hvk doctor`'s check becomes *"files parse cleanly"* — it used to
+  report "invalid frontmatter" about every parse error, which is a strange thing to say about a
+  canvas.
+- **The schema version is bumped to 4, which forces a rebuild.** Canvas support added no column
+  and still made every existing index wrong by omission: the files were already there with their
+  hashes, so nothing would have re-parsed them and a note on a board would have stayed orphaned
+  until somebody happened to touch the canvas. The mechanism for that already existed; it just
+  had never been used for a change to what gets *derived* rather than to a table.
+- Found while testing on a live deployment, and now in the deploy runbook: **restarting
+  `hvk-watch` is part of upgrading.** It is a long-running process holding the parser it started
+  with, so the command line saw canvases and the service did not — one answer by hand and
+  another from the watcher.
+- Writing canvases is **not** supported and the docs say so. Placing boxes means coordinates,
+  sizes and overlap, and nothing has needed that yet.
+
 ## 2026-08-24 — A complete guide, and a sweep for one vault's vocabulary
 
 - **`docs/GUIDE.md` and `docs/GUIDE.es.md`**: every command with what it answers and when you

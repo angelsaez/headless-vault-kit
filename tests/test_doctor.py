@@ -78,7 +78,7 @@ def test_broken_frontmatter_warns_but_does_not_fail(vault):
     scanner.scan(vault)
 
     report = doctor.run(vault)
-    assert statuses(report)["notes parse cleanly"] == "warn"
+    assert statuses(report)["files parse cleanly"] == "warn"
     assert report.failures == 0, "the vault's own YAML is not an outage"
 
 

@@ -13,7 +13,7 @@ from hvk import db, paths
 from hvk import scan as scanner
 from conftest import VAULTS
 
-VAULT_NAMES = ["basic", "links", "frontmatter", "unicode"]
+VAULT_NAMES = ["basic", "links", "frontmatter", "unicode", "canvas"]
 
 DUMP_TABLES = {
     "files": ["path", "name", "stem", "parent", "ext", "kind", "size", "hash"],
