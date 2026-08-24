@@ -29,6 +29,10 @@ from pathlib import Path
 # Commands that remove a file for good. `mv` is deliberately absent: moving things around is
 # what a vault is for, and the destination is what matters, not the verb.
 DESTRUCTIVE = ("rm", "rmdir", "shred", "unlink")
+# The tools that put bytes on disk at a path they name. Bash is deliberately not among them:
+# a redirection cannot be found reliably in a command line, and pretending otherwise would be
+# the protection-that-only-looks-like-protection this project keeps refusing to ship.
+WRITE_TOOLS = ("Write", "Edit", "NotebookEdit")
 # `find ... -delete` and `find ... -exec rm` walk past a check that only looks at argv[0].
 FIND_DELETE = re.compile(r"\bfind\b.*(-delete\b|-exec\s+rm\b)")
 
@@ -39,6 +43,10 @@ ALLOW, DENY = "allow", "deny"
 class Decision:
     permission: str
     reason: str = ""
+    # What fired and what it matched. Carried on the decision rather than parsed back out of
+    # the reason, because the audit line is written from these two fields (ADR-0014).
+    rule: str = ""
+    match: str = ""
 
     def as_hook_output(self) -> dict:
         if self.permission == ALLOW:
@@ -77,16 +85,38 @@ def _touches(value: str, protected: list) -> str | None:
     return None
 
 
-def _is_destructive(command: str) -> bool:
+def _outside_vault(value: str, vault: Path):
+    """Where a write to *value* would land, if that is outside *vault*. None if it is inside.
+
+    Relative paths resolve against the vault because that is the agent's working directory.
+    Resolving rather than comparing text is the point: ``../../.ssh/authorized_keys`` is inside
+    the vault as a string and outside it as a location.
+    """
+    try:
+        target = Path(value)
+        if not target.is_absolute():
+            target = vault / target
+        landing = target.resolve()
+        root = vault.resolve()
+    except (OSError, ValueError, RuntimeError):     # unresolvable, or a symlink loop
+        return None
+    if landing == root or root in landing.parents:
+        return None
+    return landing
+
+
+def _destructive_word(command: str):
+    """The word that removes a file, or None. Named rather than counted, so the record can
+    say which spelling was used without keeping the command line itself."""
     if FIND_DELETE.search(command):
-        return True
+        return "find"
     # Each segment of a pipeline or && chain is its own command, and only its first word is
     # the program being run.
     for segment in re.split(r"[;&|]+", command):
         words = segment.split()
         if words and Path(words[0]).name in DESTRUCTIVE:
-            return True
-    return False
+            return Path(words[0]).name
+    return None
 
 
 def decide(payload: dict, *, vault: Path | None = None, protected: list | None = None) -> Decision:
@@ -112,21 +142,69 @@ def decide(payload: dict, *, vault: Path | None = None, protected: list | None =
                 DENY,
                 f"{hit} is a protected folder in this vault, and this tool call names it "
                 f"({value}). Nothing in there is the agent's to read or change.",
+                rule="protected", match=hit,
             )
 
-    # 2. Deletion. Only Bash can do it: every other tool either writes or reads.
-    if tool == "Bash" and command and _is_destructive(command):
+    # 2. A write that lands outside the vault. The vault is the whole job; everything else on
+    #    the machine is somebody else's. This is the rule that answers the vault's own content
+    #    being untrusted input: a note can ask an agent to write, and ~/.ssh/authorized_keys,
+    #    a systemd unit and the agent's own settings.json are all one Write call away.
+    #
+    #    Reads are deliberately left alone. Refusing those breaks ordinary work -- a man page,
+    #    a config file someone asked about -- and reading is not how a vault agent damages a
+    #    machine.
+    if vault is not None and tool in WRITE_TOOLS:
+        for value in named:
+            landing = _outside_vault(value, vault)
+            if landing is not None:
+                return Decision(
+                    DENY,
+                    f"{landing} is outside the vault ({vault}), and writing outside it is not "
+                    f"this agent's business. Anything that has to leave the vault is a job for "
+                    f"whoever runs the server, by hand.",
+                    rule="outside-vault", match=str(landing),
+                )
+
+    # 3. Deletion. Only Bash can do it: every other tool either writes or reads.
+    destructive = _destructive_word(command) if tool == "Bash" and command else None
+    if destructive:
         return Decision(
             DENY,
             "Deleting files in a vault is done by moving them to .trash/, not with rm — that "
             "is how Obsidian behaves and how this project writes (ADR-0007). Use "
             "`mv <file> .trash/` if you really mean to remove it, so it can be recovered.",
+            rule="delete", match=destructive,
         )
 
     return Decision(ALLOW)
 
 
-def run(stdin_text: str, *, vault: Path | None = None, protected: list | None = None) -> str:
+def _write_record(location, payload: dict, decision: Decision) -> None:
+    """Leave the two traces a refusal has to leave. Best effort, like everything else here.
+
+    The heartbeat is touched on *every* call and the log line only on a refusal. That
+    asymmetry is the point: a line per tool call would be a log nobody reads, while an empty
+    file's timestamp answers the one question the log cannot -- whether the hook is wired in
+    at all, or whether a quiet guard is simply absent (ADR-0014).
+    """
+    from hvk import audit
+
+    try:
+        location.index_dir.mkdir(parents=True, exist_ok=True)
+        location.guard_seen_path.touch()
+    except OSError:
+        pass
+    if decision.permission != DENY:
+        return
+    audit.record(
+        location.log_path, "guard deny",
+        rule=decision.rule,
+        tool=payload.get("tool_name") or "",
+        match=decision.match,
+    )
+
+
+def run(stdin_text: str, *, location=None, protected: list | None = None) -> str:
     """Read one hook payload, return the JSON to print. Never raises."""
     try:
         payload = json.loads(stdin_text)
@@ -135,6 +213,13 @@ def run(stdin_text: str, *, vault: Path | None = None, protected: list | None = 
         return ""
     if not isinstance(payload, dict):
         return ""
-    decision = decide(payload, vault=vault, protected=protected)
+    decision = decide(payload, vault=getattr(location, "vault", None), protected=protected)
+    if location is not None:
+        try:
+            _write_record(location, payload, decision)
+        except Exception:                   # noqa: BLE001 - see the module docstring
+            # Not defensive programming for its own sake: this is the last thing between a bug
+            # in the record-keeping and an agent session that cannot make a single tool call.
+            pass
     output = decision.as_hook_output()
     return json.dumps(output, ensure_ascii=False) if output else ""

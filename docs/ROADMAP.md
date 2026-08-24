@@ -11,7 +11,7 @@ does and how to use it; this is where "how far along is it" lives.
 | 3 | Obsidian's own formats: Bases, Canvas, templates | Bases **done**; the rest postponed, see below |
 | 4 | Materialized views | **Done** |
 | 5 | Order-notes: the vault as a job queue | **Done** |
-| 6 | Security, healthchecks, rehearsed backups | **In progress** |
+| 6 | Security, healthchecks, rehearsed backups | **Done** |
 | 7 | MCP server, community parser interface, packaging | Not started |
 
 ## Maturity
@@ -21,6 +21,11 @@ Obsidian Headless and agent, where `hvk` indexes a 274-note vault and keeps it c
 delivers changes. That is days of production on one machine, by one person. Nothing here has
 been through a second installation, and phase 7 — publishing it properly — deliberately waits
 for weeks of stability rather than for a feeling of readiness.
+
+What phase 6 does not do is bound the interactive session's own permissions: those live in the
+agent's settings file, which belongs to whoever runs the agent. What this project contributes
+there is the `PreToolUse` hook — deletions, protected folders and writes outside the vault,
+refused and recorded.
 
 Restoring that vault from a backup has been rehearsed once, on that machine, on 2026-08-24:
 the archive went back into a directory beside the live vault and indexed to the same numbers,

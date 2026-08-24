@@ -1,9 +1,17 @@
 # Hooks
 
-Two rules that cannot be enforced from inside `hvk`, because the tool that would break them is
-the agent's, not ours: deleting with `rm` instead of moving to `.trash/`, and reaching into a
-folder that is none of its business. `hvk guard` answers both as a `PreToolUse` hook
-([ADR-0012](../../docs/adr/0012-a-hook-in-front-of-the-agent.md)).
+Three rules that cannot be enforced from inside `hvk`, because the tool that would break them
+is the agent's, not ours: deleting with `rm` instead of moving to `.trash/`, reaching into a
+folder that is none of its business, and writing to a path outside the vault altogether.
+`hvk guard` answers all three as a `PreToolUse` hook
+([ADR-0012](../../docs/adr/0012-a-hook-in-front-of-the-agent.md),
+[ADR-0014](../../docs/adr/0014-blocked-and-written-down.md)).
+
+The third needs no configuration: the vault is already known, and a `Write`, `Edit` or
+`NotebookEdit` whose path resolves outside it is refused. Reads are not — an agent reading a
+man page is doing its job. `Bash` is not judged on where it might write either, because a
+redirection cannot be found reliably in a command line and a rule that caught only the easy
+spellings would read as protection while providing none.
 
 **Nothing here installs itself.** The agent's `settings.json` belongs to whoever runs the
 agent; this is the snippet to paste, and the paths in it are yours to fill in.
@@ -58,3 +66,38 @@ A speed bump, not a sandbox. An agent with a shell can write a script that delet
 without any of the words this looks for. A real boundary is the operating system's — a user
 without write access, or a container. This stops the ordinary mistake and points it at the
 trash, which is worth having and is not the same thing as safety.
+
+## What it leaves behind
+
+Two files, both in the index directory — outside the vault, so they neither sync nor wake the
+watcher (ADR-0002). `hvk doctor` prints where that is.
+
+| File | What it is |
+|---|---|
+| `hvk.log` | One line per refusal: the rule that fired and what it matched. Rotates at 256 KB, one generation |
+| `guard-last-run` | Empty. Its timestamp is the last time the hook ran at all |
+
+```sh
+tail -5 ~/.local/share/hvk/<vault>-<hash>/hvk.log
+2026-08-25T04:41:09Z guard deny rule=outside-vault tool=Write match=/home/you/.ssh/authorized_keys
+2026-08-25T04:41:22Z guard deny rule=delete tool=Bash match=rm
+```
+
+**The command itself is never recorded** — a command line can carry a token, and a log that
+holds secrets is a second thing to guard. What is recorded is which rule fired and what it
+matched, which is what an audit actually needs.
+
+`guard-last-run` exists because the log cannot answer the question people actually have. A
+guard that has refused nothing and a guard that was never wired in look identical from the
+log, and pasting a snippet into a settings file is exactly the kind of step that gets half
+done. If that file is missing, the hook has never run.
+
+## What this does *not* bound
+
+The interactive session's own permissions. Which tools it may use, what it asks about before
+doing, whether it runs with `--dangerously-skip-permissions` at all: those live in the agent's
+settings, they belong to whoever runs the agent, and this project does not edit that file
+(ADR-0006). The hook is what hvk contributes to that session — a boundary the vault's own
+content cannot talk its way past — and it is worth being clear that it is not a substitute for
+the rest. The runner's side of that question is answered instead by the permission profiles in
+[`../profiles/`](../profiles/), which every order-note must name (ADR-0009, ADR-0011).

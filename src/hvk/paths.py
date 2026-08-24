@@ -16,6 +16,10 @@ from pathlib import Path
 
 DB_NAME = "index.sqlite"
 LOG_NAME = "hvk.log"
+# Touched on every guard call, written to by nothing else. Its modification time is the only
+# way to tell a hook that is installed and quiet from one that was never installed at all
+# (ADR-0014), and an empty file is the cheapest possible thing to write per tool call.
+GUARD_SEEN_NAME = "guard-last-run"
 
 # Files hvk reads by explicit path even though .obsidian/ is never indexed (ADR-0002, list A).
 APP_JSON = ".obsidian/app.json"
@@ -52,6 +56,10 @@ class Locations:
     @property
     def log_path(self) -> Path:
         return self.index_dir / LOG_NAME
+
+    @property
+    def guard_seen_path(self) -> Path:
+        return self.index_dir / GUARD_SEEN_NAME
 
 
 def find_vault(start: Path | None = None) -> Path:

@@ -16,7 +16,7 @@ import json
 
 import pytest
 
-from hvk import guard
+from hvk import audit, guard, paths
 
 
 def decide(tool: str, protected=None, **tool_input) -> guard.Decision:
@@ -137,3 +137,126 @@ def test_anything_unparseable_is_allowed_through(text):
 def test_an_unbalanced_quote_does_not_crash_it():
     decision = decide("Bash", command="rm 'unterminated", protected=["_PRIVATE"])
     assert decision.permission == "deny", "and it still catches the rm"
+
+
+# -- the vault is the boundary ----------------------------------------------------------------
+
+@pytest.fixture
+def vault(tmp_path):
+    """A vault with something outside it, which is the whole point of these tests."""
+    root = tmp_path / "vault"
+    (root / ".obsidian").mkdir(parents=True)
+    (root / "Note.md").write_text("# A note", encoding="utf-8")
+    (tmp_path / "elsewhere").mkdir()
+    return root
+
+
+@pytest.mark.parametrize("tool, field", [
+    ("Write", "file_path"), ("Edit", "file_path"), ("NotebookEdit", "notebook_path"),
+])
+def test_a_write_outside_the_vault_is_refused(vault, tool, field):
+    decision = guard.decide({"tool_name": tool, "tool_input": {field: str(vault.parent / "elsewhere" / "x.md")}},
+                            vault=vault)
+    assert decision.permission == "deny"
+    assert decision.rule == "outside-vault"
+
+
+def test_a_write_inside_the_vault_passes(vault):
+    decision = guard.decide({"tool_name": "Write", "tool_input": {"file_path": str(vault / "Sub" / "x.md")}},
+                            vault=vault)
+    assert decision.permission == "allow"
+
+
+def test_a_relative_path_is_read_against_the_vault(vault):
+    """The agent's working directory is the vault, so `Notes/x.md` is inside it."""
+    assert guard.decide({"tool_name": "Write", "tool_input": {"file_path": "Notes/x.md"}},
+                        vault=vault).permission == "allow"
+
+
+def test_climbing_out_with_dot_dot_is_caught(vault):
+    """Inside the vault as a string, outside it as a location. Resolving is what catches it."""
+    decision = guard.decide(
+        {"tool_name": "Write", "tool_input": {"file_path": "../../.ssh/authorized_keys"}}, vault=vault)
+    assert decision.permission == "deny"
+    assert ".ssh" in decision.match
+
+
+def test_reading_outside_the_vault_is_allowed(vault):
+    """Refusing reads breaks ordinary work and is not how an agent damages a machine."""
+    assert guard.decide({"tool_name": "Read", "tool_input": {"file_path": "/etc/hostname"}},
+                        vault=vault).permission == "allow"
+
+
+def test_without_a_vault_the_rule_does_not_apply():
+    assert guard.decide({"tool_name": "Write", "tool_input": {"file_path": "/etc/passwd"}}).permission == "allow"
+
+
+def test_bash_is_not_judged_on_paths_it_might_write(vault):
+    """A redirection cannot be found reliably in a command line, so it is not looked for."""
+    assert guard.decide({"tool_name": "Bash", "tool_input": {"command": "echo hi > /tmp/out"}},
+                        vault=vault).permission == "allow"
+
+
+# -- what it writes down ----------------------------------------------------------------------
+
+@pytest.fixture
+def location(vault, tmp_path):
+    return paths.Locations(vault=vault.resolve(), index_dir=tmp_path / "idx")
+
+
+def call(location, payload, **kwargs):
+    return guard.run(json.dumps(payload), location=location, **kwargs)
+
+
+def test_a_refusal_is_written_down(location):
+    call(location, {"tool_name": "Bash", "tool_input": {"command": "rm Note.md"}})
+    line = location.log_path.read_text(encoding="utf-8").strip()
+    assert "guard deny" in line and "rule=delete" in line and "match=rm" in line
+
+
+def test_the_command_itself_is_not(location):
+    """An audit needs the rule that fired, not the text: a command line can carry a token."""
+    call(location, {"tool_name": "Bash", "tool_input": {"command": "rm Secret-$TOKEN-file.md"}})
+    assert "TOKEN" not in location.log_path.read_text(encoding="utf-8")
+
+
+def test_an_allow_writes_no_line(location):
+    call(location, {"tool_name": "Read", "tool_input": {"file_path": "Note.md"}})
+    assert not location.log_path.exists()
+
+
+def test_every_call_leaves_a_heartbeat(location):
+    """The one question the log cannot answer: is the hook wired in at all?"""
+    assert not location.guard_seen_path.exists()
+    call(location, {"tool_name": "Read", "tool_input": {"file_path": "Note.md"}})
+    assert location.guard_seen_path.exists()
+
+
+def test_a_protected_folder_refusal_names_the_folder_only(location):
+    call(location, {"tool_name": "Read", "tool_input": {"file_path": "_PRIVATE/keys.md"}},
+         protected=["_PRIVATE"])
+    written = location.log_path.read_text(encoding="utf-8")
+    assert "rule=protected" in written and "match=_PRIVATE" in written
+    assert "keys.md" not in written
+
+
+def test_recording_never_breaks_the_hook(location, monkeypatch):
+    """Whatever goes wrong writing the record, the decision still reaches the agent.
+
+    The record exists to make a refusal checkable afterwards. A bug in it that stopped the
+    refusal from being *made* would be the worst possible trade.
+    """
+    def explode(*args, **kwargs):
+        raise RuntimeError("the disk, the permissions, a bug in here")
+    monkeypatch.setattr(audit, "record", explode)
+    answer = call(location, {"tool_name": "Bash", "tool_input": {"command": "rm a.md"}})
+    assert json.loads(answer)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_the_log_is_capped(location, monkeypatch):
+    """Basic rotation: one generation, so a busy month cannot fill a disk."""
+    monkeypatch.setattr(audit, "MAX_BYTES", 200)
+    for _ in range(20):
+        call(location, {"tool_name": "Bash", "tool_input": {"command": "rm Note.md"}})
+    assert location.log_path.stat().st_size < 400
+    assert location.log_path.with_name(location.log_path.name + ".1").exists()

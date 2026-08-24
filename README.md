@@ -134,7 +134,7 @@ Two things worth knowing straight away:
 | `hvk views [Path] [--apply]` | Refresh the base tables materialised inside notes; without `--apply` it only lists what is stale |
 | `hvk jobs --dir D --profiles P [--run]` | Run the order-notes waiting in a directory; without `--run` it only reports |
 | `hvk doctor [--jobs-dir D]` | Is this installation healthy? For calling from monitoring you already have |
-| `hvk guard [--protect F]` | A `PreToolUse` hook: refuses `rm` in favour of `.trash/`, and folders you nominate |
+| `hvk guard [--protect F]` | A `PreToolUse` hook: refuses `rm` in favour of `.trash/`, writes that land outside the vault, and folders you nominate. Refusals are recorded |
 | `hvk info` | What the index currently holds |
 
 Every command takes `--json` for machine-readable output; `hvk watch` emits JSON Lines, one
@@ -148,8 +148,8 @@ To keep the index current, run `hvk watch` as a service and re-hash nightly from
 ```
 
 The second line is what keeps materialised views current. It is safe to run as often as you
-like: it writes only what actually changed, and nothing at all when nothing did. Wiring it
-into `deploy/` is still to do.
+like: it writes only what actually changed, and nothing at all when nothing did. Both lines,
+the order-note runner and a nightly backup are installed for you by `deploy/install.sh`.
 
 A systemd unit for the watcher, and everything else needed to run this on a server, is in
 [`deploy/`](deploy/).

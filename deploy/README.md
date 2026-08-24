@@ -232,6 +232,16 @@ Backups, and the restore that was rehearsed against the live vault, are in
 [RESTORE.md](RESTORE.md) — including which of the copies you already have answers which
 failure, because they do not all answer the one people assume.
 
+## Where the logs are, and what rotates them
+
+Every service here logs to the journal, which already rotates: `journalctl --user -u hvk-watch`
+(drop `--user` for a system install), and `journalctl --disk-usage` if you want to know what it
+is costing. The cron jobs print nothing unless something failed, and cron mails what they print.
+
+The one file this project writes is the guard's record of what it refused, in the index
+directory, and it caps itself at 256 KB with one generation kept — see
+[hooks/](hooks/README.md). Nothing here needs a logrotate rule.
+
 ## When something is wrong
 
 | Symptom | Where to look |

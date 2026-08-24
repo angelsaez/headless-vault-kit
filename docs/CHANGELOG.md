@@ -4,6 +4,46 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-25 — The guard gets a boundary, and starts writing things down
+
+- The phase asks for one sentence: *an attempt to write outside the permitted paths is blocked
+  and is recorded.* Neither half was true. `guard.decide()` had taken a `vault` argument since
+  ADR-0012 and **never read it** — so a `Write` to `~/.ssh/authorized_keys`, to a systemd unit,
+  or to the agent's own `settings.json` went through untouched. And `hvk.log` had been reserved
+  in the index directory since ADR-0002 laid out the layout, four phases without a single line
+  ever written to it.
+- **A write that lands outside the vault is refused.** `Write`, `Edit` and `NotebookEdit` only,
+  and paths are *resolved* first, so `../../.ssh/authorized_keys` is judged by where it lands
+  rather than by how it reads. Reads are deliberately untouched: an agent reading a man page is
+  doing its job, and refusing that breaks a session for nothing. `Bash` is not judged on where
+  it might write either — a redirection cannot be found reliably in a command line, and a rule
+  that caught `>` while missing `tee`, `sed -i` and a written-then-run script would read as
+  protection while providing none.
+- **Every refusal leaves a line; every call leaves a heartbeat.** One line per refusal in
+  `hvk.log` — the rule that fired and what it matched — and `guard-last-run`, an empty file
+  touched on every call. The two answer different questions, and the second is the one people
+  actually have: a guard that has refused nothing and a guard that was never wired in look
+  identical from the log. If that file is missing, the hook has never run.
+- **What is not recorded is the command.** A command line can carry a token, a password, a
+  signed URL, and a log that holds those is a second thing to guard. The record names the rule
+  and the match — `rule=outside-vault match=/home/you/.ssh/authorized_keys`, `rule=delete
+  match=rm` — and nothing else. It rotates at 256 KB keeping one generation, which is all of
+  the "basic log rotation" this phase wanted: everything else logs to the journal, which
+  rotates already.
+- Everything about the recording is wrapped so that it cannot raise. A bug in the audit trail
+  that stopped the refusal from being *made* would be the worst trade in the file, and there is
+  a test that holds it: with `audit.record` throwing, the deny still reaches the agent.
+- **No `hvk doctor` check for any of this, on purpose.** Doctor's own rule is that a check which
+  cannot fail is noise, and there is no failure here it can see: an idle agent makes no tool
+  calls, so a stale heartbeat is not a fault, and a hook whose command is broken fails inside
+  the agent. [ADR-0014](adr/0014-blocked-and-written-down.md) records that, along with the
+  uncomfortable half — this is still a speed bump and not a sandbox, because `Bash` can write
+  anywhere and `sh -c` is right there.
+- Phase 6 is done as far as this repository goes. What is left is configuration and belongs to
+  whoever runs a server: pasting the hook into the agent's settings, choosing which folders are
+  protected, choosing where the backup lands. The repository ships the mechanism and no
+  defaults for any of the three.
+
 ## 2026-08-24 — A backup, and the restore that proves it
 
 - The server had three copies of the vault and no backup. Obsidian Sync holds it, every other

@@ -365,7 +365,7 @@ def _guard(location: paths.Locations, args: argparse.Namespace) -> int:
     protected = args.protect
     if protected is None:
         protected = [p for p in os.environ.get("HVK_PROTECTED", "").split(",") if p.strip()]
-    answer = vault_guard.run(sys.stdin.read(), vault=location.vault, protected=protected)
+    answer = vault_guard.run(sys.stdin.read(), location=location, protected=protected)
     if answer:
         print(answer)
     return 0

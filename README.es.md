@@ -137,7 +137,7 @@ Dos cosas que conviene saber desde el principio:
 | `hvk views [Ruta] [--apply]` | Regenera las tablas de Bases materializadas dentro de notas; sin `--apply` solo lista lo que está desactualizado |
 | `hvk jobs --dir D --profiles P [--run]` | Ejecuta las notas-orden que esperan en un directorio; sin `--run` solo informa |
 | `hvk doctor [--jobs-dir D]` | ¿Está sana esta instalación? Para llamarlo desde la monitorización que ya tengas |
-| `hvk guard [--protect F]` | Hook `PreToolUse`: rechaza `rm` en favor de `.trash/`, y las carpetas que designes |
+| `hvk guard [--protect F]` | Hook `PreToolUse`: rechaza `rm` en favor de `.trash/`, las escrituras que caen fuera del vault, y las carpetas que designes. Los rechazos quedan registrados |
 | `hvk info` | Qué contiene el índice ahora mismo |
 
 Todos los comandos aceptan `--json` para salida legible por máquina; `hvk watch` emite JSON
@@ -152,7 +152,8 @@ Para mantener el índice al día: `hvk watch` como servicio y verificación noct
 
 La segunda línea es la que mantiene al día las vistas materializadas. Se puede lanzar tan a
 menudo como se quiera: escribe solo lo que ha cambiado de verdad, y nada en absoluto cuando
-no ha cambiado nada. Falta enchufarla en `deploy/`.
+no ha cambiado nada. Las dos líneas, el runner de notas-orden y una copia de seguridad
+nocturna los instala `deploy/install.sh` por ti.
 
 La unit de systemd del watcher, y todo lo demás para levantar esto en un servidor, está en
 [`deploy/`](deploy/).
