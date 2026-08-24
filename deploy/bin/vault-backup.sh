@@ -5,8 +5,9 @@
 # edit; none of them covers the machine going away, and Sync in particular replicates a
 # deletion as faithfully as it replicates a note (ADR-0013).
 #
-# The artefact carries everything the vault holds -- notes, attachments, .obsidian, .trash and
-# the git history -- so wherever it lands is as sensitive as the vault itself.
+# The artefact carries everything the vault holds -- notes, attachments, .obsidian, .trash, the
+# git history and the private folders git leaves out -- so wherever it lands is exactly as
+# sensitive as the vault itself.
 set -eu
 
 CONFIG="${HVK_DEPLOY_ENV:-$HOME/.config/hvk/deploy.env}"
