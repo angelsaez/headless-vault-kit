@@ -217,6 +217,26 @@ says `does not have any commits yet`. That is not a fault; run
 Create a note on your phone, wait a few seconds, and ask the bot what links to it. That is the
 whole system in one question.
 
+## Upgrading
+
+Two things nobody remembers, and both are silent:
+
+```sh
+# after installing a new hvk
+hvk --vault ~/vault rebuild                      # only if it asks; it will say so
+systemctl --user restart hvk-watch               # sudo systemctl, if --system
+```
+
+**Restart the watcher.** It is a long-running process holding the parser it started with, so a
+new `hvk` on disk changes nothing about what is being indexed until it is restarted. Everything
+you do by hand uses the new code and the watcher does not, which is a difference that shows up
+as one answer from the command line and another from the service.
+
+**And rebuild when it tells you to.** When a release changes what gets *derived* rather than
+what a table looks like, the version is bumped and `hvk` refuses to run against the old index
+until you rebuild — because the files are unchanged, so nothing would have re-parsed them and
+the index would be quietly missing what the new version can see. A rebuild is seconds.
+
 ## Checking it from monitoring you already have
 
 Most servers already watch their own services and already know how to raise an alarm. This

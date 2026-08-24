@@ -132,6 +132,7 @@ Two things worth knowing straight away:
 | `hvk verify` | Re-hash every file as a safety net; run it nightly from cron |
 | `hvk base File.base [--view Name]` | Run a view from a `.base` file against the index, as a Markdown table |
 | `hvk views [Path] [--apply]` | Refresh the base tables materialised inside notes; without `--apply` it only lists what is stale |
+| `hvk canvas Board.canvas [--edges]` | What is on a whiteboard: its boxes, or the arrows between them |
 | `hvk jobs --dir D --profiles P [--run]` | Run the order-notes waiting in a directory; without `--run` it only reports |
 | `hvk doctor [--jobs-dir D]` | Is this installation healthy? For calling from monitoring you already have |
 | `hvk guard [--protect F]` | A `PreToolUse` hook: refuses `rm` in favour of `.trash/`, writes that land outside the vault, and folders you nominate. Refusals are recorded |

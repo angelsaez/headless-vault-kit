@@ -8,7 +8,7 @@ does and how to use it; this is where "how far along is it" lives.
 | 0 | Server baseline: Headless sync + an agent on Telegram + git, reboot-proof | **Done** |
 | 1 | Vault inventory: which plugins and real-world usages need covering | **Done** |
 | 2 | Tier-0 indexer + `hvk` CLI | **Done** |
-| 3 | Obsidian's own formats: Bases, Canvas, templates | Bases **done**; the rest postponed, see below |
+| 3 | Obsidian's own formats: Bases, Canvas, templates | Bases and Canvas **done**; templates blocked on a decision, see below |
 | 4 | Materialized views | **Done** |
 | 5 | Order-notes: the vault as a job queue | **Done** |
 | 6 | Security, healthchecks, rehearsed backups | **Done** |
@@ -52,8 +52,10 @@ Run them yourself with `pytest -m slow`.
 
 ## Postponed, and what would bring it back
 
-- **Canvas** (`.canvas`). JSON Canvas is a published, stable specification, so waiting costs
-  nothing. It gets built when a vault actually contains one.
+Canvas used to be on this list, with the condition "when a vault actually contains one". One
+did, so it was built ([ADR-0015](adr/0015-what-a-whiteboard-puts-in-the-index.md)): reading, not
+writing, and edges stay out of the index on purpose.
+
 - **A Dataview (DQL) subset.** Planned, then dropped: the vault this was written for has no
   Dataview installed, and its two `dataview` blocks are dead code that nothing renders. The
   Bases expression engine exists, so starting later is cheaper than starting now. It comes

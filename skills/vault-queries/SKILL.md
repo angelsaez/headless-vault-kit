@@ -43,6 +43,7 @@ inside the vault.
 | "Which notes are unreachable?" | `hvk orphans` |
 | "Which attachments are unused?" | `hvk orphans --attachments` |
 | "What does this Base show?" | `hvk base "Some.base"` |
+| "What is on this canvas?" | `hvk canvas "Board.canvas"` — `--edges` for the arrows |
 | "Are the dashboards up to date?" | `hvk views` |
 | "Is the index still trustworthy?" | `hvk doctor` |
 
@@ -96,6 +97,9 @@ A `.base` file is a saved query the user built in Obsidian. Running it gives the
 app would show, as Markdown:
 
 ```bash
+hvk canvas "Board.canvas"                     # the boxes on a whiteboard
+hvk canvas "Board.canvas" --edges             # the arrows, with the files they join
+
 hvk base "Library.base"                       # the first view
 hvk base "Library.base" --view "Open books"   # a named view; a wrong name lists the real ones
 hvk base "Library.base" --json                # rows, headers and summaries, structured

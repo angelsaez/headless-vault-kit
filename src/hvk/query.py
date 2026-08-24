@@ -361,7 +361,11 @@ def info(conn: sqlite3.Connection) -> dict:
         ).fetchone()[0],
         "files": count("SELECT count(*) FROM files"),
         "notes": count("SELECT count(*) FROM files WHERE kind='note'"),
-        "attachments": count("SELECT count(*) FROM files WHERE kind!='note'"),
+        # Canvases and bases are parsed, so counting them as attachments would say the index
+        # holds less than it does. Everything genuinely unparsed stays an attachment.
+        "canvases": count("SELECT count(*) FROM files WHERE kind='canvas'"),
+        "bases": count("SELECT count(*) FROM files WHERE kind='base'"),
+        "attachments": count("SELECT count(*) FROM files WHERE kind='attachment'"),
         "links": count("SELECT count(*) FROM links"),
         "broken_links": count(
             "SELECT count(*) FROM links WHERE target_file_id IS NULL AND kind!='external'"

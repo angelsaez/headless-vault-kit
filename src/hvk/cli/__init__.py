@@ -125,6 +125,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="the note the base is embedded in, for expressions that use 'this'",
     )
 
+    canvas_cmd = add("canvas", "what is on a .canvas: its nodes and the arrows between them")
+    canvas_cmd.add_argument("file", help="path to the .canvas file, absolute or inside the vault")
+    canvas_cmd.add_argument(
+        "--edges", action="store_true",
+        help="the arrows instead of the boxes: what the canvas says connects to what",
+    )
+
     jobs_cmd = add("jobs", "run the order-notes waiting in a directory")
     jobs_cmd.add_argument("--dir", metavar="PATH", help="the jobs directory (or HVK_JOBS_DIR)")
     jobs_cmd.add_argument(
@@ -284,6 +291,9 @@ def _run(args: argparse.Namespace) -> int:
         elif args.command == "base":
             _base(conn, location, args)
 
+        elif args.command == "canvas":
+            _canvas(location, args)
+
         elif args.command == "views":
             return _views(conn, location, args)
 
@@ -352,6 +362,56 @@ def _base(conn, location: paths.Locations, args: argparse.Namespace) -> None:
     print(f"{candidate.name} - view {result.view.name!r} ({counted})")
     print()
     print(base_render.to_markdown(result))
+
+
+def _canvas(location: paths.Locations, args: argparse.Namespace) -> None:
+    """List what a canvas holds, read from the file rather than from the index.
+
+    The nodes and their arrangement are not in the index on purpose (ADR-0015): what a canvas
+    contributes there is its links, its tags and its text. The shape of the board is a question
+    you ask about one canvas, and reading one JSON file to answer it is cheap -- far cheaper
+    than an agent reading it and working the format out for itself.
+    """
+    from hvk.parse.canvas import parse_canvas
+
+    candidate = Path(args.file)
+    if not candidate.is_absolute() and not candidate.is_file():
+        candidate = location.vault / args.file
+    if not candidate.is_file() and candidate.suffix != ".canvas":
+        candidate = candidate.with_suffix(".canvas")
+    if not candidate.is_file():
+        raise paths.VaultError(f"no such canvas file: {args.file}")
+
+    canvas = parse_canvas(candidate.read_text(encoding="utf-8", errors="replace"))
+    if canvas.error:
+        raise paths.VaultError(f"{candidate.name}: {canvas.error}")
+
+    if args.edges:
+        labels = {node.id: (node.file or node.text or node.url or node.id) for node in canvas.nodes}
+        rows = [
+            {
+                "from": labels.get(edge.from_node, edge.from_node),
+                "label": edge.label,
+                "to": labels.get(edge.to_node, edge.to_node),
+            }
+            for edge in canvas.edges
+        ]
+        output.emit(rows, headers=["FROM", "LABEL", "TO"], columns=["from", "label", "to"],
+                    as_json=args.json, empty="no edges on this canvas")
+        return
+
+    rows = [
+        {
+            "id": node.id,
+            "type": node.type,
+            # One line each: a text node can hold a page of Markdown, and this is an inventory
+            # of the board, not a reader for it.
+            "what": " ".join((node.file or node.url or node.text).split())[:70],
+        }
+        for node in canvas.nodes
+    ]
+    output.emit(rows, headers=["ID", "TYPE", "WHAT"], columns=["id", "type", "what"],
+                as_json=args.json, empty="this canvas has no nodes")
 
 
 def _guard(location: paths.Locations, args: argparse.Namespace) -> int:

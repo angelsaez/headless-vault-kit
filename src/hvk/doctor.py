@@ -90,11 +90,13 @@ def _parse_errors(conn: sqlite3.Connection) -> Check:
         "SELECT count(*) FROM files WHERE parse_error IS NOT NULL"
     ).fetchone()[0]
     if not total:
-        return Check("notes parse cleanly", OK)
+        return Check("files parse cleanly", OK)
     named = ", ".join(row["path"] for row in rows)
     # A warning, not a failure: one note with broken YAML is the vault's problem to fix, and
-    # nobody should be woken up for it.
-    return Check("notes parse cleanly", WARN, f"{total} with invalid frontmatter: {named}")
+    # nobody should be woken up for it. The reason is not spelled out here because it depends
+    # on the file -- invalid frontmatter in a note, invalid JSON in a canvas -- and the stored
+    # message says which.
+    return Check("files parse cleanly", WARN, f"{total} that could not be parsed: {named}")
 
 
 def _stuck_jobs(location: paths.Locations, jobs_dir: str | None, hours: int) -> Check | None:
