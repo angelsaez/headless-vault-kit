@@ -8,6 +8,7 @@ silent, and in a vault synced across devices, permanent.
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path
 
 import pytest
@@ -506,3 +507,39 @@ def test_it_goes_through_the_writer_intact(vault):
     written = path.read_bytes()
     assert written == raw.replace(b"estado:   pendiente", b"estado:   en-curso")
     assert written.count(b"\r\n") == written.count(b"\n"), "CRLF must survive"
+
+
+# -- permissions ------------------------------------------------------------------------------
+
+posix_only = pytest.mark.skipif(os.name == "nt", reason="Windows has no POSIX file mode")
+
+
+@posix_only
+def test_rewriting_a_note_keeps_its_permissions(vault):
+    """Found on the server: every note this project touched had quietly become 0600.
+
+    mkstemp creates 0600 and os.replace keeps the temporary file's mode, so a note written by
+    Obsidian at 0664 came back unreadable to anyone else the first time a view or a job
+    rewrote it. Editing a file is not the moment to change who can read it, and git does not
+    track the difference, so nothing would ever have reported it.
+    """
+    path = put(vault, "Note.md", b"before")
+    os.chmod(path, 0o664)
+    original = vault.read("Note.md")
+    assert vault.write(original, "after")
+    assert stat.S_IMODE(path.stat().st_mode) == 0o664
+
+
+@posix_only
+def test_a_new_note_is_born_readable(vault):
+    """Not 0600 either: what any ordinary program creating a file would have produced."""
+    original = vault.read("New.md")
+    vault.write(original, "hello")
+    expected = 0o666 & ~_umask()
+    assert stat.S_IMODE((vault.root / "New.md").stat().st_mode) == expected
+
+
+def _umask() -> int:
+    current = os.umask(0)
+    os.umask(current)
+    return current
