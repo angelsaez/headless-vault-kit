@@ -6,15 +6,15 @@ note, so it arrives on every device the way any other note does.
 
 A note declares what it wants and where to put it::
 
-    %% vista: base "000 BASE habilidades.base" vista "Tabla" cada 30m %%
-    <!-- vista:inicio -->
+    %% view: base "Projects.base" view "Table" every 30m %%
+    <!-- view:start -->
     (regenerated)
-    <!-- vista:fin -->
+    <!-- view:end -->
 
-The markers are the ones the plan fixes. Their English spellings work too -- ``%% view: %%``
-with ``<!-- view:start -->`` and ``<!-- view:end -->`` -- because the vault this was written
-for is in Spanish and the repository it ships in is in English, and neither should have to
-learn the other's vocabulary. A note picks one dialect and its markers must match it.
+The Spanish spellings work identically -- ``%% vista: %%`` with ``<!-- vista:inicio -->`` and
+``<!-- vista:fin -->``, and ``base``/``vista``/``cada`` for the settings -- because the marker
+lives in somebody's *notes* and a vault is written in whatever language its author thinks in.
+A note picks one dialect and its markers must match it.
 
 Nothing here writes a timestamp. Regenerating unchanged data has to produce the same bytes,
 or the exit criterion of phase 4 -- regenerate twice, get no diff -- would be false on the

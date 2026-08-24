@@ -14,7 +14,7 @@ table into a note, and Sync carries it everywhere like any other note.
 The plan fixes the shape of the thing:
 
 ```markdown
-%% vista: base "000 BASE habilidades.base" vista "Tabla" cada 30m %%
+%% vista: base "Proyectos.base" vista "Tabla" cada 30m %%
 <!-- vista:inicio -->
 (regenerated)
 <!-- vista:fin -->

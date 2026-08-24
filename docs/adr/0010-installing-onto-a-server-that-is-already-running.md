@@ -15,7 +15,8 @@ written for turned up a situation the installer cannot express:
 
 - `obsidian-headless.service` is **already running** there, as a system unit, syncing the
   vault.
-- Claude Code with the Telegram channel is **already running**, as `nexus-arranque.service`.
+- Claude Code with the Telegram channel is **already running**, under a unit name of the
+  machine's own.
 - The vault is **already** a git repository with its own auto-commit on a cron schedule.
 - Nothing else of ours is there: no `hvk`, no index, no watcher, no scheduled views or jobs.
 
@@ -36,9 +37,9 @@ machine worth putting a vault on probably has something else on it already.
 
 - **Document "install it by hand on a busy machine".** Rejected: the runbook is the product
   here as much as the code is, and "copy these three files yourself" is where deployments rot.
-- **Detect what is already running and skip it.** Attractive and wrong. Guessing that
-  `nexus-arranque.service` is "the same thing as" `hvk-agent.service` means guessing about
-  somebody else's machine from a name. Refusing to install is safe; deciding silently is not.
+- **Detect what is already running and skip it.** Attractive and wrong. Guessing that some
+  other unit is "the same thing as" `hvk-agent.service` means guessing about somebody else's
+  machine from a name. Refusing to install is safe; deciding silently is not.
 - **Let the caller say what to install.** Chosen. The operator knows what the machine already
   does; the installer does not.
 

@@ -4,6 +4,31 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-24 — A complete guide, and a sweep for one vault's vocabulary
+
+- **`docs/GUIDE.md` and `docs/GUIDE.es.md`**: every command with what it answers and when you
+  would reach for it, both dialects of every format, the safety rules and *why* each one exists,
+  and worked cases — a morning briefing, finding what is rotting, a dashboard that reaches a
+  phone, a report asked for from a train, recovering a note deleted last Tuesday. Both READMEs
+  link to it. Every command in it was run against `test-vaults/` before it was written down; a
+  guide whose examples do not work is worse than no guide.
+- **The order-note keys were already bilingual and nothing said so.** `type`/`tipo`,
+  `status`/`estado`, `profile`/`perfil`/`perfil_permisos`, `output`/`salida`,
+  `started`/`iniciada`, `finished`/`terminada`, with `pending`/`pendiente`, `done`/`hecho`,
+  `failed`/`fallido` — and a note is answered **in the dialect it used**, so `estado: pendiente`
+  comes back `estado: hecho` and never `status: done`. That is now a table in the guide in both
+  languages, because a feature nobody documents is a feature nobody has.
+- **A sweep for the first vault's vocabulary.** The shipped surface carried the name of a real
+  file from the vault this was built against, as the canonical example in `views.py`'s module
+  docstring, in the `vault-queries` skill, and in ADR-0008. All three now use a neutral name,
+  and the skill leads with the English dialect it never used to mention. ADR-0010 no longer
+  names a unit that exists on one particular machine.
+- What was **deliberately left**: the ADRs and this journal keep the history of *why* a borrowed
+  name was rejected (ADR-0002 argues it at length, and deleting that would remove the reasoning
+  that protects the repository from doing it again), and `test-vaults/` stays Spanish — accented
+  keys are what exposed the ASCII-only Bases tokeniser, so that coverage is the point rather
+  than an accident.
+
 ## 2026-08-24 — The loop was exercised on the deployment, not assumed
 
 - Everything the plan asked to be *measured on a real machine* has now been measured there, and
@@ -21,8 +46,8 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 ## 2026-08-24 — A base can be named the way a note names anything else
 
-- ADR-0008's own example declares a view as `base "000 BASE habilidades.base"` — a filename,
-  no folder — and on the real vault that failed with *no such base file*. The resolver only
+- ADR-0008's own example declares a view by **filename**, with no folder in it, and on a real
+  vault that failed with *no such base file*. The resolver only
   ever treated the name as a **path** from the vault root. Every base in `test-vaults/views`
   sits at the root, so the tests had been passing by luck, and the first vault with its bases
   in a folder found it immediately.
