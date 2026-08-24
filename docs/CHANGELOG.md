@@ -4,6 +4,21 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-24 — The loop was exercised on the deployment, not assumed
+
+- Everything the plan asked to be *measured on a real machine* has now been measured there, and
+  the roadmap says so instead of implying it: a note written on another device arrives through
+  sync and is indexed in about a second; the agent answers a backlinks question from the index
+  rather than by reading files; an order-note created on a device is claimed and executed
+  exactly once, stamping its own status where its author can see it; and the machine survives a
+  reboot with every service, the agent's session and the index coming back unattended.
+- The one that was worth doing twice: two runners launched at the same instant on one
+  order-note, with the scheduled one running every minute alongside them. One `started`, one
+  `finished`, one output. The claim of ADR-0009 is a write that declares the hash it read, and
+  losing that race is how a second runner is supposed to lose.
+- None of this changes a line of code. It is recorded because "it works on the machine it was
+  built for" is a claim this repository should be able to point at.
+
 ## 2026-08-24 — A base can be named the way a note names anything else
 
 - ADR-0008's own example declares a view as `base "000 BASE habilidades.base"` — a filename,
