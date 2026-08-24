@@ -31,12 +31,16 @@ reconstruible desde los propios archivos. Este proyecto lo reconstruye en el ser
 - **Vault como cola**: notas-orden con estado en frontmatter; un runner las ejecuta con
   Claude Code y el resultado se sincroniza de vuelta a todos tus dispositivos.
 - **Harness**: permisos, hooks y auditoría con los medios nativos de Claude Code + git.
+- **Servidor MCP**: `hvk mcp` sirve el vault a cualquier cliente MCP por stdio — de solo lectura
+  por defecto, y capaz de escribir solo si la instancia se arrancó con `--write`.
 
 El criterio de alcance es un modelo de tres niveles: el comportamiento natural de la app se
 replica exacto; los formatos oficiales de Obsidian (Bases, Canvas, plantillas) se soportan
 completos; y los plugins de comunidad más usados entran solo si su estado vive en archivos
-parseables — el resto, vía una interfaz de parsers extensible para que cualquiera aporte
-el suyo. Nunca se ejecuta código de plugins ni se reproduce la interfaz.
+parseables — el resto, vía una [interfaz de parsers
+extensible](CONTRIBUTING.md#writing-a-parser-adapter) para que cualquiera aporte el suyo. Los
+tableros de Obsidian Kanban se leen por esa interfaz, como ejemplo trabajado. Nunca se ejecuta
+código de plugins ni se reproduce la interfaz.
 
 ## Requisitos
 
@@ -140,6 +144,7 @@ Dos cosas que conviene saber desde el principio:
 | `hvk jobs --dir D --profiles P [--run]` | Ejecuta las notas-orden que esperan en un directorio; sin `--run` solo informa |
 | `hvk doctor [--jobs-dir D]` | ¿Está sana esta instalación? Para llamarlo desde la monitorización que ya tengas |
 | `hvk guard [--protect F]` | Hook `PreToolUse`: rechaza `rm` en favor de `.trash/`, las escrituras que caen fuera del vault, y las carpetas que designes. Los rechazos quedan registrados |
+| `hvk mcp [--write] [--protect F]` | Sirve el vault a cualquier cliente MCP por stdio. Solo lectura salvo con `--write`, que añade las herramientas de escritura; se aplican las mismas reglas del guard y cada escritura queda registrada |
 | `hvk info` | Qué contiene el índice ahora mismo |
 
 Todos los comandos aceptan `--json` para salida legible por máquina; `hvk watch` emite JSON
@@ -170,7 +175,7 @@ Cada comando, para qué sirve cada pieza, los casos de uso y el vocabulario en d
 ## Estructura del repositorio
 
 ```text
-src/hvk/      El paquete: indexador, parsers, capa de escritura y el CLI hvk
+src/hvk/      El paquete: indexador, parsers, capa de escritura, servidor MCP y el CLI hvk
 tests/        pytest, contra los vaults sintéticos de abajo
 test-vaults/  Vaults sintéticos, con los casos incómodos: Unicode, YAML raro,
               encabezados duplicados, enlaces ambiguos y rotos
@@ -181,14 +186,17 @@ docs/adr/     Decisiones de arquitectura: el «por qué» de cada elección de d
 docs/         CHANGELOG.md, la bitácora del repositorio
 ```
 
-El resto de carpetas (`src/hvk/`, `tests/`, `test-vaults/`, `runner/`, `deploy/`) irán
-apareciendo a medida que sus fases se implementen. La herramienta se escribe en Python 3.11+
-(ver [ADR-0001](docs/adr/0001-indexer-language.md)).
+Escrito en Python 3.11+ ([ADR-0001](docs/adr/0001-indexer-language.md)), con `ruamel.yaml` y
+`watchdog` como únicas dependencias de ejecución.
 
 ## Contribuir
 
-Todavía no acepto pull requests: la interfaz de parsers que los haría útiles no está
-publicada. Los informes de fallos y las preguntas sí son bienvenidos.
+Los pull requests son bienvenidos, y también los informes de fallos y las preguntas.
+**[CONTRIBUTING.md](CONTRIBUTING.md)** lo cuenta entero: cómo se corre la suite, las reglas que
+no se negocian, la norma de una ADR por decisión, y cómo escribir un adaptador de parser para un
+formato que esto todavía no lee.
+
+Lo que se aporta queda bajo la MIT del propio proyecto, y no hay CLA.
 
 Si vienes a leer el código, los tests son el mapa:
 
@@ -198,9 +206,9 @@ Si vienes a leer el código, los tests son el mapa:
 ```
 
 Cada push y cada pull request pasan la suite en Python 3.11 y 3.13, instalan el paquete
-construido y comprueban que responde contra un vault que no ha visto nunca, y parsean todos los
-scripts de shell ([el workflow](.github/workflows/ci.yml)). Solo en Linux: Linux es donde esto
-está pensado para correr.
+construido con pip y con `uv tool install` y comprueban que cada uno responde contra un vault que
+no ha visto nunca, y parsean todos los scripts de shell ([el workflow](.github/workflows/ci.yml)).
+Solo en Linux: Linux es donde esto está pensado para correr.
 
 El despliegue no se ejercita en CI: necesita una instancia de systemd de usuario y una máquina
 desechable. Vive en [`tools/testbed/`](tools/testbed/), un contenedor Debian de usar y tirar, y

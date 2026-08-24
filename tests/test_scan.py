@@ -13,7 +13,7 @@ from hvk import db, paths
 from hvk import scan as scanner
 from conftest import VAULTS
 
-VAULT_NAMES = ["basic", "links", "frontmatter", "unicode", "canvas"]
+VAULT_NAMES = ["basic", "links", "frontmatter", "unicode", "canvas", "kanban"]
 
 DUMP_TABLES = {
     "files": ["path", "name", "stem", "parent", "ext", "kind", "size", "hash"],
@@ -22,7 +22,10 @@ DUMP_TABLES = {
     "headings": ["level", "text", "line"],
     "blocks": ["block_id", "line"],
     "links": ["target_raw", "subpath", "kind", "embed", "candidates", "line"],
-    "tasks": ["text", "status", "done", "line"],
+    # due and extra_json are in the fingerprint because a tier-2 field is a dict serialised
+    # to JSON, and one that serialised in a different order each run would make a rebuild
+    # non-deterministic in a way none of the other columns would notice (ADR-0004, ADR-0017).
+    "tasks": ["text", "status", "done", "line", "due", "extra_json"],
 }
 
 

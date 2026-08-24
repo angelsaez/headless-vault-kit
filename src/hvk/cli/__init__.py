@@ -25,6 +25,7 @@ examples:
   hvk backlinks Alpha                 what links to Alpha, by name or by path
   hvk links --ambiguous               links where more than one file matched (ADR-0003)
   hvk rebuild --json                  deterministic rebuild, machine-readable output
+  hvk mcp                             serve this vault to an agent over MCP, read-only
 """
 
 
@@ -150,6 +151,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="actually launch the agent; without it jobs are claimed and reported only",
     )
 
+    mcp_cmd = add("mcp", "serve this vault over MCP, on stdin and stdout")
+    mcp_cmd.add_argument(
+        "--write", action="store_true",
+        help="also offer the tools that change the vault. Without it the server is read-only, "
+             "and the writing tools are not offered at all",
+    )
+    mcp_cmd.add_argument(
+        "--protect", action="append", metavar="FOLDER", default=None,
+        help="a folder no client may touch; repeat, or set HVK_PROTECTED (comma-separated). "
+             "No default: unset means the rule does not apply",
+    )
+
     guard_cmd = add("guard", "PreToolUse hook: refuse deletions and protected folders")
     guard_cmd.add_argument(
         "--protect", action="append", metavar="FOLDER", default=None,
@@ -211,6 +224,9 @@ def _run(args: argparse.Namespace) -> int:
 
     if args.command == "guard":
         return _guard(location, args)
+
+    if args.command == "mcp":
+        return _mcp(location, args)
 
     conn = db.connect(location.db_path)
     try:
@@ -484,6 +500,20 @@ def _guard(location: paths.Locations, args: argparse.Namespace) -> int:
     if answer:
         print(answer)
     return 0
+
+
+def _mcp(location: paths.Locations, args: argparse.Namespace) -> int:
+    """Serve this vault over MCP until the client closes stdin.
+
+    Nothing may reach stdout but protocol messages -- one JSON object per line -- so the line
+    saying the server is up goes to stderr, where a client that logs it will show it and a
+    client that does not will ignore it.
+    """
+    from hvk import mcp as mcp_server
+
+    mode = "read-write" if args.write else "read-only"
+    print(f"hvk mcp: serving {location.vault} ({mode})", file=sys.stderr, flush=True)
+    return mcp_server.serve(location, allow_write=args.write, protected=args.protect)
 
 
 def _doctor(location: paths.Locations, args: argparse.Namespace) -> int:

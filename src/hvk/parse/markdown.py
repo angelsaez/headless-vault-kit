@@ -25,8 +25,18 @@ from dataclasses import dataclass, field
 from ruamel.yaml import YAML, YAMLError
 
 from hvk.parse import tasks as task_fields
+from hvk.parse.model import Block, Heading, Parsed, Prop, RawLink, Tag, Task
+from hvk.parse.registry import Parser
 from ruamel.yaml.constructor import SafeConstructor
 from ruamel.yaml.nodes import MappingNode
+
+# The row shapes moved to hvk.parse.model, so a parser written outside this file has somewhere
+# to import them from that is not the Markdown parser (ADR-0017). They are re-exported here
+# because this is where they lived for five phases and every caller knows it.
+__all__ = [
+    "PARSER", "Block", "Heading", "Parsed", "ParsedNote", "Prop", "RawLink", "Tag", "Task",
+    "parse_file", "parse_note", "split_frontmatter",
+]
 
 
 class _AppLikeConstructor(SafeConstructor):
@@ -79,69 +89,15 @@ ALIAS_KEYS = ("aliases", "alias")
 
 
 @dataclass
-class Prop:
-    key: str
-    value: str | None
-    value_type: str
-    idx: int | None
-    inline: bool
-    line: int
+class ParsedNote(Parsed):
+    """A note: the contract, plus the one thing only a note has.
 
+    ``frontmatter`` is the YAML mapping as it parsed, kept whole. The index stores properties
+    row by row and cannot hand that back -- an order-note reads its own state out of it, and a
+    base has to tell a key that was absent from one that was empty.
+    """
 
-@dataclass
-class Tag:
-    tag: str
-    source: str
-    line: int
-
-
-@dataclass
-class Heading:
-    level: int
-    text: str
-    line: int
-
-
-@dataclass
-class Block:
-    block_id: str
-    line: int
-
-
-@dataclass
-class RawLink:
-    """A link as written, before it is resolved against the file index (ADR-0003)."""
-
-    target_raw: str
-    subpath: str | None
-    kind: str
-    embed: bool
-    line: int
-
-
-@dataclass
-class Task:
-    text: str
-    status: str
-    done: bool
-    line: int
-    due: str | None = None
-    # Tier-2 fields read from the Tasks plugin and Dataview syntax (ADR-0004).
-    extra: dict = field(default_factory=dict)
-
-
-@dataclass
-class ParsedNote:
-    title: str = ""
-    body: str = ""
     frontmatter: dict = field(default_factory=dict)
-    props: list[Prop] = field(default_factory=list)
-    tags: list[Tag] = field(default_factory=list)
-    headings: list[Heading] = field(default_factory=list)
-    blocks: list[Block] = field(default_factory=list)
-    links: list[RawLink] = field(default_factory=list)
-    tasks: list[Task] = field(default_factory=list)
-    error: str | None = None
 
 
 def split_frontmatter(text: str) -> tuple[str | None, str, int]:
@@ -380,3 +336,17 @@ def parse_note(text: str, *, fallback_title: str = "") -> ParsedNote:
         note.title = h1 or fallback_title
 
     return note
+
+
+def parse_file(text: str, path: str) -> ParsedNote:
+    """The registry's entry point: parse one Markdown file, given its vault-relative path.
+
+    ``parse_note`` takes a fallback title because it is also used on fragments -- the Markdown
+    written inside a canvas box, which has no file of its own. This is the file-shaped wrapper,
+    and the title it falls back to is the note's own name, which is what the app shows when a
+    note has neither an H1 nor a ``title``.
+    """
+    return parse_note(text, fallback_title=path.rsplit("/", 1)[-1].removesuffix(".md"))
+
+
+PARSER = Parser(name="markdown", extensions=("md",), kind="note", parse=parse_file)

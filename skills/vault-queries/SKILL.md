@@ -81,6 +81,11 @@ Due dates and priorities are read from the Tasks plugin's markers and from Datav
 fields. A task with no due date is **never** returned by a date filter — it is undated, not
 overdue. Dated tasks sort before undated ones.
 
+**Kanban boards are included.** A card on an Obsidian Kanban board is a task like any other, and
+`--json` shows two extra fields on it: `list`, the board column it sits in, and its date, read
+from Kanban's own `@{2026-09-01}` syntax. So "what is in progress" is a question `hvk tasks`
+answers, without opening the board.
+
 ### Properties
 
 ```bash
@@ -266,3 +271,7 @@ to call; it is something that answers back. Three refusals, and each names its a
 
 Every refusal is recorded. If one surprises you, say what you were trying to do and why rather
 than looking for another way to do the same thing.
+
+The same three refusals reach you unchanged if you are talking to this vault through `hvk mcp`
+rather than through a shell — the server applies the guard itself, so there is no client for
+which a protected folder is not protected.

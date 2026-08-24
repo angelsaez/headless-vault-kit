@@ -15,8 +15,9 @@ from pathlib import Path
 # were already there with their hashes, so nothing would have re-parsed them and a note on a
 # board would have stayed orphaned until someone happened to touch the canvas. Refusing to run
 # until 'hvk rebuild' is the mechanism that already exists for exactly this, and a rebuild is
-# seconds.
-SCHEMA_VERSION = 4
+# seconds. Version 5 is the Kanban adapter (ADR-0017), for the same reason again: the boards in
+# an existing index have no list and no date on their cards, and nothing would go back for them.
+SCHEMA_VERSION = 5
 
 # FTS5 with diacritics folded, so that searching "cafe" finds "café" -- which matters in a
 # vault written in Spanish.
@@ -34,7 +35,7 @@ CREATE TABLE files (
     stem_lower  TEXT NOT NULL,          -- case-insensitive matching for link resolution
     parent      TEXT NOT NULL,          -- vault-relative folder, '' at the root
     ext         TEXT NOT NULL,          -- lowercased, no dot, '' when there is none
-    kind        TEXT NOT NULL,          -- 'note' | 'attachment'
+    kind        TEXT NOT NULL,          -- whatever parser claimed it, or 'attachment' (ADR-0017)
     ctime       INTEGER NOT NULL,       -- creation time where the filesystem has one
     mtime       INTEGER NOT NULL,
     size        INTEGER NOT NULL,

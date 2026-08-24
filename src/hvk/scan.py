@@ -20,13 +20,16 @@ from pathlib import Path
 
 from hvk import __version__, db
 from hvk.links import FileEntry, FileIndex
-from hvk.parse.markdown import parse_note
+from hvk.parse.registry import REGISTRY
 from hvk.paths import Locations
 
 # Operating-system litter that is never content (ADR-0002, list A).
 LITTER = {".DS_Store", "Thumbs.db", "desktop.ini"}
 
-KIND_BY_EXT = {"md": "note", "canvas": "canvas", "base": "base"}
+# What kind a file is, and what reads it, are one question now, and the registry answers it
+# (ADR-0017). A file nothing claims is an attachment: indexed as a name, a size and a hash,
+# which is what a PNG has always been here.
+ATTACHMENT = "attachment"
 
 
 @dataclass
@@ -72,13 +75,23 @@ def _relative(vault: Path, path: Path) -> str:
     return path.relative_to(vault).as_posix()
 
 
-def _file_fields(vault: Path, path: Path, stat: os.stat_result, digest: str) -> dict:
+def _split_name(vault: Path, path: Path) -> tuple[str, str, str, str]:
+    """``(relative path, parent, stem, extension)`` -- the extension lowercased, without a dot.
+
+    Split out so that the extension can be known before the file is read: it decides whether
+    there is a parser at all, and therefore whether the bytes are worth decoding.
+    """
     rel = _relative(vault, path)
     parent, _, name = rel.rpartition("/")
     stem, dot, ext = name.rpartition(".")
     if not dot:  # no extension at all
         stem, ext = name, ""
-    ext = ext.lower()
+    return rel, parent, stem, ext.lower()
+
+
+def _file_fields(vault: Path, path: Path, stat: os.stat_result, digest: str, kind: str) -> dict:
+    rel, parent, stem, ext = _split_name(vault, path)
+    name = rel.rpartition("/")[2]
     return {
         "path": rel,
         "name": name,
@@ -86,7 +99,7 @@ def _file_fields(vault: Path, path: Path, stat: os.stat_result, digest: str) -> 
         "stem_lower": stem.lower(),
         "parent": parent,
         "ext": ext,
-        "kind": KIND_BY_EXT.get(ext, "attachment"),
+        "kind": kind,
         # Linux rarely records a creation time, so st_birthtime_ns is used where the
         # filesystem offers it and the inode change time stands in where it does not. Bases
         # exposes this as file.ctime, and a wrong answer would be worse than an honest
@@ -108,27 +121,32 @@ def _clear_derived(conn: sqlite3.Connection, file_id: int) -> None:
     conn.execute("DELETE FROM fts WHERE rowid = ?", (file_id,))
 
 
-def _store_note(conn: sqlite3.Connection, file_id: int, path: str, text: str) -> str | None:
-    """Parse a note and write everything derived from it. Returns a parse error, if any."""
-    stem = path.rsplit("/", 1)[-1].removesuffix(".md")
-    note = parse_note(text, fallback_title=stem)
+def _store(conn: sqlite3.Connection, file_id: int, path: str, parsed) -> str | None:
+    """Write everything one parser derived from one file. Returns its parse error, if any.
 
+    This used to be two functions, one per format, and the second was the first with four of
+    its six inserts deleted. There is only one now, because the contract says a parser hands
+    back rows and a parser that has none of a given kind hands back an empty list -- a canvas
+    has no headings, and that is a fact about canvases, not a reason for a second copy of this
+    code (ADR-0017).
+    """
     conn.executemany(
         "INSERT INTO props(file_id, key, value, value_type, idx, inline, line) "
         "VALUES(?, ?, ?, ?, ?, ?, ?)",
-        [(file_id, p.key, p.value, p.value_type, p.idx, int(p.inline), p.line) for p in note.props],
+        [(file_id, p.key, p.value, p.value_type, p.idx, int(p.inline), p.line)
+         for p in parsed.props],
     )
     conn.executemany(
         "INSERT INTO tags(file_id, tag, source, line) VALUES(?, ?, ?, ?)",
-        [(file_id, t.tag, t.source, t.line) for t in note.tags],
+        [(file_id, t.tag, t.source, t.line) for t in parsed.tags],
     )
     conn.executemany(
         "INSERT INTO headings(file_id, level, text, line) VALUES(?, ?, ?, ?)",
-        [(file_id, h.level, h.text, h.line) for h in note.headings],
+        [(file_id, h.level, h.text, h.line) for h in parsed.headings],
     )
     conn.executemany(
         "INSERT INTO blocks(file_id, block_id, line) VALUES(?, ?, ?)",
-        [(file_id, b.block_id, b.line) for b in note.blocks],
+        [(file_id, b.block_id, b.line) for b in parsed.blocks],
     )
     conn.executemany(
         "INSERT INTO tasks(file_id, text, status, done, line, due, extra_json) "
@@ -139,7 +157,7 @@ def _store_note(conn: sqlite3.Connection, file_id: int, path: str, text: str) ->
                 # sort_keys keeps the stored JSON byte-identical across rebuilds.
                 json.dumps(t.extra, ensure_ascii=False, sort_keys=True) if t.extra else None,
             )
-            for t in note.tasks
+            for t in parsed.tasks
         ],
     )
     # Links go in unresolved; the second pass fills target_file_id and candidates.
@@ -148,44 +166,14 @@ def _store_note(conn: sqlite3.Connection, file_id: int, path: str, text: str) ->
         "candidates, line) VALUES(?, ?, NULL, ?, ?, ?, 0, ?)",
         [
             (file_id, ln.target_raw, ln.subpath, ln.kind, int(ln.embed), ln.line)
-            for ln in note.links
+            for ln in parsed.links
         ],
     )
     conn.execute(
         "INSERT INTO fts(rowid, path, title, body) VALUES(?, ?, ?, ?)",
-        (file_id, path, note.title, note.body),
+        (file_id, path, parsed.title, parsed.body),
     )
-    return note.error
-
-
-def _store_canvas(conn: sqlite3.Connection, file_id: int, path: str, text: str) -> str | None:
-    """Parse a canvas and write what it contributes: its links, its tags and its text.
-
-    A canvas is the one file type that points at notes without mentioning them in prose. If
-    this did not run, a note placed on a whiteboard would have no backlinks and look orphaned
-    -- which is the state in which people delete things.
-    """
-    from hvk.parse.canvas import parse_canvas
-
-    canvas = parse_canvas(text)
-    conn.executemany(
-        "INSERT INTO tags(file_id, tag, source, line) VALUES(?, ?, ?, ?)",
-        [(file_id, t.tag, t.source, t.line) for t in canvas.tags],
-    )
-    conn.executemany(
-        "INSERT INTO links(file_id, target_raw, target_file_id, subpath, kind, embed, "
-        "candidates, line) VALUES(?, ?, NULL, ?, ?, ?, 0, ?)",
-        [
-            (file_id, ln.target_raw, ln.subpath, ln.kind, int(ln.embed), ln.line)
-            for ln in canvas.links
-        ],
-    )
-    title = path.rsplit("/", 1)[-1].removesuffix(".canvas")
-    conn.execute(
-        "INSERT INTO fts(rowid, path, title, body) VALUES(?, ?, ?, ?)",
-        (file_id, path, title, canvas.body),
-    )
-    return canvas.error
+    return parsed.error
 
 
 def _build_index(conn: sqlite3.Connection) -> FileIndex:
@@ -256,7 +244,15 @@ def index_file(
         stats.unchanged += 1
         return
 
-    fields = _file_fields(vault, path, stat, digest)
+    # The extension decides whether anything could read this file, and that decides whether the
+    # bytes are worth decoding. An attachment is a hundred megabytes of video as readily as it
+    # is a PNG, and turning that into a str to discover nobody wanted it is the one line that
+    # would make scanning a vault full of photographs expensive.
+    ext = _split_name(vault, path)[3]
+    candidates = REGISTRY.candidates(ext)
+    text = data.decode("utf-8", errors="replace") if candidates else ""
+    parser = REGISTRY.choose(candidates, text, rel)
+    fields = _file_fields(vault, path, stat, digest, parser.kind if parser else ATTACHMENT)
     if previous is not None:
         file_id = previous["id"]
         conn.execute(
@@ -277,12 +273,14 @@ def index_file(
         file_id = cursor.lastrowid
         stats.added += 1
 
-    error = None
     if fields["kind"] == "note":
         stats.notes += 1
-        error = _store_note(conn, file_id, rel, data.decode("utf-8", errors="replace"))
-    elif fields["kind"] == "canvas":
-        error = _store_canvas(conn, file_id, rel, data.decode("utf-8", errors="replace"))
+
+    # A parser with nothing to parse is not an omission: `.base` is a known kind of file that
+    # derives no rows, and the registry says so rather than scan.py knowing it (ADR-0017).
+    error = None
+    if parser is not None and parser.parse is not None:
+        error = _store(conn, file_id, rel, parser.parse(text, rel))
     if error:
         stats.errors += 1
         conn.execute("UPDATE files SET parse_error = ? WHERE id = ?", (error, file_id))

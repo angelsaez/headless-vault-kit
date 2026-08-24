@@ -45,3 +45,5 @@ wrong is part of what makes the log worth keeping.
 | [0014](0014-blocked-and-written-down.md) | Blocked, and written down | accepted | 6 |
 | [0015](0015-what-a-whiteboard-puts-in-the-index.md) | What a whiteboard puts in the index | accepted | 3 |
 | [0016](0016-a-subset-of-a-query-language.md) | A subset of a query language, and the parts that refuse | accepted | 3 |
+| [0017](0017-a-parser-interface-extracted-from-two.md) | A parser interface, extracted from the two that existed | accepted | 7 |
+| [0018](0018-an-mcp-server-that-writes.md) | An MCP server that writes | accepted | 7 |

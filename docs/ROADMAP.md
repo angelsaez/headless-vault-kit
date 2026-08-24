@@ -12,15 +12,35 @@ does and how to use it; this is where "how far along is it" lives.
 | 4 | Materialized views | **Done** |
 | 5 | Order-notes: the vault as a job queue | **Done** |
 | 6 | Security, healthchecks, rehearsed backups | **Done** |
-| 7 | MCP server, community parser interface, packaging | Not started |
+| 7 | MCP server, community parser interface, packaging | Built, and **entered early** — see below |
+
+## Phase 7 was entered before its condition was met
+
+The plan set one entry condition for phase 7 and it was not a formality: **weeks of real
+stability**, not days. It was built anyway, on 2026-08-25, with two days of production behind
+it. That is a decision the owner made with the condition in front of him, and it is recorded
+here rather than quietly satisfied.
+
+What that costs is worth naming. The condition existed because publishing is the point at which
+mistakes stop being yours alone, and two days is not enough time for the failure modes of one
+installation to show up — let alone the ones that only appear on somebody else's machine. So:
+
+- **Nothing is published.** No PyPI release, and `uv tool install --from git+...` remains the
+  documented route. That part of the phase was always "leave it ready", and it still is.
+- **The MCP server has never been driven by a client that is not a test.** Its protocol is
+  exercised by a fake client in `tests/test_mcp.py`, which proves the framing and the boundary
+  and proves nothing at all about interoperability.
+- **The parser interface has one adapter, written here.** The plan's original exit criterion
+  asked for one written by somebody else; the owner retired that on 2026-08-24 as a criterion
+  measuring adoption rather than design. Kanban is what stands in its place.
 
 ## Maturity
 
 It runs on one server, and has done since 2026-08-24: an ARM64 VPS that already hosted its own
 Obsidian Headless and agent, where `hvk` indexes a vault of some 280 notes and keeps it current
-as sync delivers changes. That is days of production on one machine, by one person. Nothing
-here has been through a second installation, and phase 7 — publishing it properly —
-deliberately waits for weeks of stability rather than for a feeling of readiness.
+as sync delivers changes. That is days of production on one machine, by one person. **Nothing
+here has been through a second installation**, which is the single most useful thing to know
+about it, and the reason the release half of phase 7 is still deliberately undone.
 
 The whole loop has been exercised there rather than assumed: a note written on another device
 arrives through sync and is indexed in about a second; the agent answers "what links to this"
@@ -31,7 +51,9 @@ been rebooted, with every service, the agent's session and the index coming back
 What phase 6 does not do is bound the interactive session's own permissions: those live in the
 agent's settings file, which belongs to whoever runs the agent. What this project contributes
 there is the `PreToolUse` hook — deletions, protected folders and writes outside the vault,
-refused and recorded.
+refused and recorded. Since phase 7 the MCP server applies those same rules itself, by calling
+the same function, because a hook is a Claude Code feature and a client from anywhere else never
+passes through one ([ADR-0018](adr/0018-an-mcp-server-that-writes.md)).
 
 Restoring that vault from a backup has been rehearsed twice on that machine, both on
 2026-08-24: once from the archive beside it, and once **from the off-site copy**, fetched back
@@ -49,6 +71,23 @@ The numbers the plan set as its exit criteria for phase 2:
 | Index queries | < 100 ms | **0.5 – 35 ms** | 0.8 – 80 ms |
 
 Run them yourself with `pytest -m slow`.
+
+## What phase 7 added
+
+- **`hvk mcp`** — the vault as tools for any MCP client, over stdio, with no network listener.
+  Read-only unless the instance was started with `--write`, in which case the writing tools
+  exist and every one of their writes goes through the layer of
+  [ADR-0007](adr/0007-writing-to-the-vault.md) and leaves a line in `hvk.log`.
+  [ADR-0018](adr/0018-an-mcp-server-that-writes.md) is mostly about what stands in front of it.
+- **A parser interface**, extracted from the two parsers that already existed rather than
+  designed for an imagined third, with **Obsidian Kanban** as the worked adapter: a board's
+  cards now carry the list they sit in and the date Kanban writes in its own syntax, so
+  `hvk tasks --due-before` answers a format it was blind to. Contract, registration point and
+  how to write one: [CONTRIBUTING.md](../CONTRIBUTING.md#writing-a-parser-adapter) and
+  [ADR-0017](adr/0017-a-parser-interface-extracted-from-two.md).
+- **CONTRIBUTING.md**, and the licensing question settled before it could matter: contributions
+  are MIT, inbound as outbound, and there is no CLA. That has to be decided before the first
+  external pull request, not after.
 
 ## Postponed, and what would bring it back
 
@@ -69,6 +108,12 @@ remains permanently out of scope** — its blocks are not even read.
   periodic notes created *without* the app in front of them.
 - **Materialising a `dataview` block into a note.** `hvk views` does it for Bases; `hvk dql
   --note` reads the blocks and prints the answers. Nothing has asked for the writing half.
+- **Discovering parser adapters from installed packages.** The interface supports an adapter
+  living in somebody else's package; what it will not do is sweep the machine for entry points
+  and run what it finds. Making `hvk scan` execute whatever is installed is a decision about
+  trust, and it comes back the day publishing forces the question.
+- **Publishing to PyPI.** Deliberately not done. The phase's own entry condition was weeks of
+  stability and it has had days, so what is ready is the packaging, not the release.
 
 ## Where the rest of the reasoning is
 
