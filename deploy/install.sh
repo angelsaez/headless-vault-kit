@@ -124,12 +124,15 @@ prepare_unit() {
     fi
 }
 
+# Set before the branch, not inside it: the last line of this script reads it, and with an
+# --only that names no unit -- schedules and the backup, on a machine whose services are its
+# own -- the whole install would otherwise succeed and then exit 2 on a blank line.
+CHANGED=0
 if [ -z "$UNITS" ]; then
     say "systemd units: none requested"
 else
 say "systemd units -> $UNIT_DIR"
 [ "$DRY" = 1 ] || $SUDO mkdir -p "$UNIT_DIR"
-CHANGED=0
 for unit in $UNITS; do
     source_file="$HERE/systemd/$unit"
     staged=$(mktemp); prepare_unit "$source_file" > "$staged"

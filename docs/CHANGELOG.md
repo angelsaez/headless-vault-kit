@@ -4,6 +4,17 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-25 — An install with no units at all stopped failing
+
+- `install.sh --only schedules,backup` did everything it was asked to — copied the scripts,
+  wrote the crontab block — and then **exited 2 on a blank line**, because `CHANGED` is only
+  set inside the branch that installs units and the last line of the script reads it. Found by
+  running exactly that on a server whose sync, agent and git checkpoints are its own, which is
+  the case ADR-0010 says is normal rather than exceptional.
+- The variable is initialised before the branch. The selftest now installs with no units at
+  all and checks the exit code, which is the shape that had never been exercised: every other
+  `--only` in there names a unit.
+
 ## 2026-08-25 — The guard gets a boundary, and starts writing things down
 
 - The phase asks for one sentence: *an attempt to write outside the permitted paths is blocked
