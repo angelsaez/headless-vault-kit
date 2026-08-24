@@ -301,3 +301,43 @@ def test_a_note_holding_two_views_is_written_once(run, views_vault, monkeypatch)
 
     assert sum(1 for path in writes if path.endswith("Doble.md")) == 1
     assert note(views_vault, "Doble.md").decode("utf-8").count("| Habilidad |") == 2
+
+
+# -- naming the base --------------------------------------------------------------------------
+
+def test_a_base_in_a_folder_can_be_named_by_its_filename(run, views_vault):
+    """How ADR-0008's own example names one, and how a wikilink names anything (ADR-0003).
+
+    Every base in this test vault sits at the root, so a bare name resolved as a path by luck.
+    In a real vault they live in folders, and there the documented directive failed.
+    """
+    folder = views_vault / "Sistema" / "Bases"
+    folder.mkdir(parents=True)
+    shutil.copy(views_vault / "Habilidades.base", folder / "Guardada.base")
+    (views_vault / "Suelta.md").write_text(
+        f'%% vista: base "Guardada" vista "Tabla" cada 30m %%\n{BEGIN}\n{END}\n',
+        encoding="utf-8",
+    )
+    run("scan")
+    code, output = run("views", "--apply")
+    assert code == 0, output.out
+    assert "|" in (views_vault / "Suelta.md").read_text(encoding="utf-8"), "the table went in"
+
+
+def test_two_bases_with_one_name_are_refused(run, views_vault):
+    """Ambiguity is the vault's to resolve: guessing would materialise a table at random."""
+    for folder in ("Uno", "Dos"):
+        (views_vault / folder).mkdir()
+        shutil.copy(views_vault / "Habilidades.base", views_vault / folder / "Repetida.base")
+    (views_vault / "Ambigua.md").write_text(
+        f'%% vista: base "Repetida" vista "Tabla" cada 30m %%\n{BEGIN}\n{END}\n',
+        encoding="utf-8",
+    )
+    run("scan")
+    code, output = run("views", "--apply")
+    assert code == 1
+    assert "more than one" in output.out
+    assert "Repetida.base" in output.out
+    assert BEGIN + "\n" + END in (views_vault / "Ambigua.md").read_text(encoding="utf-8"), \
+        "and it wrote nothing into the note"
+

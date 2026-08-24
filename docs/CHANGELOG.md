@@ -4,6 +4,20 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-24 — A base can be named the way a note names anything else
+
+- ADR-0008's own example declares a view as `base "000 BASE habilidades.base"` — a filename,
+  no folder — and on the real vault that failed with *no such base file*. The resolver only
+  ever treated the name as a **path** from the vault root. Every base in `test-vaults/views`
+  sits at the root, so the tests had been passing by luck, and the first vault with its bases
+  in a folder found it immediately.
+- A name that is not a path is now looked up in the index, which already knows every base
+  there is, and matched on whole path segments. That is how a wikilink names a note
+  (ADR-0003), and someone writing a directive by hand has no reason to expect the two to
+  differ.
+- **Two bases with the same name are refused**, naming them, rather than resolved by picking
+  one: materialising a table at random into a note somebody trusts is worse than not
+  materialising it. The note is left untouched, as with every other view error.
 ## 2026-08-24 — Everything this project wrote was quietly becoming private
 
 - Found by looking at a real vault after a job ran: **every note hvk had written or rewritten

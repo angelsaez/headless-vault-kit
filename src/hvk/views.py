@@ -216,6 +216,19 @@ def _indexed(conn: sqlite3.Connection, note: str) -> bool:
     return conn.execute("SELECT 1 FROM files WHERE path = ?", (note,)).fetchone() is not None
 
 
+def _bases_named(conn: sqlite3.Connection, name: str) -> list:
+    """Every indexed base whose path ends with *name*, matched on whole path segments.
+
+    Bases are few -- one, in the vault this was written for -- so the filtering happens here
+    rather than in SQL, where matching a trailing segment means escaping a LIKE pattern built
+    out of untrusted text.
+    """
+    wanted = name if name.endswith(".base") else name + ".base"
+    rows = conn.execute("SELECT path FROM files WHERE kind = 'base' ORDER BY path").fetchall()
+    return [row["path"] for row in rows
+            if row["path"] == wanted or row["path"].endswith("/" + wanted)]
+
+
 def _render(conn: sqlite3.Connection, vault: write.Vault, note: str, indexed: bool,
             declaration: Declaration) -> tuple[str, int, str]:
     """Run one declaration's base view and return its Markdown, row count and any warning."""
@@ -226,7 +239,22 @@ def _render(conn: sqlite3.Connection, vault: write.Vault, note: str, indexed: bo
     if not candidate.is_file() and candidate.suffix != ".base":
         candidate = vault.resolve(name + ".base")
     if not candidate.is_file():
-        raise ViewError(f"no such base file in the vault: {name}")
+        # Not a path, then. Try it as a *name*, which is how a note names anything else in a
+        # vault -- a wikilink does not carry a folder either (ADR-0003), and somebody writing
+        # a directive by hand has no reason to expect these to differ. The index already
+        # knows every base there is, so this costs one query and no walk.
+        matches = _bases_named(conn, name)
+        if len(matches) > 1:
+            raise ViewError(
+                f"more than one base is called {name}: {', '.join(matches[:3])}. "
+                f"Name it by its path in the vault to say which one."
+            )
+        if not matches:
+            raise ViewError(
+                f"no such base file in the vault: {name}. Name it by path from the vault "
+                f"root, or by filename if there is only one with that name."
+            )
+        candidate = vault.resolve(matches[0])
 
     parsed = base_file.load(candidate)
     # 'this' is the note holding the view, which is what a base embedded in a note sees --
