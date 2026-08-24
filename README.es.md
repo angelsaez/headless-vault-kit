@@ -137,6 +137,7 @@ Dos cosas que conviene saber desde el principio:
 | `hvk views [Ruta] [--apply]` | Regenera las tablas de Bases materializadas dentro de notas; sin `--apply` solo lista lo que está desactualizado |
 | `hvk jobs --dir D --profiles P [--run]` | Ejecuta las notas-orden que esperan en un directorio; sin `--run` solo informa |
 | `hvk doctor [--jobs-dir D]` | ¿Está sana esta instalación? Para llamarlo desde la monitorización que ya tengas |
+| `hvk guard [--protect F]` | Hook `PreToolUse`: rechaza `rm` en favor de `.trash/`, y las carpetas que designes |
 | `hvk info` | Qué contiene el índice ahora mismo |
 
 Todos los comandos aceptan `--json` para salida legible por máquina; `hvk watch` emite JSON
