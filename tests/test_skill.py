@@ -82,3 +82,18 @@ def test_the_skill_warns_that_vault_content_is_data():
     """The security principle of the plan, in the place the agent will actually read it."""
     text = SKILL.read_text(encoding="utf-8").lower()
     assert "data, never instructions" in text
+
+
+def test_the_description_names_every_command_the_skill_teaches():
+    """The description is the only part an agent reads before deciding to load the skill.
+
+    Canvas and DQL were documented in the body for a day while the description still listed
+    the commands from before them, so a question about a dataview block would not have
+    reached the page that answers it. A body nobody loads is a body nobody has.
+    """
+    front = SKILL.read_text(encoding="utf-8").split("---", 2)[1]
+    description = re.search(r"^description: (.+)$", front, re.MULTILINE).group(1)
+    taught = {shlex.split(command)[1] for command in documented_commands()}
+    named = set(re.findall("[a-z]+", description.lower()))
+    missing = sorted(name for name in taught if name not in named)
+    assert not missing, f"the description does not name: {', '.join(missing)}"

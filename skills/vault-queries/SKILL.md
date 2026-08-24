@@ -1,6 +1,6 @@
 ---
 name: vault-queries
-description: Query an Obsidian vault through the hvk index instead of reading files. Use whenever a question is about the vault as a whole - what links to a note, what mentions a topic, which tasks are due, which notes have a property, what is orphaned or broken - and before opening notes one by one to find something. Covers hvk search, backlinks, links, tags, tasks, props, orphans, base, views, jobs, doctor, info, scan and verify.
+description: Query an Obsidian vault through the hvk index instead of reading files. Use whenever a question is about the vault as a whole - what links to a note, what mentions a topic, which tasks are due, which notes have a property, what is orphaned or broken - and before opening notes one by one to find something. Also for reading the formats a vault carries - Bases, canvases and Dataview query blocks - without Obsidian rendering them. Covers hvk search, backlinks, links, tags, tasks, props, orphans, base, canvas, dql, views, jobs, doctor, info, scan and verify.
 ---
 
 # Querying the vault with hvk
@@ -113,6 +113,45 @@ If the base is embedded in a note and its filters mention `this`, pass `--this P
 which note. Not every Bases feature is supported — [ADR-0005](../../docs/adr/0005-bases-subset.md)
 lists what is — and anything unsupported fails naming itself rather than silently returning a
 table with a filter missing. Warnings about unknown keys go to stderr; the table is still good.
+
+### Canvases
+
+A `.canvas` points at notes **without mentioning them**, so a note placed on a board has
+backlinks that come from no prose anywhere. That is why `hvk backlinks` may name a canvas, and
+why a note on a board is not an orphan.
+
+```bash
+hvk canvas "Board.canvas"                     # the boxes: id, type, and what each holds
+hvk canvas "Board.canvas" --edges             # the arrows, with the files they join
+```
+
+The arrows are **not** links between notes in the index, deliberately — Obsidian does not
+derive that either. If the question is "what does this board say connects to what", `--edges`
+is the answer and reads the file to give it. Writing canvases is not supported at all
+([ADR-0015](../../docs/adr/0015-what-a-whiteboard-puts-in-the-index.md)).
+
+### Dataview blocks
+
+A vault may carry ```` ```dataview ```` blocks. They can be answered from the index with no
+plugin installed and nothing rendered:
+
+```bash
+hvk dql "LIST FROM #project"                  # the supported subset
+hvk dql --note "Dashboard.md"                 # every dataview block in a note
+```
+
+Three things to know before quoting an answer:
+
+- **Only a subset is implemented**, and everything else refuses with its own name in the
+  message — `TASK`, `CALENDAR`, `GROUP BY`, `FLATTEN`, `FROM [[link]]`. A refusal means the
+  query was not answered, not that nothing matched. Do not paraphrase one as "no results".
+- **Equality is one `=`** and `and`/`or`/`not` are words, the way Dataview writes them.
+- **A DQL query sees inline fields** (`owner:: Ana` in the body) as well as frontmatter, while
+  `hvk base` sees frontmatter only. The two can legitimately answer differently over the same
+  vault ([ADR-0016](../../docs/adr/0016-a-subset-of-a-query-language.md)).
+
+`dataviewjs` blocks are never read. Executing plugin code is out of scope, so if a question
+depends on one, say so rather than guessing at what the script would have produced.
 
 ### Materialised views
 

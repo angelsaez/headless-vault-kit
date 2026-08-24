@@ -4,6 +4,24 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-25 — The skill was teaching two things it did not admit to
+
+- There is one skill, `vault-queries`, and it is indexed in `skills/README.md`. What was wrong
+  is inside it: **its `description` still listed the commands from before Canvas and DQL
+  existed.** That file says, in its own words, that the description is what decides whether a
+  skill gets loaded at all — so an agent asked *"what does this dataview block say?"* would
+  never have reached the page that answers it. A body nobody loads is a body nobody has.
+- The description now names `canvas` and `dql`, and a test keeps it that way: every command the
+  skill teaches by example has to appear in the description. That check would have failed on the
+  day Canvas landed.
+- Two sections added for the formats that had a table row and nothing else. **Canvases**: why a
+  backlink can come from a board with no prose behind it, and that the arrows are deliberately
+  not links. **Dataview blocks**: that a refusal means *the query was not answered* and must
+  never be paraphrased as "no results", that equality is one `=`, and that a DQL query sees
+  inline fields while a base does not — so the two can legitimately disagree over one vault.
+- `dataviewjs` gets its own line, because the useful instruction to an agent is not "it is
+  unsupported" but "say so rather than guessing at what the script would have produced".
+
 ## 2026-08-25 — Checking the documentation found two things the documentation was right about
 
 - Asked whether DQL was documented properly, the answer was yes — it is in both guides, both
