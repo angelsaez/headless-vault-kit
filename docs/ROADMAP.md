@@ -17,10 +17,16 @@ does and how to use it; this is where "how far along is it" lives.
 ## Maturity
 
 It runs on one server, and has done since 2026-08-24: an ARM64 VPS that already hosted its own
-Obsidian Headless and agent, where `hvk` indexes a 274-note vault and keeps it current as sync
-delivers changes. That is days of production on one machine, by one person. Nothing here has
-been through a second installation, and phase 7 — publishing it properly — deliberately waits
-for weeks of stability rather than for a feeling of readiness.
+Obsidian Headless and agent, where `hvk` indexes a vault of some 280 notes and keeps it current
+as sync delivers changes. That is days of production on one machine, by one person. Nothing
+here has been through a second installation, and phase 7 — publishing it properly —
+deliberately waits for weeks of stability rather than for a feeling of readiness.
+
+The whole loop has been exercised there rather than assumed: a note written on another device
+arrives through sync and is indexed in about a second; the agent answers "what links to this"
+from the index rather than by reading files; an order-note created on a device is claimed and
+executed exactly once, stamping its own status where the author can see it; and the machine has
+been rebooted, with every service, the agent's session and the index coming back on their own.
 
 What phase 6 does not do is bound the interactive session's own permissions: those live in the
 agent's settings file, which belongs to whoever runs the agent. What this project contributes
