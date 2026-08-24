@@ -211,6 +211,10 @@ check "no auto-commit line in cron"  "! crontab -l | grep -q vault-autocommit"
 check "no backup script either"      "[ ! -e \"\$HOME/.local/share/hvk/deploy-bin/vault-backup.sh\" ]"
 check "the schedules are there"      "crontab -l | grep -q 'hvk-schedule.sh jobs'"
 check "an unknown part is refused"   "! '$HERE/install.sh' --only nonsense >/dev/null 2>&1"
+# --only rewrites the cron block, so narrowing it drops entries that were working a moment ago.
+"$HERE/install.sh" --only watch >"$LAB/narrow.txt" 2>&1
+check "it says what it is dropping" "grep -q 'scheduled now and will not be' '$LAB/narrow.txt'"
+check "and names the entry itself"  "grep -q 'hvk-schedule.sh jobs' '$LAB/narrow.txt'"
 "$HERE/uninstall.sh" >/dev/null 2>&1
 
 echo ""

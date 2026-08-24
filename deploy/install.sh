@@ -230,6 +230,26 @@ wants schedules && LINES="$LINES
 # not choose, and nobody gets a cron entry that fails every night for want of one.
 wants backup && [ -n "${BACKUP_DIR:-}" ] && LINES="$LINES
 ${BACKUP_CRON:-41 3 * * *} $BIN_DIR/vault-backup.sh"
+# --only rewrites this block from scratch rather than merging into it, so a part left out of
+# the list loses its entries -- silently, on a machine where they were already working. Adding
+# one part to a server means naming the others too. Say what is about to disappear.
+CURRENT=$(printf '%s
+' "$EXISTING" | awk -v b="$MARK_BEGIN" -v e="$MARK_END" '
+    $0 == b { inside = 1; next } $0 == e { inside = 0 } inside && $0 !~ /^#/ && NF { print }')
+DROPPED=""
+OLDIFS=$IFS; IFS='
+'
+for line in $CURRENT; do
+    case "$LINES" in *"$line"*) ;; *) DROPPED="$DROPPED$line
+" ;; esac
+done
+IFS=$OLDIFS
+if [ -n "$DROPPED" ]; then
+    say "  NOTE: these entries are scheduled now and will not be after this run:"
+    printf '%s' "$DROPPED" | sed 's/^/    /'
+    say "    Name every part you want, not only the new one: --only watch,schedules,backup"
+fi
+
 BLOCK=$(printf '%s
 %s%s
 %s

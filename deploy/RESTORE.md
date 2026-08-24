@@ -27,10 +27,15 @@ re-run the installer, and there is a nightly entry ([ADR-0013](../docs/adr/0013-
 
 ```sh
 $EDITOR ~/.config/hvk/deploy.env      # BACKUP_DIR, and BACKUP_OFFSITE_HOOK to get it off here
-./deploy/install.sh --only backup
+./deploy/install.sh                   # or --only watch,schedules,backup -- see below
 crontab -l | grep vault-backup        # 41 3 * * * ... by default
 ~/.local/share/hvk/deploy-bin/vault-backup.sh    # once, by hand, rather than waiting for 03:41
 ```
+
+If this machine only ever had *some* of the parts installed, name them all: `--only` rewrites
+the managed crontab block rather than adding to it, so `--only backup` on a server already
+running the views and the order-note runner would leave it scheduling nothing else. The
+installer says what it is about to drop, but reading it afterwards is the wrong time.
 
 `BACKUP_DIR` must be outside the vault, and the script refuses if it is not: inside, the
 archive would sync to every device, be indexed by the watcher, and tomorrow's copy would
