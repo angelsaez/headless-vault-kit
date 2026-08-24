@@ -1,6 +1,6 @@
 ---
 name: vault-queries
-description: Query an Obsidian vault through the hvk index instead of reading files. Use whenever a question is about the vault as a whole - what links to a note, what mentions a topic, which tasks are due, which notes have a property, what is orphaned or broken - and before opening notes one by one to find something. Covers hvk search, backlinks, links, tags, tasks, props, orphans, base, views, jobs, info, scan and verify.
+description: Query an Obsidian vault through the hvk index instead of reading files. Use whenever a question is about the vault as a whole - what links to a note, what mentions a topic, which tasks are due, which notes have a property, what is orphaned or broken - and before opening notes one by one to find something. Covers hvk search, backlinks, links, tags, tasks, props, orphans, base, views, jobs, doctor, info, scan and verify.
 ---
 
 # Querying the vault with hvk
@@ -44,6 +44,7 @@ inside the vault.
 | "Which attachments are unused?" | `hvk orphans --attachments` |
 | "What does this Base show?" | `hvk base "Some.base"` |
 | "Are the dashboards up to date?" | `hvk views` |
+| "Is the index still trustworthy?" | `hvk doctor` |
 
 ### Search
 
@@ -162,6 +163,16 @@ Link resolution follows a documented rule, not Obsidian's own — the app's rule
 note names is not published. Every link where more than one file could have been meant is
 flagged here. If a backlink looks wrong, this is the first place to check; it is a short,
 finite list, not a vague worry.
+
+```bash
+hvk doctor
+```
+
+One command for "should I trust these answers": whether the index still describes the vault,
+which notes have invalid frontmatter, how many links do not resolve, and whether an order-note
+has been claimed for hours with nothing behind it. It exits non-zero only for real problems —
+broken frontmatter and unresolved links are warnings, because they belong to the vault rather
+than to the installation.
 
 Other checks: `hvk info` reports `parse_errors` (notes whose frontmatter is invalid YAML) and
 `broken_links`. `hvk verify` re-hashes every file and reports anything the incremental path

@@ -41,9 +41,12 @@ el suyo. Nunca se ejecuta código de plugins ni se reproduce la interfaz.
 
 ## Estado
 
-**Fases 1, 2, 4 y 5 hechas, más la mitad de Bases de la fase 3.** Lo que no está hecho es la
-fase 0 —ejecutarlo en un servidor de verdad— y hasta que eso ocurra nadie, ni su propio autor,
-lo ha usado en producción un solo día. Lee la hoja de ruta antes de confiarle nada.
+**Fases 0, 1, 2, 4 y 5 hechas, más la mitad de Bases de la fase 3.** Desde el 2026-08-24 corre
+en un servidor real: un VPS ARM64 que ya alojaba su propio Obsidian Headless y su agente, donde
+`hvk` indexa un vault de 274 notas, lo mantiene al día según Sync trae cambios, y responde
+desde Telegram. La Fase 6 —convertir los perfiles de permisos en una garantía del código y no
+de un fichero de configuración, y un restore ensayado— está en marcha. Días de producción, no
+meses: lee la hoja de ruta antes de confiarle nada.
 
 ✅ **Fase 2.** El indexador de Nivel 0 parsea un vault a SQLite y responde búsquedas,
 backlinks, enlaces, etiquetas, tareas, propiedades y huérfanos, con reconstrucción determinista.
@@ -197,6 +200,7 @@ Dos cosas que conviene saber desde el principio:
 | `hvk base Archivo.base [--view Nombre]` | Ejecuta una vista de un `.base` contra el índice, como tabla Markdown |
 | `hvk views [Ruta] [--apply]` | Regenera las tablas de Bases materializadas dentro de notas; sin `--apply` solo lista lo que está desactualizado |
 | `hvk jobs --dir D --profiles P [--run]` | Ejecuta las notas-orden que esperan en un directorio; sin `--run` solo informa |
+| `hvk doctor [--jobs-dir D]` | ¿Está sana esta instalación? Para llamarlo desde la monitorización que ya tengas |
 | `hvk info` | Qué contiene el índice ahora mismo |
 
 Todos los comandos aceptan `--json` para salida legible por máquina; `hvk watch` emite JSON
@@ -223,13 +227,13 @@ estar listo.
 
 | Fase | Qué entrega | Estado |
 |---|---|---|
-| 0 | Base operativa en el VPS: Headless + Claude Code/Telegram + git, sobrevive a reinicios | Construida, sin ejecutar aún en un servidor |
+| 0 | Base operativa en el VPS: Headless + Claude Code/Telegram + git, sobrevive a reinicios | **Hecha**, corriendo en un servidor |
 | 1 | Inventario del vault: qué plugins y usos reales hay que cubrir | **Hecha** |
 | 2 | Indexador Nivel 0 + CLI `hvk` | **Hecha** |
 | 3 | Bases, Canvas, plantillas y notas periódicas | Bases **hecho**; el resto pospuesto |
 | 4 | Vistas materializadas (DQL de Dataview pospuesto) | **Hecha** |
 | 5 | Notas-orden: el vault como cola de trabajos | **Hecha** (Sync y Telegram esperan a la Fase 0) |
-| 6 | Seguridad, healthchecks, backups ensayados | Pendiente |
+| 6 | Seguridad, healthchecks, backups ensayados | **En curso** |
 | 7 | MCP + parsers de comunidad + empaquetado | Futuro |
 
 ## ¿Qué necesito para usarlo?

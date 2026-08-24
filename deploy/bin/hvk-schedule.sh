@@ -38,8 +38,18 @@ case "$TASK" in
             exit 1
         fi
         ;;
+    doctor)
+        # For monitoring that already exists. It prints nothing while healthy, so a machine
+        # with its own alerting can call this and only hear from it when something is wrong.
+        if ! OUT=$("$HVK_BIN" --vault "$HVK_VAULT" doctor                        ${HVK_JOBS_DIR:+--jobs-dir "$HVK_JOBS_DIR"} 2>&1); then
+            printf 'hvk doctor found a problem:
+%s
+' "$OUT" >&2
+            exit 1
+        fi
+        ;;
     *)
-        echo "usage: hvk-schedule.sh views|jobs" >&2
+        echo "usage: hvk-schedule.sh views|jobs|doctor" >&2
         exit 2
         ;;
 esac

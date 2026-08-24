@@ -136,6 +136,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="actually launch the agent; without it jobs are claimed and reported only",
     )
 
+    doctor_cmd = add("doctor", "check this installation; meant to be called from monitoring")
+    doctor_cmd.add_argument(
+        "--jobs-dir", metavar="PATH",
+        help="also check for stuck order-notes there (or HVK_JOBS_DIR)",
+    )
+    doctor_cmd.add_argument(
+        "--stuck-hours", type=int, default=6, metavar="H",
+        help="how long a claimed job may run before it counts as stuck (default: 6)",
+    )
+
     views_cmd = add("views", "regenerate the base views materialised inside notes")
     views_cmd.add_argument(
         "path", nargs="?", help="restrict to one note or one folder (default: the whole vault)"
@@ -174,6 +184,9 @@ def _run(args: argparse.Namespace) -> int:
 
     if args.command == "jobs":
         return _jobs(location, args)
+
+    if args.command == "doctor":
+        return _doctor(location, args)
 
     conn = db.connect(location.db_path)
     try:
@@ -329,6 +342,34 @@ def _base(conn, location: paths.Locations, args: argparse.Namespace) -> None:
     print(f"{candidate.name} - view {result.view.name!r} ({counted})")
     print()
     print(base_render.to_markdown(result))
+
+
+def _doctor(location: paths.Locations, args: argparse.Namespace) -> int:
+    """Report what only hvk can know, and exit non-zero when something is actually wrong.
+
+    Warnings do not fail: a note with broken YAML is the vault's problem, and a check that
+    wakes somebody for it is a check they will stop reading.
+    """
+    import os
+
+    from hvk import doctor as checkup
+
+    report = checkup.run(
+        location,
+        jobs_dir=args.jobs_dir or os.environ.get("HVK_JOBS_DIR"),
+        stuck_hours=args.stuck_hours,
+    )
+    output.emit(
+        [check.as_dict() for check in report.checks],
+        headers=("CHECK", "STATUS", "DETAIL"),
+        columns=("check", "status", "detail"),
+        as_json=args.json,
+        empty="nothing to check",
+    )
+    if not args.json and (report.failures or report.warnings):
+        print()
+        print(f"{report.failures} failure(s), {report.warnings} warning(s).")
+    return 1 if report.failures else 0
 
 
 def _jobs(location: paths.Locations, args: argparse.Namespace) -> int:
