@@ -12,7 +12,7 @@ import sys
 import time
 from pathlib import Path
 
-from hvk import __version__, db, jobs, output, paths, query, views, write
+from hvk import __version__, db, dql, jobs, output, paths, query, views, write
 from hvk import scan as scanner
 from hvk.bases import base_file as _base_file
 from hvk.bases import values as bases_values
@@ -381,8 +381,13 @@ def _dql(conn, location: paths.Locations, args: argparse.Namespace) -> None:
     from hvk.write import Vault
 
     if args.note:
-        text = Vault(location.vault).read(args.note).text
-        queries = dataview.blocks_in(text)
+        # A missing file reads as empty by design (ADR-0007: "absent" is how create-if-absent
+        # is expressed), so without this check a typo in the note name is reported as a note
+        # with no blocks -- and you conclude the note has none.
+        original = Vault(location.vault).read(args.note)
+        if not original.exists:
+            raise dataview.DqlError(f"no such note: {args.note}")
+        queries = dataview.blocks_in(original.text)
         if not queries:
             print(f"no dataview blocks in {args.note}")
             return
@@ -615,7 +620,7 @@ def main(argv: list[str] | None = None) -> int:
         return code
     except (paths.VaultError, db.IndexError_, query.QueryError,
             _base_file.BaseError, ExpressionError, write.WriteError,
-            jobs.JobError, views.ViewError) as exc:
+            jobs.JobError, views.ViewError, dql.DqlError) as exc:
         print(f"hvk: {exc}", file=sys.stderr)
         return 2
     except BrokenPipeError:
