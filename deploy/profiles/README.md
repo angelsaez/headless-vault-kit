@@ -36,8 +36,15 @@ not interactive: there is nobody to answer a prompt.
 files exist to avoid, and a job runs because a note said so — and a note can arrive from a web
 capture or a shared folder.
 
-## The gap this does not close
+## What is enforced, and what is not
 
-`hvk` checks that a profile exists and is well-formed, **not that it restricts anything**. A
-profile called `read-only` that granted everything would be honoured. Making that guarantee
-real is phase 6's work; until then, these files are the guarantee.
+Two shapes are refused outright ([ADR-0011](../../docs/adr/0011-a-profile-has-to-be-a-limit.md)):
+
+- a `command` carrying a known bypass argument — `--dangerously-skip-permissions` and friends;
+- a profiles directory **inside the vault**, since anything that can write a note could then
+  rewrite what an agent may do.
+
+What is still not checked is whether the settings a profile points at actually restrict
+anything. A `command` that runs an agent with no settings file at all passes both refusals. So
+these files remain the recommendation, not an enforcement — and the honest summary is that
+`hvk` can stop the likely mistake, not a determined one.

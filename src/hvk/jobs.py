@@ -68,6 +68,21 @@ _DIALECT = {"en": 0, "es": 1}
 SAFE_PROFILE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._-]*$")
 DEFAULT_TIMEOUT = 900
 
+# Arguments that tell an agent to ignore its own permission settings. A profile carrying one of
+# these is not a limit, it is the absence of a limit wearing the name of one -- and the whole
+# point of naming a profile is that a note cannot choose "no limits".
+#
+# Knowing these strings is a small, deliberate exception to the rule that this runner learns no
+# agent's flags (ADR-0009). It is a safeguard, not a feature: nothing here builds a command
+# line, and an agent this list does not know is simply not protected by it. Adding one is a
+# line of code.
+BYPASS_FLAGS = (
+    "--dangerously-skip-permissions",   # Claude Code
+    "--dangerously-bypass-approvals-and-sandbox",
+    "bypasspermissions",                # --permission-mode bypassPermissions, either spelling
+    "--yolo",
+)
+
 
 class JobError(Exception):
     """A job cannot be run as declared. Carries the reason written into the note."""
@@ -112,6 +127,16 @@ class Profile:
                 f"profile {name!r} must set \"command\" to a non-empty list of strings, "
                 f"which is executed directly -- there is no shell here"
             )
+        lowered = " ".join(command).lower()
+        for flag in BYPASS_FLAGS:
+            if flag in lowered:
+                raise JobError(
+                    f"profile {name!r} passes {flag}, which tells the agent to ignore its own "
+                    f"permissions. A job runs because a note said so, and a note can arrive "
+                    f"from anywhere -- so the one thing a profile may not do is remove the "
+                    f"limits it exists to impose. Remove that argument."
+                )
+
         timeout = data.get("timeout", DEFAULT_TIMEOUT)
         if not isinstance(timeout, int) or timeout <= 0:
             raise JobError(f"profile {name!r} has a timeout that is not a positive integer")
@@ -412,6 +437,15 @@ def resolve_settings(vault: write.Vault, jobs: str | None,
     profiles_dir = Path(profiles).expanduser().resolve()
     if not profiles_dir.is_dir():
         raise JobError(f"the profiles directory does not exist: {profiles_dir}")
+    # A profile says what an agent may do, so a profile inside the vault is a permission grant
+    # that syncs -- editable from a phone, and by anything that can write a note. ADR-0009 only
+    # asked for this in prose; asking is not a boundary.
+    if profiles_dir == vault.root or profiles_dir.is_relative_to(vault.root):
+        raise JobError(
+            f"the profiles directory is inside the vault ({profiles_dir}). Profiles decide what "
+            f"an agent may do, and one that syncs can be edited from any device that reaches "
+            f"the vault. Move it somewhere outside {vault.root}."
+        )
     return jobs_dir, profiles_dir
 
 
