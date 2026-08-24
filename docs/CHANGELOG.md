@@ -39,6 +39,10 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   the agent. [ADR-0014](adr/0014-blocked-and-written-down.md) records that, along with the
   uncomfortable half — this is still a speed bump and not a sandbox, because `Bash` can write
   anywhere and `sh -c` is right there.
+- The runbook now has a step for it. Someone following `deploy/README.md` end to end would
+  have finished with the hook still uninstalled and no reason to suspect it existed — it was
+  only ever mentioned in `deploy/hooks/`, which is where you look after you know. It is step 7
+  of 8, with the check that it actually took: refuse a deletion, and look for the line.
 - Phase 6 is done as far as this repository goes. What is left is configuration and belongs to
   whoever runs a server: pasting the hook into the agent's settings, choosing which folders are
   protected, choosing where the backup lands. The repository ships the mechanism and no
