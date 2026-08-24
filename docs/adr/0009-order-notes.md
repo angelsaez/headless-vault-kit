@@ -131,6 +131,12 @@ profile exists and is well-formed, not that its `command` is careful. A profile 
 `read-only` that grants everything would be honoured. Making permissions real is phase 6's
 work; this ADR only guarantees that a job cannot run without one being chosen deliberately.
 
+> **Partly closed in phase 6 (2026-08-24).** Two of the ways a profile could be a limit in
+> name only are now refused outright: a `command` carrying a known bypass flag, and a profiles
+> directory inside the vault. Neither makes a careless profile safe — a `command` that grants
+> everything without naming a bypass flag still passes — so the substance of this consequence
+> stands. See [ADR-0011](0011-a-profile-has-to-be-a-limit.md).
+
 **`hvk jobs` executes arbitrary configured programs.** That is the point, and it means the
 security of this feature is the security of the profiles directory and of whoever can drop
 files into the jobs directory. Both are now explicit surfaces with names, rather than implicit

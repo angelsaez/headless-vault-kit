@@ -346,3 +346,44 @@ def test_a_job_that_failed_earlier_does_not_keep_raising_the_alarm(lab, capsys):
     capsys.readouterr()
     assert cli.main(argv) == 0, "the same failure, a minute later, is history not news"
     assert "status: failed" in note(lab, "Bad"), "the note still records what happened"
+
+
+# -- a profile has to actually be a limit ----------------------------------------------------
+
+@pytest.mark.parametrize("flag", [
+    "--dangerously-skip-permissions",
+    "--permission-mode=bypassPermissions",
+    "--yolo",
+])
+def test_a_profile_that_removes_the_limits_is_refused(lab, flag):
+    """The one thing a profile may not do is undo the reason profiles exist."""
+    profile(lab, "wide-open", ["claude", "-p", flag])
+    order(lab, "One", profile="wide-open")
+    outcome = only(run(lab))
+
+    assert outcome.status == "failed"
+    assert "ignore its own permissions" in outcome.detail
+    assert not (lab[0] / "Reports" / "Out.md").exists()
+
+
+def test_profiles_inside_the_vault_are_refused(lab):
+    """A profile that syncs is a permission grant any device can edit."""
+    inside = lab[0] / "profiles"
+    inside.mkdir()
+    (inside / "read-only.json").write_text(json.dumps({"command": ECHO}), encoding="utf-8")
+
+    with pytest.raises(JobError, match="inside the vault"):
+        run(lab, profiles=inside)
+
+
+def test_the_shipped_example_profile_passes_its_own_checks(tmp_path):
+    """The examples in deploy/profiles/ are the recommendation; they must survive it."""
+    import pathlib
+
+    source = pathlib.Path(__file__).resolve().parent.parent / "deploy" / "profiles"
+    text = (source / "read-only.json.example").read_text(encoding="utf-8")
+    (tmp_path / "read-only.json").write_text(text, encoding="utf-8")
+
+    loaded = jobs.Profile.load(tmp_path, "read-only")
+    assert loaded.command[0] == "claude"
+    assert loaded.timeout > 0
