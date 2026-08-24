@@ -1,7 +1,7 @@
 # 0014 — Blocked, and written down
 
 **Status:** accepted
-**Date:** 2026-08-25
+**Date:** 2026-08-24
 **Phase:** 6
 
 ## Context
@@ -49,8 +49,8 @@ agent's working directory. With no vault known, the rule does not apply.
 file, touched on each invocation. `hvk.log` gets one line per refusal:
 
 ```
-2026-08-25T04:41:09Z guard deny rule=outside-vault tool=Write match=/home/you/.ssh/authorized_keys
-2026-08-25T04:41:22Z guard deny rule=delete tool=Bash match=rm
+2026-08-24T04:41:09Z guard deny rule=outside-vault tool=Write match=/home/you/.ssh/authorized_keys
+2026-08-24T04:41:22Z guard deny rule=delete tool=Bash match=rm
 ```
 
 The rule that fired and what it matched — the protected folder's name, the resolved

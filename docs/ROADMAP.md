@@ -27,9 +27,9 @@ agent's settings file, which belongs to whoever runs the agent. What this projec
 there is the `PreToolUse` hook — deletions, protected folders and writes outside the vault,
 refused and recorded.
 
-Restoring that vault from a backup has been rehearsed twice on that machine: on 2026-08-24 from
-the archive beside it, and on 2026-08-25 **from the off-site copy**, fetched back to a clean
-directory as if the server were gone. Both times it came back file for file and indexed to the
+Restoring that vault from a backup has been rehearsed twice on that machine, both on
+2026-08-24: once from the archive beside it, and once **from the off-site copy**, fetched back
+to a clean directory as if the server were gone. Both times it came back file for file and indexed to the
 same numbers as the live vault — see [deploy/RESTORE.md](../deploy/RESTORE.md).
 
 ## Measured, on a generated 10,000-note vault

@@ -4,7 +4,7 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
-## 2026-08-25 — The restore was rehearsed again, from off the machine this time
+## 2026-08-24 — The restore was rehearsed again, from off the machine this time
 
 - The first rehearsal restored an archive from the disk that had written it, and said so: the
   off-site half was untested because no destination existed yet. With one configured, it was
@@ -15,7 +15,7 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
 - Worth keeping the reason in view: an upload's exit code is a statement about a command. Only
   a restore is a statement about a backup.
 
-## 2026-08-25 — An install with no units at all stopped failing
+## 2026-08-24 — An install with no units at all stopped failing
 
 - `install.sh --only schedules,backup` did everything it was asked to — copied the scripts,
   wrote the crontab block — and then **exited 2 on a blank line**, because `CHANGED` is only
@@ -26,7 +26,7 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   all and checks the exit code, which is the shape that had never been exercised: every other
   `--only` in there names a unit.
 
-## 2026-08-25 — The guard gets a boundary, and starts writing things down
+## 2026-08-24 — The guard gets a boundary, and starts writing things down
 
 - The phase asks for one sentence: *an attempt to write outside the permitted paths is blocked
   and is recorded.* Neither half was true. `guard.decide()` had taken a `vault` argument since

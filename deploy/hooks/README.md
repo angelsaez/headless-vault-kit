@@ -79,8 +79,8 @@ watcher (ADR-0002). `hvk doctor` prints where that is.
 
 ```sh
 tail -5 ~/.local/share/hvk/<vault>-<hash>/hvk.log
-2026-08-25T04:41:09Z guard deny rule=outside-vault tool=Write match=/home/you/.ssh/authorized_keys
-2026-08-25T04:41:22Z guard deny rule=delete tool=Bash match=rm
+2026-08-24T04:41:09Z guard deny rule=outside-vault tool=Write match=/home/you/.ssh/authorized_keys
+2026-08-24T04:41:22Z guard deny rule=delete tool=Bash match=rm
 ```
 
 **The command itself is never recorded** — a command line can carry a token, and a log that

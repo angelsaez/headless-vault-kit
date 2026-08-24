@@ -188,8 +188,8 @@ while sync, the watcher and the agent were all running, into a directory beside 
 | Compared to the live vault | `diff -rq` over both trees: no difference at all |
 | Left behind | nothing. The restored copy and the archive were removed, the crontab and the configuration untouched |
 
-**The round trip, the next day.** The rehearsal above restored an archive from the disk that
-wrote it, which tests everything except the part that matters most when a machine is gone. With
+**The round trip, once there was somewhere to fetch it back from.** The rehearsal above
+restored an archive from the disk that wrote it, which tests everything except the part that matters most when a machine is gone. With
 a destination configured, it was done again the way it would really happen: the archive and its
 checksum fetched back from off-site into a clean directory, checksum verified there, restored
 beside the vault in 2.4 s — 588 files, 16 checkpoints, history intact, no difference at all
