@@ -121,3 +121,32 @@ def test_querying_without_an_index_says_so(tmp_path, capsys):
     assert code == 2
     assert "Run 'hvk scan' first" in capsys.readouterr().err
 
+def test_a_closed_pipe_says_nothing_on_stderr(tmp_path):
+    """`hvk tasks | head` is what the skill tells an agent to do, so it must stay quiet.
+
+    The size matters and is the whole trick. A table of a few tens of kilobytes fits in the
+    buffers, so the write itself never fails and the pipe being gone is only discovered when
+    Python flushes on the way out -- outside any handler, which is why the interpreter used to
+    print "Exception ignored in ... BrokenPipeError" itself. Make the vault much larger and the
+    write fails instead, the handler catches it, and the test passes with the fix removed.
+    """
+    import shutil
+    import subprocess
+    import sys
+
+    if not shutil.which("head"):
+        pytest.skip("needs head to build a real pipeline")
+
+    vault = tmp_path / "vault"
+    (vault / ".obsidian").mkdir(parents=True)
+    (vault / ".obsidian" / "app.json").write_text("{}", encoding="utf-8")
+    for note in range(30):
+        body = "".join(f"- [ ] task {note}-{item} {'x' * 60}\n" for item in range(10))
+        (vault / f"N{note}.md").write_text(f"# N{note}\n{body}", encoding="utf-8")
+
+    hvk = '"%s" -m hvk --vault "%s" --index "%s"' % (sys.executable, vault, tmp_path / "idx")
+    subprocess.run(hvk + " scan", shell=True, capture_output=True, check=True)
+    done = subprocess.run(hvk + " tasks | head -1", shell=True, capture_output=True)
+
+    assert b"Exception ignored" not in done.stderr, done.stderr.decode("utf-8", "replace")
+    assert b"BrokenPipeError" not in done.stderr, done.stderr.decode("utf-8", "replace")

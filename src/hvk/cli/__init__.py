@@ -428,7 +428,13 @@ def main(argv: list[str] | None = None) -> int:
 
     args = _merge_globals(build_parser().parse_args(argv))
     try:
-        return _run(args)
+        code = _run(args)
+        # Flushed here, inside the guard, and this is the whole point. A table of a few tens
+        # of kilobytes fits in the buffers, so writing it never fails; the pipe being gone is
+        # only discovered when Python flushes on the way out -- long after this try block, so
+        # the handler below never ran and the interpreter printed the failure itself.
+        sys.stdout.flush()
+        return code
     except (paths.VaultError, db.IndexError_, query.QueryError,
             _base_file.BaseError, ExpressionError, write.WriteError,
             jobs.JobError, views.ViewError) as exc:
