@@ -2,15 +2,21 @@
 
 The permission profiles of ADR-0009 bound what an order-note's agent may do. They say nothing
 about the interactive session — the one on Telegram, which a person talks to and which
-therefore runs with more freedom on purpose. Two things should be true of both:
+therefore runs with more freedom on purpose. Three things should be true of both:
 
 * **A delete is a move to `.trash/`.** Obsidian works that way, the write layer works that way
   (ADR-0007), and an agent reaching for `rm` should be stopped rather than trusted to remember.
 * **Some folders are not the agent's business.** Which ones is nobody's business but the
   vault owner's, so there is no default list: unset means the rule does not apply.
+* **The vault is where the writing happens.** A path that resolves outside it is refused for
+  the tools that name one, because the vault's own content is untrusted input and a note can
+  ask an agent to write a file (ADR-0014).
 
 This runs as a hook rather than as a rule inside hvk because the thing to constrain is the
 agent's own tools. `hvk` never deletes anything; `rm` in a Bash call does.
+
+What is refused is also written down, in the index directory: one line naming the rule and
+what it matched, never the command, which can carry a token.
 
 The contract is Claude Code's: the tool call arrives as JSON on stdin, and a decision goes back
 as JSON on stdout. Anything this cannot parse is allowed through — a hook that fails closed on
