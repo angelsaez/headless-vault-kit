@@ -25,6 +25,7 @@ which is the normal case rather than the exception.
 | `schedules` | `hvk-schedule.sh` | `~/.local/share/hvk/deploy-bin/` | Runs the views and the runner from cron, quiet unless something failed |
 | `backup` | `vault-backup.sh`, `vault-restore.sh` | same | A dated archive of the whole vault, and the script that puts one back. Scheduled only once `BACKUP_DIR` says where ([RESTORE.md](RESTORE.md)) |
 | — | permission profiles | **outside the vault**, wherever `HVK_JOBS_PROFILES` points | Not installed: copy them from [`profiles/`](profiles/) and edit. They decide what an order-note's agent may do |
+| — | the `PreToolUse` hook | the agent's own `settings.json` | Not installed either: the snippet is in [`hooks/`](hooks/README.md). It is what stops the agent deleting instead of trashing, reading a protected folder, or writing outside the vault |
 | `git` + `schedules` + `backup` | cron block | your crontab | The auto-commit, `hvk verify` nightly at 04:17, the materialised views, the order-note runner, and the nightly archive |
 
 With `--system` the three units go to `/etc/systemd/system` instead, and are managed with
@@ -181,7 +182,21 @@ can pair with it and reach an agent that can read and write your vault.
 
 Detach with `Ctrl-b d`. The session keeps running.
 
-### 7. The fire test
+### 7. Put the guard in front of the agent
+
+```sh
+$EDITOR ~/.claude/settings.json     # the snippet is in deploy/hooks/README.md
+```
+
+Deletions become `.trash/` moves, writes outside the vault are refused, and the folders you
+nominate are off limits — with every refusal recorded. Nothing installs this for you: it goes
+in the agent's own settings, which belong to you and not to this project.
+
+Check it took, rather than assuming. Ask the agent to delete a note; it should refuse and say
+why, and a line should appear in `hvk.log` in the index directory. If `guard-last-run` is not
+there at all, the hook never ran.
+
+### 8. The fire test
 
 ```sh
 sudo reboot
@@ -231,6 +246,16 @@ a week has a week-old timestamp and is perfectly healthy.
 Backups, and the restore that was rehearsed against the live vault, are in
 [RESTORE.md](RESTORE.md) — including which of the copies you already have answers which
 failure, because they do not all answer the one people assume.
+
+## Where the logs are, and what rotates them
+
+Every service here logs to the journal, which already rotates: `journalctl --user -u hvk-watch`
+(drop `--user` for a system install), and `journalctl --disk-usage` if you want to know what it
+is costing. The cron jobs print nothing unless something failed, and cron mails what they print.
+
+The one file this project writes is the guard's record of what it refused, in the index
+directory, and it caps itself at 256 KB with one generation kept — see
+[hooks/](hooks/README.md). Nothing here needs a logrotate rule.
 
 ## When something is wrong
 
