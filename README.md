@@ -134,6 +134,7 @@ Two things worth knowing straight away:
 | `hvk views [Path] [--apply]` | Refresh the base tables materialised inside notes; without `--apply` it only lists what is stale |
 | `hvk jobs --dir D --profiles P [--run]` | Run the order-notes waiting in a directory; without `--run` it only reports |
 | `hvk doctor [--jobs-dir D]` | Is this installation healthy? For calling from monitoring you already have |
+| `hvk guard [--protect F]` | A `PreToolUse` hook: refuses `rm` in favour of `.trash/`, and folders you nominate |
 | `hvk info` | What the index currently holds |
 
 Every command takes `--json` for machine-readable output; `hvk watch` emits JSON Lines, one

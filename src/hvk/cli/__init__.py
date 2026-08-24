@@ -136,6 +136,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="actually launch the agent; without it jobs are claimed and reported only",
     )
 
+    guard_cmd = add("guard", "PreToolUse hook: refuse deletions and protected folders")
+    guard_cmd.add_argument(
+        "--protect", action="append", metavar="FOLDER", default=None,
+        help="a folder the agent may not touch at all; repeat, or set HVK_PROTECTED "
+             "(comma-separated). No default: unset means the rule does not apply",
+    )
+
     doctor_cmd = add("doctor", "check this installation; meant to be called from monitoring")
     doctor_cmd.add_argument(
         "--jobs-dir", metavar="PATH",
@@ -187,6 +194,9 @@ def _run(args: argparse.Namespace) -> int:
 
     if args.command == "doctor":
         return _doctor(location, args)
+
+    if args.command == "guard":
+        return _guard(location, args)
 
     conn = db.connect(location.db_path)
     try:
@@ -342,6 +352,23 @@ def _base(conn, location: paths.Locations, args: argparse.Namespace) -> None:
     print(f"{candidate.name} - view {result.view.name!r} ({counted})")
     print()
     print(base_render.to_markdown(result))
+
+
+def _guard(location: paths.Locations, args: argparse.Namespace) -> int:
+    """Answer one PreToolUse hook payload on stdin.
+
+    Exit code stays 0 whatever it decides: a deny is expressed in the JSON, and a non-zero
+    exit would be read as the hook itself having failed.
+    """
+    from hvk import guard as vault_guard
+
+    protected = args.protect
+    if protected is None:
+        protected = [p for p in os.environ.get("HVK_PROTECTED", "").split(",") if p.strip()]
+    answer = vault_guard.run(sys.stdin.read(), vault=location.vault, protected=protected)
+    if answer:
+        print(answer)
+    return 0
 
 
 def _doctor(location: paths.Locations, args: argparse.Namespace) -> int:
