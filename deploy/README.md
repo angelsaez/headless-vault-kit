@@ -201,6 +201,30 @@ says `does not have any commits yet`. That is not a fault; run
 Create a note on your phone, wait a few seconds, and ask the bot what links to it. That is the
 whole system in one question.
 
+## Checking it from monitoring you already have
+
+Most servers already watch their own services and already know how to raise an alarm. This
+does not replace that: `hvk doctor` answers only the questions nothing else can — whether the
+index still describes the vault, whether a job has been claimed for hours with no runner
+behind it — and exits non-zero when one of them is a real problem.
+
+```sh
+hvk --vault ~/vault doctor                       # a table, for a person
+hvk --vault ~/vault doctor --json                # for a script
+~/.local/share/hvk/deploy-bin/hvk-schedule.sh doctor   # silent unless something is wrong
+```
+
+The last form is the one to put in an existing healthcheck: it prints nothing while healthy,
+so it only speaks when it has something to say.
+
+Warnings — a note with invalid frontmatter, an unresolved link — do **not** make it exit
+non-zero. Those are the vault's business, and a check that raises an alarm about them is a
+check people learn to ignore.
+
+The freshness check counts notes rather than reading the last-scan timestamp, and that is
+deliberate: the watcher only writes when something changes, so a vault nobody has touched for
+a week has a week-old timestamp and is perfectly healthy.
+
 ## When something is wrong
 
 | Symptom | Where to look |

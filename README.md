@@ -39,9 +39,12 @@ adapter. Plugin code is never executed and the UI is never reproduced.
 
 ## Status
 
-**Phases 1, 2, 4 and 5 are done, and the Bases half of phase 3.** What is not done is
-phase 0 — running it on an actual server — and until that happens nobody, including its author,
-has used this in production for a single day. Read the roadmap below before relying on it.
+**Phases 0, 1, 2, 4 and 5 are done, and the Bases half of phase 3.** Since 2026-08-24 it runs
+on a real server: an ARM64 VPS that already hosted its own Obsidian Headless and agent, where
+`hvk` indexes a 274-note vault, keeps it current as sync delivers changes, and answers from
+Telegram. Phase 6 — making the permission profiles a guarantee of the code rather than of a
+config file, and a rehearsed restore — is under way. Days of production, not months: read the
+roadmap before relying on it.
 
 ✅ **Phase 2.** The tier-0 indexer parses a vault into SQLite and answers search, backlinks,
 links, tags, tasks, properties and orphans, with a deterministic rebuild. A watcher keeps it
@@ -191,6 +194,7 @@ Two things worth knowing straight away:
 | `hvk base File.base [--view Name]` | Run a view from a `.base` file against the index, as a Markdown table |
 | `hvk views [Path] [--apply]` | Refresh the base tables materialised inside notes; without `--apply` it only lists what is stale |
 | `hvk jobs --dir D --profiles P [--run]` | Run the order-notes waiting in a directory; without `--run` it only reports |
+| `hvk doctor [--jobs-dir D]` | Is this installation healthy? For calling from monitoring you already have |
 | `hvk info` | What the index currently holds |
 
 Every command takes `--json` for machine-readable output; `hvk watch` emits JSON Lines, one
@@ -217,13 +221,13 @@ feeling of readiness.
 
 | Phase | Deliverable | Status |
 |---|---|---|
-| 0 | Server baseline: Headless sync + Claude Code/Telegram + git, reboot-proof | Built, not yet run on a server |
+| 0 | Server baseline: Headless sync + Claude Code/Telegram + git, reboot-proof | **Done**, running on a server |
 | 1 | Vault inventory: which plugins and real-world usages need covering | **Done** |
 | 2 | Tier-0 indexer + `hvk` CLI | **Done** |
 | 3 | Bases, Canvas, templates and periodic notes | Bases **done**; the rest postponed |
 | 4 | Materialized views (Dataview DQL postponed) | **Done** |
 | 5 | Order-notes: the vault as a job queue | **Done** (Sync and Telegram wait on phase 0) |
-| 6 | Security, healthchecks, rehearsed backups | Pending |
+| 6 | Security, healthchecks, rehearsed backups | **In progress** |
 | 7 | MCP server + community parsers + packaging | Future |
 
 ## What do I need to use it?
