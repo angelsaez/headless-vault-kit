@@ -26,7 +26,9 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 
-from hvk.parse.markdown import RawLink, Tag, parse_note
+from hvk.parse.markdown import parse_note
+from hvk.parse.model import Parsed, RawLink, Tag
+from hvk.parse.registry import Parser
 
 # The four node types the specification defines. Anything else is skipped rather than guessed
 # at: a canvas written by a future Obsidian should not make a vault fail to index.
@@ -54,13 +56,16 @@ class CanvasEdge:
 
 
 @dataclass
-class Canvas:
-    nodes: list = field(default_factory=list)
-    edges: list = field(default_factory=list)
-    links: list = field(default_factory=list)
-    tags: list = field(default_factory=list)
-    body: str = ""
-    error: str | None = None
+class Canvas(Parsed):
+    """The contract, plus the two things only a whiteboard has.
+
+    ``nodes`` and ``edges`` are never written to the index (ADR-0015). They are here because
+    ``hvk canvas`` answers questions about the shape of one board by reading its file, and the
+    parser is where that reading already happens.
+    """
+
+    nodes: list[CanvasNode] = field(default_factory=list)
+    edges: list[CanvasEdge] = field(default_factory=list)
 
 
 def _text_of(node: dict) -> str:
@@ -138,3 +143,17 @@ def parse_canvas(text: str) -> Canvas:
 
     canvas.body = "\n".join(searchable)
     return canvas
+
+
+def parse_file(text: str, path: str) -> Canvas:
+    """The registry's entry point: a canvas, titled by its own filename.
+
+    A canvas has no frontmatter and no H1, so there is nowhere else a title could come from --
+    and without one, full-text search would find the board's contents under an empty name.
+    """
+    canvas = parse_canvas(text)
+    canvas.title = path.rsplit("/", 1)[-1].removesuffix(".canvas")
+    return canvas
+
+
+PARSER = Parser(name="canvas", extensions=("canvas",), kind="canvas", parse=parse_file)
