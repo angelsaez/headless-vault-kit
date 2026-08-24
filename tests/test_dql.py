@@ -158,3 +158,51 @@ def test_dataviewjs_is_not_a_query():
 
 def test_a_note_with_no_blocks_yields_none():
     assert dql.blocks_in("# Just a note\n") == []
+
+
+# -- through the command line ---------------------------------------------------------------
+
+@pytest.fixture
+def cli_run(tmp_path, capsys):
+    from hvk import cli
+    from conftest import VAULTS
+
+    base = ["--vault", str(VAULTS / "dataview"), "--index", str(tmp_path / "idx")]
+    cli.main([*base, "scan"])
+    capsys.readouterr()
+
+    def _run(*args):
+        code = cli.main([*base, *args])
+        return code, capsys.readouterr()
+
+    return _run
+
+
+def test_a_note_that_is_not_there_is_not_a_note_without_blocks(cli_run):
+    """Reading a missing file gives empty text by design (ADR-0007), so without a check a
+    typo in the note name reads as "this note has no blocks" and you believe it."""
+    code, output = cli_run("dql", "--note", "Nope.md")
+    assert code != 0
+    assert "no such note" in output.err
+
+
+def test_a_note_with_no_blocks_says_exactly_that(cli_run):
+    code, output = cli_run("dql", "--note", "Projects/Alpha.md")
+    assert code == 0
+    assert "no dataview blocks" in output.out
+
+
+def test_an_unsupported_query_is_a_message_and_not_a_traceback(cli_run):
+    code, output = cli_run("dql", "TASK WHERE done")
+    assert code != 0
+    assert output.err.startswith("hvk: ")
+    assert "TASK" in output.err
+    assert "Traceback" not in output.err
+
+
+def test_the_blocks_of_a_note_are_all_run(cli_run):
+    code, output = cli_run("dql", "--note", "Dashboard.md")
+    assert code == 0
+    assert output.out.count("LIST FROM #active") == 1
+    assert "TABLE" in output.out
+    assert "dv.list" not in output.out, "the dataviewjs block is not a query"

@@ -4,6 +4,26 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-25 — Checking the documentation found two things the documentation was right about
+
+- Asked whether DQL was documented properly, the answer was yes — it is in both guides, both
+  READMEs and the skill, and **every example runs**. Running them is what found the rest of
+  this entry.
+- **`hvk dql --note` could not tell a missing note from a note with no blocks.** Reading a file
+  that is not there returns empty text on purpose (ADR-0007: that is how "create it if it is
+  still absent" is expressed), so a typo in the note name printed *"no dataview blocks in
+  Panel.md"* and exited zero. You would believe it. It now says `no such note` and exits
+  non-zero.
+- **Every DQL refusal was reaching the terminal as a traceback.** `DqlError` was not in the
+  CLI's list of errors to catch, so the careful messages this project spent an ADR on —
+  *"GROUP is Dataview syntax this does not implement"* — arrived as a Python stack. Every
+  refusal is now one `hvk: …` line, which is what they were written to be.
+- **`tests/test_guides.py`**: the guides are the longest documents here and nothing checked
+  them, while the skill has had its examples executed since it was written. Running all 117
+  examples is not possible — a guide is allowed to describe a vault rather than one that
+  exists — so what is checked is what can rot silently: that the subcommand exists, that every
+  flag is real, and that every documented query is one this project can actually parse.
+
 ## 2026-08-24 — A Dataview subset, and the parts that say no
 
 - Reopened on a criterion that changed rather than evidence that did: not *"does anyone here
