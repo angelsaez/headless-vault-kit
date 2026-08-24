@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import stat
 import tempfile
 from dataclasses import dataclass
 from datetime import datetime
@@ -75,6 +76,21 @@ class Original:
         if self.bom:
             body = BOM + body
         return body.encode("utf-8")
+
+
+def _existing_mode(path: Path) -> int:
+    """The mode a rewritten file should keep, or the one a new file would have had.
+
+    Rewriting keeps exactly what was there. A new file gets what an ordinary program creating
+    it would have got -- 0666 less the umask -- rather than the 0600 a temporary file is born
+    with, because a note is not a secret and the vault around it is not one either.
+    """
+    try:
+        return stat.S_IMODE(path.stat().st_mode)
+    except OSError:
+        current = os.umask(0)
+        os.umask(current)
+        return 0o666 & ~current
 
 
 @dataclass(frozen=True)
@@ -207,12 +223,25 @@ class Vault:
             return False
 
         path.parent.mkdir(parents=True, exist_ok=True)
+        # What the note's permissions must end up as. mkstemp creates 0600 and os.replace
+        # keeps whatever the temporary file had, so without this every note this project
+        # touches quietly becomes unreadable to everyone but its owner -- while every note
+        # Obsidian and sync write next to it stays 0664. Editing a file is not the moment to
+        # change who can read it, and a divergence git does not track is one nobody notices.
+        mode = _existing_mode(path)
         handle, temporary = tempfile.mkstemp(prefix=TEMP_PREFIX, dir=str(path.parent))
         try:
             with os.fdopen(handle, "wb") as stream:
                 stream.write(data)
                 stream.flush()
                 os.fsync(stream.fileno())
+            try:
+                os.chmod(temporary, mode)
+            except OSError:
+                # Best effort by design. On a filesystem that cannot do this, the note keeps
+                # the 0600 it was born with -- which is the behaviour that existed before this
+                # line and is a far better outcome than refusing to write the note at all.
+                pass
             os.replace(temporary, path)
         except OSError as exc:
             raise WriteError(f"cannot write {path}: {exc}") from exc

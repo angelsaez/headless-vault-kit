@@ -4,6 +4,27 @@ Repository journal: one entry per change, newest first.
 Format: `## YYYY-MM-DD — title`, saying what changed and why.
 
 
+## 2026-08-24 — Everything this project wrote was quietly becoming private
+
+- Found by looking at a real vault after a job ran: **every note hvk had written or rewritten
+  was `0600`**, while every note beside it, written by Obsidian and sync, was `0664`. Not just
+  the outputs it creates — an order-note created by hand at `0664` came back `0600` the moment
+  the runner stamped its status on it. Give it time and every note a materialised view touches
+  goes the same way.
+- The cause is one line that was never there: `mkstemp` creates its file `0600`, `os.replace`
+  keeps whatever mode the temporary had, and the atomic write of ADR-0007 has always gone
+  through both. The mode was the one property of a file the write layer did not preserve,
+  in a module whose whole promise is that it preserves what it did not come to change.
+- Rewriting a note now keeps exactly the permissions it had, and a new note is born with what
+  any ordinary program creating it would have produced — `0666` less the umask — rather than
+  the private-by-accident mode of a temporary file. The `chmod` is best effort: on a
+  filesystem that cannot do it the note keeps `0600`, which is where we already were, and is
+  a better outcome than refusing to write the note.
+- Worth naming why nobody had noticed. Sync does not carry POSIX modes, so no other device
+  shows it; git tracks only the executable bit, so the audit trail does not either; and on a
+  single-user server everything keeps working. It is exactly the kind of divergence that is
+  invisible until the day something else needs to read the vault.
+
 ## 2026-08-24 — The restore was rehearsed again, from off the machine this time
 
 - The first rehearsal restored an archive from the disk that had written it, and said so: the
