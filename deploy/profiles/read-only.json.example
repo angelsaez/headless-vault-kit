@@ -1,0 +1,4 @@
+{
+  "command": ["claude", "-p", "--settings", "/home/CHANGE-ME/hvk-profiles/read-only.settings.json"],
+  "timeout": 900
+}
