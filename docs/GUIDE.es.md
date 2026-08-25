@@ -651,6 +651,61 @@ Apunta el cliente donde ese cliente espere. La forma es casi siempre esta:
 Añade `"--write"` a `args` cuando de verdad lo quieras, y `"--protect", "Privada"` por cada
 carpeta que ningún cliente deba tocar.
 
+### Las herramientas, al completo
+
+Los argumentos marcados con **\*** son obligatorios. Todas responden en JSON, y con las mismas
+formas que produce `--json` en la línea de comandos: lo que cuentan las secciones anteriores vale
+también aquí.
+
+**Consulta — siempre ofrecidas**
+
+| Herramienta | Argumentos | Qué devuelve |
+|---|---|---|
+| `info` | — | Cuántos ficheros, notas, enlaces, etiquetas y tareas hay, cuándo se escaneó por última vez, y cuántos enlaces están rotos o son ambiguos. Lo primero que preguntar si importa si las respuestas están al día |
+| `search` | **\*`query`** — el texto, admitiendo `tag:nombre` y `path:fragmento` dentro<br>`limit` — cuántas coincidencias como mucho (20 por defecto) | `matches`: ruta, título y fragmento de cada una |
+| `backlinks` | **\*`target`** — la ruta de una nota, o solo su nombre | `target`, la ruta a la que resolvió, y `backlinks`: fichero, línea y texto exacto de cada enlace que apunta ahí, canvas incluidos |
+| `links` | `source` — solo los enlaces escritos en esta nota<br>`broken` — solo los que no resuelven a nada<br>`ambiguous` — solo aquellos en los que coincidieron varios ficheros | `links`: origen, línea, lo que se escribió y a qué resolvió |
+| `tags` | `count` — incluir cuántos ficheros lleva cada una<br>`prefix` — esa etiqueta y sus hijas anidadas, de modo que `casa` incluye `casa/bricolaje` | `tags`, todas las distintas, del frontmatter y del cuerpo |
+| `tasks` | `pending` — solo las sin terminar<br>`done` — solo las terminadas<br>`due_before` — `AAAA-MM-DD`; las tareas sin fecha nunca coinciden<br>`path` — rutas que contengan este texto | `tasks`: ruta, línea, estado, fecha de vencimiento y los campos de plugin de esa línea. Las tarjetas de Kanban incluidas, con su lista |
+| `props` | `where` — una lista de `estado=abierto`, `estado!=hecho`, o una clave suelta que significa «la tiene»; se combinan con AND<br>`key` — qué propiedad mostrar | Los `files` que coinciden. Sin argumentos, el catálogo de todas las claves de propiedad y cuánto se usan |
+| `orphans` | `attachments` — incluir también los adjuntos sin referenciar | `orphans`: lo que nadie enlaza. La lista que hay que leer antes de borrar nada |
+| `base` | **\*`file`** — el `.base`, por ruta dentro del vault<br>`view` — qué vista (por defecto, la primera)<br>`this` — la nota en la que está embebida, para las expresiones que usan `this` | Las `columns`, `headers`, `rows` y `total` de la vista, más los `warnings` que haya |
+| `canvas` | **\*`file`** — el `.canvas`, por ruta dentro del vault | `nodes` (las cajas) y `edges` (las flechas, con los dos extremos nombrados) |
+| `dql` | `query` — una consulta Dataview<br>`note` — en su lugar: ejecutar todos los bloques ```` ```dataview ```` de esta nota | `results`, uno por consulta, cada uno con la forma de una respuesta de `base` |
+| `note_read` | **\*`path`** — la nota, dentro del vault | `text`, `exists` y `digest` — el valor que hay que devolverle a `note_write` |
+
+**Escritura — solo si el servidor se arrancó con `--write`**
+
+| Herramienta | Argumentos | Qué hace |
+|---|---|---|
+| `note_write` | **\*`path`** — la nota, dentro del vault<br>**\*`text`** — el contenido nuevo entero de la nota<br>`if_unchanged` — `absent` para rechazar si ya existe, o un digest de `note_read` para rechazar si ha cambiado desde entonces | Crea o reemplaza una nota. Atómica, conserva los finales de línea y los permisos del fichero, y no hace nada en absoluto si el contenido es idéntico. Responde `created` y `changed` |
+| `note_set_property` | **\*`path`** — la nota, dentro del vault<br>**\*`key`** — la clave del frontmatter a fijar<br>**\*`value`** — su valor nuevo | Fija una sola propiedad y deja cada otro byte como estaba. El YAML no se vuelve a parsear, así que el orden de las claves, los comentarios y las comillas sobreviven |
+| `views_apply` | `path` — una nota o carpeta (por defecto, todo el vault) | Regenera las tablas de bases materializadas en las notas y las escribe. Responde `views`, `changed` y `errors` |
+| `jobs_run` | `dry_run` — informar sin reclamar ni ejecutar nada | Ejecuta las notas-orden que esperan en el directorio de trabajos del servidor, cada una bajo el perfil que nombra su propio frontmatter |
+
+Los directorios de trabajos y de perfiles son **configuración del servidor y un cliente no puede
+elegirlos**. Un perfil de permisos escogido por aquello a lo que se le dan los permisos no es un
+permiso, que es todo el trato de la sección 9; así que `jobs_run` no acepta ningún directorio, y
+sin `HVK_JOBS_DIR` y `HVK_JOBS_PROFILES` se niega igual que en la línea de comandos.
+
+### Cuando una herramienta no puede responder
+
+Vuelve como un resultado normal marcado como error, con una frase dentro — no como un error de
+protocolo, que la mayoría de clientes enseñan como un servidor caído. «No hay ninguna nota que se
+llame así» es una respuesta a una pregunta. Así que un cliente ve la misma redacción que verías
+tú en la terminal:
+
+- `no file in the index matches 'Nope'`
+- `GROUP is Dataview syntax this does not implement`
+- `_PRIVADA is a protected folder in this vault, and this tool call names it`
+- `Two.md has changed since it was read (if_unchanged does not match). Nothing was written.`
+- `no index at ...; run 'hvk scan' first` — el índice se abre al primer uso y no al arrancar, así
+  que un servidor sobre un vault que nadie ha escaneado arranca y luego lo dice, en vez de
+  parecer muerto.
+
+Un mensaje que empiece por `hvk failed on ...` es de otra naturaleza: eso es un fallo de aquí, no
+una pregunta que el vault no pueda responder, y nombra la excepción para que se pueda reportar.
+
 ### Qué lo sujeta, dado que escribe
 
 Cinco cosas, y ninguna es nueva: es la maquinaria de las fases 4 a 6 apuntando a un segundo

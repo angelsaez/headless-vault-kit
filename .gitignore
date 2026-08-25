@@ -9,6 +9,10 @@ secrets/
 # Claude Code: per-machine preferences. The shared settings.json IS committed.
 .claude/settings.local.json
 
+# An MCP client's server list names a vault by absolute path, which is this machine's business
+# and not the repository's. `hvk mcp` needs no configuration of its own.
+.mcp.json
+
 # The index and anything else derived at runtime: rebuildable, so never versioned (ADR-0002)
 *.sqlite
 *.sqlite3

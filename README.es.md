@@ -165,7 +165,9 @@ nocturna los instala `deploy/install.sh` por ti.
 La unit de systemd del watcher, y todo lo demás para levantar esto en un servidor, está en
 [`deploy/`](deploy/).
 
-Cuando esto llegue a PyPI, instalarlo será `uv tool install hvk` y nada más.
+Cuando esto llegue a PyPI, instalarlo será `uv tool install headless-vault-kit` y nada
+más. El comando sigue siendo `hvk`: cómo se llama un paquete y qué deja en tu `PATH` son
+dos nombres distintos, y el largo es el descriptivo.
 
 ## La guía completa
 

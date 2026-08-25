@@ -70,3 +70,71 @@ def test_every_documented_query_parses(guide, command):
     if not arguments.query:
         return                                    # --note, whose queries live in the note
     dql.parse(arguments.query)
+
+
+# -- the MCP tool reference -------------------------------------------------------------------
+#
+# The guides document every MCP tool and every argument in a table. A client is handed those
+# names by `tools/list` and never reads the guide, so nothing in the running system notices when
+# the two disagree -- which makes this the exact shape of documentation that rots silently.
+
+TOOL_ROW_RE = re.compile(r"^\| `(\w+)` \| (.*?) \| ", re.MULTILINE)
+# Every argument in those tables is written `name` — description, and the dash is what tells an
+# argument from an example: `home` matches `home/diy` names no argument, and neither does
+# ```dataview```. Requiring it means this needs no list of words to forgive, which is the kind of
+# list that quietly grows until it is hiding a real mistake.
+ARGUMENT_RE = re.compile(r"`(\w+)`(?:\*\*)? — ")
+
+
+def documented_tools(guide: Path) -> dict:
+    """`{tool: {arguments}}` as one guide's tables describe them."""
+    text = guide.read_text(encoding="utf-8")
+    found = {}
+    for name, arguments in TOOL_ROW_RE.findall(text):
+        # The argument cell also names types and examples in backticks -- 'YYYY-MM-DD', 'this',
+        # 'home/diy'. Only what the schema actually calls an argument counts, and anything the
+        # schema does not know is caught by the comparison below.
+        found[name] = set(ARGUMENT_RE.findall(arguments))
+    return found
+
+
+def published_tools() -> dict:
+    from hvk.mcp import tools
+
+    return {tool.name: set(tool.schema["properties"]) for tool in tools.ALL}
+
+
+@pytest.mark.parametrize("guide", GUIDES, ids=lambda g: g.name)
+def test_every_mcp_tool_is_documented(guide):
+    assert set(documented_tools(guide)) == set(published_tools()), (
+        f"{guide.name} and hvk.mcp.tools disagree about which tools exist"
+    )
+
+
+@pytest.mark.parametrize("guide", GUIDES, ids=lambda g: g.name)
+def test_every_argument_of_every_tool_is_documented(guide):
+    documented, published = documented_tools(guide), published_tools()
+    for name, arguments in published.items():
+        # A subset check on the guide's side would let a documented argument that no longer
+        # exists survive, which is the more misleading of the two failures.
+        assert documented[name] >= arguments, (
+            f"{guide.name} does not document {sorted(arguments - documented[name])} "
+            f"for the {name} tool"
+        )
+        invented = documented[name] - arguments
+        assert not invented,             f"{guide.name} documents {sorted(invented)} on {name}, which is not an argument"
+
+
+@pytest.mark.parametrize("guide", GUIDES, ids=lambda g: g.name)
+def test_the_required_arguments_are_marked(guide):
+    """A client is not obliged to honour the published schema, so a reader of the guide has to
+    be able to see which arguments a tool refuses to run without."""
+    from hvk.mcp import tools
+
+    text = guide.read_text(encoding="utf-8")
+    for tool in tools.ALL:
+        for argument in tool.schema["required"]:
+            assert "**" + chr(92) + f"*`{argument}`**" in text, (
+                f"{guide.name} does not mark {argument} as required anywhere "
+                f"(needed by {tool.name})"
+            )

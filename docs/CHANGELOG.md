@@ -42,6 +42,31 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-25 — Every MCP tool documented, in both languages, with a test that says so
+
+- **The guides named the sixteen MCP tools and documented none of their arguments.** Those live
+  in the schemas and reach a client through `tools/list`, so the model could see them and a
+  person reading the guide could not. Both guides now carry the full reference: every tool,
+  every argument, which are required, and what comes back.
+- **Kept honest by `tests/test_guides.py`**, which now compares the documented tools and
+  arguments against what `hvk.mcp.tools` actually publishes, in each language. This is the exact
+  shape of documentation that rots without anyone noticing — nothing in the running system reads
+  the guide, so nothing else would ever disagree out loud.
+- **The test found a real ambiguity in the tables' own format** rather than in the content: an
+  argument and an example both being a word in backticks. Fixed by writing every argument as
+  `` `name` `` followed by a dash and a description, which reads better *and* needs no list of
+  words to forgive — the kind of list that grows until it is hiding a mistake. It also turned up
+  three arguments the tables named and never described.
+- **A section on what a refusal looks like**, since it is the part a client author gets wrong:
+  a tool that cannot answer returns a normal result flagged as an error and carrying a sentence,
+  never a JSON-RPC error, because most clients show one of those as a crashed server.
+- **`uv tool install hvk` was wrong in both READMEs.** The distribution is `headless-vault-kit`
+  and the command it installs is `hvk`; those are two different names and the sentence conflated
+  them. The long descriptive name stays, and the README now says why the short command is
+  unaffected.
+- `.mcp.json` is ignored: an MCP client's server list names a vault by absolute path, which is a
+  machine's business and not the repository's.
+
 ## 2026-08-25 — The half of the parser interface that was missing
 
 - **ADR-0017 claimed an adapter could live outside this repository. It could not, from the

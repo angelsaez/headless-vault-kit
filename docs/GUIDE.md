@@ -640,6 +640,58 @@ Point a client at it the way that client expects. The shape is nearly always thi
 Add `"--write"` to `args` when you mean it, and `"--protect", "Private"` for each folder no
 client may touch.
 
+### The tools, in full
+
+Arguments marked **\*** are required. Every tool answers with JSON; the shapes are the same ones
+`--json` produces on the command line, so anything in the sections above describes these too.
+
+**Query — always offered**
+
+| Tool | Arguments | What comes back |
+|---|---|---|
+| `info` | — | Counts of files, notes, links, tags and tasks, when the index was last scanned, and how many links are broken or ambiguous. Ask this first if it matters whether the answers are current |
+| `search` | **\*`query`** — text, accepting `tag:name` and `path:fragment` inline<br>`limit` — most matches to return (default 20) | `matches`: a path, title and snippet each |
+| `backlinks` | **\*`target`** — a note's path, or just its name | `target`, the path it resolved to, and `backlinks`: the file, line and exact text of every link pointing there, canvases included |
+| `links` | `source` — only links written in this note<br>`broken` — only ones resolving to nothing<br>`ambiguous` — only ones where several files matched | `links`: source, line, what was written, and what it resolved to |
+| `tags` | `count` — include how many files carry each<br>`prefix` — this tag and its nested children, so `home` matches `home/diy` | `tags`, every distinct one, from frontmatter and from the body |
+| `tasks` | `pending` — only unfinished<br>`done` — only finished<br>`due_before` — `YYYY-MM-DD`; undated tasks never match<br>`path` — paths containing this text | `tasks`: path, line, status, due date and the plugin fields on the line. Kanban cards included, carrying their list |
+| `props` | `where` — a list of `status=open`, `status!=done`, or a bare key meaning it exists; combined with AND<br>`key` — which property to show | `files` matching. With no arguments, the catalogue of every property key and how widely it is used |
+| `orphans` | `attachments` — include unreferenced attachments too | `orphans`: what nothing links to. The list to read before deleting anything |
+| `base` | **\*`file`** — the `.base`, by path inside the vault<br>`view` — which view (default: the first)<br>`this` — the note it is embedded in, for expressions using `this` | The view's `columns`, `headers`, `rows` and `total`, plus any `warnings` |
+| `canvas` | **\*`file`** — the `.canvas`, by path inside the vault | `nodes` (the boxes) and `edges` (the arrows, with both ends named) |
+| `dql` | `query` — a Dataview query<br>`note` — instead: run every ```` ```dataview ```` block in this note | `results`, one per query, each shaped like a `base` answer |
+| `note_read` | **\*`path`** — the note, inside the vault | `text`, `exists`, and `digest` — the value to hand back to `note_write` |
+
+**Writing — only when the server was started with `--write`**
+
+| Tool | Arguments | What it does |
+|---|---|---|
+| `note_write` | **\*`path`** — the note, inside the vault<br>**\*`text`** — the note's whole new contents<br>`if_unchanged` — `absent` to refuse if it already exists, or a digest from `note_read` to refuse if it has changed since | Creates or replaces a note. Atomic, keeps the file's line endings and permissions, and does nothing at all when the content is identical. Answers `created` and `changed` |
+| `note_set_property` | **\*`path`** — the note, inside the vault<br>**\*`key`** — the frontmatter key to set<br>**\*`value`** — its new value | Sets one property and leaves every other byte alone. The YAML is never reparsed, so key order, comments and quoting survive |
+| `views_apply` | `path` — one note or folder (default: the whole vault) | Regenerates the base tables materialised in notes and writes them. Answers `views`, `changed` and `errors` |
+| `jobs_run` | `dry_run` — report without claiming or executing anything | Runs the order-notes waiting in the server's jobs directory, each under the profile its own frontmatter names |
+
+The jobs and profiles directories are **the server's configuration and cannot be chosen by a
+client**. A permission profile picked by the thing being permitted is not a permission at all,
+which is the whole of section 9's bargain; so `jobs_run` takes no directory, and without
+`HVK_JOBS_DIR` and `HVK_JOBS_PROFILES` it refuses exactly as the command line does.
+
+### When a tool cannot answer
+
+It comes back as a normal result flagged as an error, carrying a sentence — not a protocol
+error, which most clients show as a crashed server. "There is no note called that" is an answer
+to a question. So a client sees the same wording you would get on the command line:
+
+- `no file in the index matches 'Nope'`
+- `GROUP is Dataview syntax this does not implement`
+- `_PRIVATE is a protected folder in this vault, and this tool call names it`
+- `Two.md has changed since it was read (if_unchanged does not match). Nothing was written.`
+- `no index at ...; run 'hvk scan' first` — the index is opened on first use, not at startup, so
+  a server on a vault nobody has scanned starts and then says so, instead of looking dead.
+
+A message beginning `hvk failed on ...` is different in kind: that is a bug here, not a question
+the vault cannot answer, and it names the exception so it can be reported.
+
 ### What holds it, given that it can write
 
 Five things, and none of them is new — this is the machinery of phases 4 to 6, pointed at a

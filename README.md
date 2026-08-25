@@ -161,7 +161,9 @@ the order-note runner and a nightly backup are installed for you by `deploy/inst
 A systemd unit for the watcher, and everything else needed to run this on a server, is in
 [`deploy/`](deploy/).
 
-Once this is on PyPI, installing it will be `uv tool install hvk` and nothing else.
+Once this is on PyPI, installing it will be `uv tool install headless-vault-kit` and
+nothing else. The command stays `hvk`: what a package is called and what it puts on your
+`PATH` are two different names, and the long one is the descriptive one.
 
 ## The complete guide
 
