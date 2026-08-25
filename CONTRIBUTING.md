@@ -42,10 +42,18 @@ The slow ones are excluded by default because they build a ten-thousand-note vau
 the numbers in [`docs/ROADMAP.md`](docs/ROADMAP.md). Run them when you have touched the indexer
 or a parser.
 
-Every push and pull request runs the suite on Python 3.11 and 3.13, installs the built package
-both with pip and with `uv tool install`, checks it answers against a vault it has never seen,
-and parses every shell script — [the workflow](.github/workflows/ci.yml). Linux only, because
-Linux is where this is meant to run.
+Every push and pull request runs six checks — [the workflow](.github/workflows/ci.yml) — and all
+six have to pass before anything can be merged:
+
+| Check | What it would catch |
+|---|---|
+| `the workflows themselves parse` | a workflow file that would make CI run *no jobs at all* |
+| `pytest on Python 3.11` / `3.13` | the suite, on the floor version and a current one |
+| `installs as a package` | a missing package or a broken entry point, which an editable install hides |
+| `installs the way the README says to` | the `uv tool install` route the documentation actually recommends |
+| `shell scripts parse` | `bash -n`, and the executable bit a Windows checkout drops |
+
+Linux only, because Linux is where this is meant to run.
 
 **The deployment is not exercised in CI.** It needs a systemd user instance and a machine to
 throw away, so it lives in [`tools/testbed/`](tools/testbed/) — a disposable Debian container.
@@ -87,9 +95,12 @@ log worth keeping.
   `docs/GUIDE.md` and `docs/GUIDE.es.md`.
 - **Commits** are conventional, small, and one change each: `feat:`, `fix:`, `docs:`, `adr:`.
 - **Branches** are `type/subject-in-english` — `feat/parser-interface`, `fix/broken-links`.
-- **Pull requests** against `main`. Add the entry in [`docs/CHANGELOG.md`](docs/CHANGELOG.md)
-  in the same PR: it is the repository's journal, newest first, and it says what changed and
-  *why*.
+- **Pull requests** against `main`, which is protected: nothing reaches it except through one,
+  and not until the checks pass. Add the entry in [`docs/CHANGELOG.md`](docs/CHANGELOG.md) in
+  the same PR: it is the repository's journal, newest first, and it says what changed and *why*.
+- **The first time you open a PR, its checks wait for a maintainer to start them.** That is
+  GitHub's approval gate for contributors from a fork, not a comment on your patch — a pull
+  request runs your code on a runner, so somebody looks before it does.
 - **Comments explain why, not what.** The code says what it does. If a line exists because of a
   failure, name the failure.
 
