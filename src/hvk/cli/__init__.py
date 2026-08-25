@@ -12,7 +12,7 @@ import sys
 import time
 from pathlib import Path
 
-from hvk import __version__, db, dql, jobs, output, paths, query, views, write
+from hvk import __version__, db, dql, jobs, output, parse, paths, query, views, write
 from hvk import scan as scanner
 from hvk.bases import base_file as _base_file
 from hvk.bases import values as bases_values
@@ -193,6 +193,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _run(args: argparse.Namespace) -> int:
+    # Before anything reads the vault: import the parser adapters this installation declares,
+    # so they are registered by the time a file needs one (ADR-0019). Unset costs nothing,
+    # which matters because this runs in front of the guard hook too, on every tool call.
+    parse.load_declared()
     location = paths.resolve(args.vault, args.index)
 
     if args.command in ("scan", "rebuild", "verify"):
@@ -650,7 +654,7 @@ def main(argv: list[str] | None = None) -> int:
         return code
     except (paths.VaultError, db.IndexError_, query.QueryError,
             _base_file.BaseError, ExpressionError, write.WriteError,
-            jobs.JobError, views.ViewError, dql.DqlError) as exc:
+            jobs.JobError, views.ViewError, dql.DqlError, parse.ParserError) as exc:
         print(f"hvk: {exc}", file=sys.stderr)
         return 2
     except BrokenPipeError:

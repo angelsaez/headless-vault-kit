@@ -17,6 +17,7 @@ Two rules shape what is in here:
 from __future__ import annotations
 
 import datetime as dt
+import os
 import sqlite3
 from dataclasses import dataclass
 
@@ -144,6 +145,28 @@ def _as_datetime(value) -> dt.datetime | None:
     return None
 
 
+def _parsers() -> Check:
+    """Which formats this installation can read, and whether every declared adapter loaded.
+
+    Here because of how an adapter fails: `HVK_PARSERS` is read per process, so a variable set
+    in the watcher's unit and not in your shell means the two disagree about what a file even
+    is -- and the symptom is a format that indexes as an attachment, silently. This is the one
+    place that can say so out loud.
+    """
+    from hvk.parse import ENV_VAR, REGISTRY, load_declared
+
+    declared = os.environ.get(ENV_VAR, "").strip()
+    try:
+        loaded = load_declared()
+    except Exception as exc:                     # noqa: BLE001 - reported, not raised
+        return Check("parsers are loaded", FAIL, str(exc))
+
+    names = ", ".join(sorted(parser.name for parser in REGISTRY.parsers))
+    if not declared:
+        return Check("parsers are loaded", OK, f"{names} (none declared in {ENV_VAR})")
+    return Check("parsers are loaded", OK, f"{names} (+{len(loaded)} from {ENV_VAR})")
+
+
 def _broken_links(conn: sqlite3.Connection) -> Check:
     counts = query.info(conn)
     broken = counts["broken_links"]
@@ -172,6 +195,7 @@ def run(location: paths.Locations, *, jobs_dir: str | None = None,
             return Report([Check("index is readable", FAIL, str(exc))])
 
         checks.append(_index_matches_disk(conn, location))
+        checks.append(_parsers())
         checks.append(_parse_errors(conn))
         checks.append(_broken_links(conn))
     finally:

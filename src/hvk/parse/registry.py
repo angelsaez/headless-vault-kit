@@ -11,20 +11,32 @@ file, marked by a line in its own frontmatter. An interface that could only disp
 extension would have had nothing to say about it, and the plan named it as the example adapter
 before this was written.
 
-**Registration is explicit.** Nothing is discovered from installed packages. `hvk scan` walks a
-vault and reads its files; making it also load and execute whatever third-party code happens to
-declare an entry point is a decision about trust, not about parsing, and this project does not
-make that one quietly. :func:`register` is public, so an adapter living outside this repository
-registers itself by being imported -- one line, in the open, in something that already chose to
-run it.
+**Registration is explicit, and nothing is discovered.** `hvk scan` walks a vault and reads its
+files; making it also sweep the installed packages and execute whatever declares an entry point
+is a decision about trust, not about parsing, and this project does not make that one quietly.
+
+What an adapter outside this repository gets instead is :data:`ENV_VAR` -- ``HVK_PARSERS``, a
+list of modules to import, named by the person running hvk (ADR-0019). Nothing is searched for
+and nothing loads that was not named. It has no default, like every other dangerous setting
+here: unset means no adapter is loaded, never that one is guessed at.
 """
 
 from __future__ import annotations
 
+import importlib
+import os
 from dataclasses import dataclass, field
 from typing import Callable
 
 from hvk.parse.model import Parsed
+
+#: Modules to import before scanning, comma- or space-separated, so that the parsers they
+#: declare register themselves. Read once per process by :func:`load_declared`.
+ENV_VAR = "HVK_PARSERS"
+
+
+class ParserError(Exception):
+    """A module named in ``HVK_PARSERS`` could not be loaded."""
 
 
 @dataclass(frozen=True)
@@ -114,3 +126,35 @@ REGISTRY = Registry()
 def register(parser: Parser) -> Parser:
     """Register *parser* for the rest of this process. The public way in."""
     return REGISTRY.register(parser)
+
+
+def load_declared(spec: str | None = None) -> list:
+    """Import every module named in ``HVK_PARSERS``, so its parsers register themselves.
+
+    Returns the names imported, in order. Unset or empty does nothing at all -- not a search
+    that finds nothing, but no work: this is called once per command, including in front of the
+    guard hook, and the common case has to be free.
+
+    **A module that cannot be imported is an error, and a loud one.** The alternative was
+    considered and is worse: an adapter named with a typo would then load nothing, the vault
+    would index without it, and every file of that format would be quietly missing what the
+    adapter contributes. Nobody checks an index for the absence of something. Somebody who
+    named a module meant it, so failing to load it stops the command.
+    """
+    if spec is None:
+        spec = os.environ.get(ENV_VAR, "")
+    names = [name.strip() for name in spec.replace(",", " ").split() if name.strip()]
+
+    loaded = []
+    for name in names:
+        try:
+            importlib.import_module(name)
+        except Exception as exc:                # noqa: BLE001 - any import failure, reported
+            raise ParserError(
+                f"{ENV_VAR} names {name!r}, which could not be imported: "
+                f"{type(exc).__name__}: {exc}. Nothing was indexed. Either install the package "
+                f"that provides it, or take it out of {ENV_VAR} -- a parser that was asked for "
+                f"and did not load would leave every file of its format quietly incomplete."
+            ) from exc
+        loaded.append(name)
+    return loaded

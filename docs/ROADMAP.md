@@ -82,9 +82,12 @@ Run them yourself with `pytest -m slow`.
 - **A parser interface**, extracted from the two parsers that already existed rather than
   designed for an imagined third, with **Obsidian Kanban** as the worked adapter: a board's
   cards now carry the list they sit in and the date Kanban writes in its own syntax, so
-  `hvk tasks --due-before` answers a format it was blind to. Contract, registration point and
-  how to write one: [CONTRIBUTING.md](../CONTRIBUTING.md#writing-a-parser-adapter) and
-  [ADR-0017](adr/0017-a-parser-interface-extracted-from-two.md).
+  `hvk tasks --due-before` answers a format it was blind to. An adapter in somebody else's
+  package is loaded by naming its module in `HVK_PARSERS`, and `hvk doctor` reports which
+  parsers are registered. Contract, registration point and how to write one:
+  [CONTRIBUTING.md](../CONTRIBUTING.md#writing-a-parser-adapter),
+  [ADR-0017](adr/0017-a-parser-interface-extracted-from-two.md) and
+  [ADR-0019](adr/0019-naming-the-adapters-to-load.md).
 - **CONTRIBUTING.md**, and the licensing question settled before it could matter: contributions
   are MIT, inbound as outbound, and there is no CLA. That has to be decided before the first
   external pull request, not after.
@@ -108,10 +111,11 @@ remains permanently out of scope** — its blocks are not even read.
   periodic notes created *without* the app in front of them.
 - **Materialising a `dataview` block into a note.** `hvk views` does it for Bases; `hvk dql
   --note` reads the blocks and prints the answers. Nothing has asked for the writing half.
-- **Discovering parser adapters from installed packages.** The interface supports an adapter
-  living in somebody else's package; what it will not do is sweep the machine for entry points
-  and run what it finds. Making `hvk scan` execute whatever is installed is a decision about
-  trust, and it comes back the day publishing forces the question.
+- **Discovering parser adapters from installed packages**, via entry points. An adapter in
+  somebody else's package is loaded by naming its module in `HVK_PARSERS`
+  ([ADR-0019](adr/0019-naming-the-adapters-to-load.md)); what hvk will not do is sweep the
+  machine and run whatever declares itself. Making `hvk scan` execute code nobody named is a
+  decision about trust, and it comes back the day publishing forces the question.
 - **Publishing to PyPI.** Deliberately not done. The phase's own entry condition was weeks of
   stability and it has had days, so what is ready is the packaging, not the release.
 

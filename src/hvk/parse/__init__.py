@@ -14,9 +14,13 @@ about how a file gets read follows from it:
     register(Parser(name="mine", extensions=("mine",), kind="note", parse=my_parse))
 
 An adapter that lives in this repository is added to ``BUILT_IN``. One that lives in your own
-package calls :func:`~hvk.parse.registry.register` when it is imported, and nothing here has to
-know it exists. Nothing is discovered automatically: see :mod:`hvk.parse.registry` for why a
-vault scan does not go looking for code to run.
+package calls :func:`~hvk.parse.registry.register` when it is imported, and is named in the
+``HVK_PARSERS`` environment variable so that something imports it::
+
+    HVK_PARSERS=hvk_excalidraw hvk scan
+
+Nothing is discovered automatically: see :mod:`hvk.parse.registry` for why a vault scan does not
+go looking for code to run, and ADR-0019 for why naming the modules is the middle ground.
 
 The contract itself -- what a parser is handed and what it gives back -- is
 :mod:`hvk.parse.model`.
@@ -25,7 +29,9 @@ The contract itself -- what a parser is handed and what it gives back -- is
 from hvk.parse import canvas, kanban, markdown
 from hvk.parse.model import Block, Heading, Parsed, Prop, RawLink, Tag, Task
 from hvk.parse.markdown import ParsedNote, parse_note
-from hvk.parse.registry import REGISTRY, Parser, Registry, register
+from hvk.parse.registry import (
+    ENV_VAR, REGISTRY, Parser, ParserError, Registry, load_declared, register,
+)
 
 # `.base` has no parser on purpose: the index records that a base exists so that `hvk views`
 # can find one by name, and the file is read whole, on demand, by the Bases machinery. Shredding
@@ -40,7 +46,7 @@ for _parser in BUILT_IN:
     register(_parser)
 
 __all__ = [
-    "BASE", "BUILT_IN", "Block", "Heading", "Parsed", "ParsedNote", "Parser", "Prop",
-    "REGISTRY", "RawLink", "Registry", "Tag", "Task", "canvas", "kanban", "markdown",
-    "parse_note", "register",
+    "BASE", "BUILT_IN", "Block", "ENV_VAR", "Heading", "Parsed", "ParsedNote", "Parser",
+    "ParserError", "Prop", "REGISTRY", "RawLink", "Registry", "Tag", "Task", "canvas",
+    "kanban", "load_declared", "markdown", "parse_note", "register",
 ]

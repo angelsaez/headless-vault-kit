@@ -698,6 +698,26 @@ handed and what it hands back is in
 [CONTRIBUTING.md](../CONTRIBUTING.md#writing-a-parser-adapter); the reasoning is
 [ADR-0017](adr/0017-a-parser-interface-extracted-from-two.md).
 
+### Loading an adapter somebody else wrote
+
+Install it, then name its module in `HVK_PARSERS` — a comma- or space-separated list of modules
+hvk imports before it reads anything:
+
+```sh
+hvk doctor
+```
+
+That last command is how you check: it lists the parsers actually registered in this process.
+The variable is read per process, so set it **where the service is defined** rather than in one
+shell — a watcher that knows about your adapter and a nightly `hvk verify` that does not will
+quietly build different indexes from the same files.
+
+Nothing is loaded that you did not name. hvk does not go looking through your installed packages
+for code to run, and a module you named that cannot be imported stops the command instead of
+being skipped — an adapter that silently failed to load would leave every file of its format
+indexed as a plain attachment, with no error anywhere to tell you
+([ADR-0019](adr/0019-naming-the-adapters-to-load.md)).
+
 What will never be taught this way is a plugin whose state lives in its own code. Reading a file
 format is the whole method here, and running someone's plugin is not on the other side of a
 smaller decision — it is on the other side of the line.
