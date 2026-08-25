@@ -42,6 +42,31 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-25 — The half of the parser interface that was missing
+
+- **ADR-0017 claimed an adapter could live outside this repository. It could not, from the
+  command line.** An adapter in somebody else's package registers itself when imported, and
+  nothing in `hvk scan` — or in any other command — ever imported it. The only route was to stop
+  using `hvk` and drive the package from Python of your own, which for a tool whose whole surface
+  is a CLI is not an extension point. It was a gap with documentation in front of it.
+- **The failure it produced was the quiet kind.** A file nothing claims is not an error; it is
+  indexed as an attachment, exactly as a PNG is. So "my adapter never loaded" looked like a vault
+  that indexed cleanly and reported nothing wrong, while missing everything the adapter would
+  have contributed.
+- **`HVK_PARSERS` names the modules to import** (ADR-0019), read once per command before
+  anything reads the vault. Nothing is searched for and nothing loads that a person did not name
+  — which is the whole difference from entry points, refused again here on trust rather than on
+  cost. No default, like `HVK_JOBS_DIR` and `HVK_PROTECTED`; unset costs one `os.environ.get` and
+  no imports, which matters because this runs in front of the guard hook on every tool call.
+- **A module that will not import stops the command**, naming both the module and the variable.
+  The quiet alternative is worse: an adapter misspelled by one letter loads nothing, and every
+  file of its format is silently incomplete. Nobody checks an index for the absence of something.
+- **`hvk doctor` now reports which parsers are registered**, and fails on a declaration that will
+  not load. That check exists because of how the variable is scoped: it is read per process, so
+  one set in the watcher's unit and not in your shell means the two disagree about what a file
+  even is — and without somewhere to ask, that difference is invisible. It is also the sharpest
+  edge left here, and ADR-0019 says what the fix would be if it ever bites.
+
 ## 2026-08-25 — Phase 7, entered two days early on purpose
 
 - **The entry condition was weeks of stability, and it has had days.** Ángel decided to build

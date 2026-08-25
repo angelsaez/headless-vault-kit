@@ -156,3 +156,155 @@ def test_the_registration_point_is_a_list_anyone_can_read():
     """`BUILT_IN` is the documented place a parser in this repository is added, and adding one
     is meant to be one line. If this ever grows a mechanism, the docs have to grow with it."""
     assert [p.name for p in BUILT_IN] == ["markdown", "canvas", "base", "kanban"]
+
+
+# -- adapters from outside this repository (ADR-0019) -------------------------------------------
+
+# A pretend third-party adapter, in nobody's repository but its author's. Written to a temporary
+# directory rather than kept as a file here, because the point being tested is that hvk can use
+# a parser it has never seen and does not ship.
+ADAPTER = """
+from hvk.parse.model import Parsed, Tag
+from hvk.parse.registry import Parser, register
+
+
+def parse_file(text, path):
+    return Parsed(title="from outside", body=text,
+                  tags=[Tag(tag="sketching", source="sketch", line=1)])
+
+
+register(Parser(name="sketch", extensions=("sk",), kind="sketch", parse=parse_file))
+"""
+
+
+@pytest.fixture
+def adapter(tmp_path, monkeypatch):
+    """Write an adapter module somewhere importable, and undo its registration afterwards.
+
+    The registry is process-wide, so a test that registers a parser and walks away changes what
+    every later test sees. Restoring the list is what keeps these independent.
+    """
+    import sys
+
+    package = tmp_path / "pkg"
+    package.mkdir()
+    (package / "hvk_sketch.py").write_text(ADAPTER, encoding="utf-8")
+    monkeypatch.syspath_prepend(str(package))
+    monkeypatch.setattr(registry.REGISTRY, "parsers", list(registry.REGISTRY.parsers))
+    yield "hvk_sketch"
+    sys.modules.pop("hvk_sketch", None)
+
+
+def test_nothing_is_loaded_when_nothing_is_declared(monkeypatch):
+    """No default, like every other dangerous setting here. Unset means no adapter loads, and it
+    must cost nothing: this runs once per command, in front of the guard hook included."""
+    monkeypatch.delenv(registry.ENV_VAR, raising=False)
+    assert registry.load_declared() == []
+
+
+def test_a_declared_module_is_imported_and_registers_itself(adapter, monkeypatch):
+    monkeypatch.setenv(registry.ENV_VAR, adapter)
+    assert registry.load_declared() == [adapter]
+    assert registry.REGISTRY.select("sk", "", "Board.sk").name == "sketch"
+
+
+@pytest.mark.parametrize("spec", ["hvk_sketch", " hvk_sketch ", "hvk_sketch,", "hvk_sketch  ,"])
+def test_the_list_is_read_forgivingly(adapter, spec):
+    assert registry.load_declared(spec) == ["hvk_sketch"]
+
+
+def test_a_module_that_cannot_be_imported_stops_the_command(monkeypatch):
+    """Loudly, on purpose. The quiet alternative is worse: an adapter named with a typo loads
+    nothing, the vault indexes without it, and every file of that format is silently missing
+    what the adapter contributes. Nobody checks an index for the absence of something."""
+    monkeypatch.setenv(registry.ENV_VAR, "no_such_module_anywhere")
+    with pytest.raises(registry.ParserError, match="could not be imported"):
+        registry.load_declared()
+
+
+def test_the_failure_names_the_module_and_the_variable(monkeypatch):
+    monkeypatch.setenv(registry.ENV_VAR, "no_such_module_anywhere")
+    with pytest.raises(registry.ParserError) as failure:
+        registry.load_declared()
+    assert "no_such_module_anywhere" in str(failure.value)
+    assert registry.ENV_VAR in str(failure.value)
+
+
+def test_a_declared_adapter_reaches_a_real_scan_from_the_command_line(
+    adapter, tmp_path, monkeypatch, capsys
+):
+    """The whole point of ADR-0019, and the gap it closes: before this, an adapter living in
+    somebody else's package could be reached from Python and never from `hvk`."""
+    from hvk import cli, db
+
+    vault = tmp_path / "vault"
+    (vault / ".obsidian").mkdir(parents=True)
+    (vault / ".obsidian" / "app.json").write_text("{}", encoding="utf-8")
+    (vault / "Board.sk").write_text("a sketch", encoding="utf-8")
+
+    monkeypatch.setenv(registry.ENV_VAR, adapter)
+    assert cli.main(["--vault", str(vault), "--index", str(tmp_path / "idx"), "scan"]) == 0
+    capsys.readouterr()
+
+    conn = db.connect(tmp_path / "idx" / "index.sqlite")
+    try:
+        assert conn.execute(
+            "SELECT kind FROM files WHERE path = 'Board.sk'"
+        ).fetchone()["kind"] == "sketch"
+        assert [r["tag"] for r in conn.execute("SELECT tag FROM tags")] == ["sketching"]
+    finally:
+        conn.close()
+
+
+def test_the_same_file_is_an_attachment_when_no_adapter_is_declared(tmp_path, monkeypatch, capsys):
+    """The other half of the previous test, and the failure it is protecting against: a format
+    nothing claims indexes silently, as a name and a hash."""
+    from hvk import cli, db
+
+    monkeypatch.delenv(registry.ENV_VAR, raising=False)
+    vault = tmp_path / "vault"
+    (vault / ".obsidian").mkdir(parents=True)
+    (vault / ".obsidian" / "app.json").write_text("{}", encoding="utf-8")
+    (vault / "Board.sk").write_text("a sketch", encoding="utf-8")
+
+    cli.main(["--vault", str(vault), "--index", str(tmp_path / "idx"), "scan"])
+    capsys.readouterr()
+    conn = db.connect(tmp_path / "idx" / "index.sqlite")
+    try:
+        assert conn.execute(
+            "SELECT kind FROM files WHERE path = 'Board.sk'"
+        ).fetchone()["kind"] == "attachment"
+    finally:
+        conn.close()
+
+
+def test_a_bad_declaration_is_one_line_on_stderr_and_not_a_traceback(tmp_path, monkeypatch, capsys):
+    from hvk import cli
+
+    vault = tmp_path / "vault"
+    (vault / ".obsidian").mkdir(parents=True)
+    monkeypatch.setenv(registry.ENV_VAR, "no_such_module_anywhere")
+    code = cli.main(["--vault", str(vault), "--index", str(tmp_path / "idx"), "scan"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert captured.err.startswith("hvk: ")
+    assert "Traceback" not in captured.err
+
+
+def test_doctor_says_which_parsers_are_loaded(adapter, tmp_path, monkeypatch):
+    """`HVK_PARSERS` is read per process, so a variable set in the watcher's unit and not in
+    your shell means the two disagree about what a file even is. This is the one place that can
+    say so out loud."""
+    from hvk import doctor
+
+    monkeypatch.setenv(registry.ENV_VAR, adapter)
+    check = doctor._parsers()
+    assert check.status == doctor.OK
+    assert "sketch" in check.detail and registry.ENV_VAR in check.detail
+
+
+def test_doctor_fails_rather_than_hides_a_declaration_that_will_not_load(monkeypatch):
+    from hvk import doctor
+
+    monkeypatch.setenv(registry.ENV_VAR, "no_such_module_anywhere")
+    assert doctor._parsers().status == doctor.FAIL

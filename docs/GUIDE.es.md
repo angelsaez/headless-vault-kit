@@ -709,6 +709,26 @@ puede enseñar a hvk sin cambiar nada del centro. Qué recibe un adaptador y qu�
 [CONTRIBUTING.md](../CONTRIBUTING.md#writing-a-parser-adapter); el razonamiento, en la
 [ADR-0017](adr/0017-a-parser-interface-extracted-from-two.md).
 
+### Cargar un adaptador que ha escrito otra persona
+
+Instálalo y nombra su módulo en `HVK_PARSERS` — la lista de módulos, separados por comas o
+espacios, que hvk importa antes de leer nada:
+
+```sh
+hvk doctor
+```
+
+Ese último comando es la forma de comprobarlo: lista los parsers realmente registrados en este
+proceso. La variable se lee por proceso, así que ponla **donde se define el servicio** y no en
+una shell suelta — un watcher que conoce tu adaptador y un `hvk verify` nocturno que no lo conoce
+construyen índices distintos a partir de los mismos ficheros, sin decir nada.
+
+No se carga nada que no hayas nombrado. hvk no va a rebuscar código que ejecutar entre tus
+paquetes instalados, y un módulo que nombres y no se pueda importar detiene el comando en vez de
+saltárselo: un adaptador que fallara al cargar en silencio dejaría cada fichero de su formato
+indexado como un adjunto cualquiera, sin ningún error que te lo dijera
+([ADR-0019](adr/0019-naming-the-adapters-to-load.md)).
+
 Lo que nunca se enseñará así es un plugin cuyo estado viva en su propio código. Leer un formato
 de fichero es todo el método aquí, y ejecutar el plugin de alguien no está al otro lado de una
 decisión más pequeña: está al otro lado de la raya.

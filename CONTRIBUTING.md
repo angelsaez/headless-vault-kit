@@ -147,12 +147,30 @@ Five things to know, each of which is a rule rather than a preference:
   derived from files that are already indexed. Their hashes have not changed, so nothing would
   go back for them; the version check is what asks for a rebuild.
 
-An adapter inside this repository is added to `BUILT_IN` in
-[`src/hvk/parse/__init__.py`](src/hvk/parse/__init__.py) — one line. One in your own package
-calls `register()` when it is imported, and nothing here has to know it exists. Nothing is
-discovered automatically: making `hvk scan` load and run whatever code happens to be installed
-is a decision about trust, and [ADR-0017](docs/adr/0017-a-parser-interface-extracted-from-two.md)
-says why it was not made quietly.
+### Getting it loaded
+
+An adapter **inside this repository** is added to `BUILT_IN` in
+[`src/hvk/parse/__init__.py`](src/hvk/parse/__init__.py) — one line.
+
+An adapter **in your own package** is named in `HVK_PARSERS`, which is the list of modules hvk
+imports before it reads anything:
+
+```bash
+pip install hvk-excalidraw
+HVK_PARSERS=hvk_excalidraw hvk scan
+```
+
+Comma- or space-separated for several. On a server, set it once where the service is defined,
+so the watcher and the cron jobs agree; `hvk doctor` reports which parsers are actually
+registered, which is how you check. A module that cannot be imported stops the command rather
+than being skipped — an adapter that silently failed to load would leave every file of its
+format quietly indexed as an attachment.
+
+Nothing is discovered automatically. Making `hvk scan` sweep the installed packages and execute
+whatever declares an entry point is a decision about trust, not about parsing;
+[ADR-0017](docs/adr/0017-a-parser-interface-extracted-from-two.md) says why it was not made
+quietly, and [ADR-0019](docs/adr/0019-naming-the-adapters-to-load.md) is why naming the modules
+is what you get instead.
 
 Bring a test vault with it, under `test-vaults/`, including the file that *looks* like your
 format and is not.
