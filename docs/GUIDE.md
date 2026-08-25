@@ -31,13 +31,15 @@ instead of reading two hundred files, and a vault that stays useful on a machine
 
 ## 2. Install and first run
 
-Python 3.11 or newer. Until it is on PyPI:
+Python 3.11 or newer, and nothing else.
 
 ```sh
-uv tool install --from git+https://github.com/angelsaez/headless-vault-kit headless-vault-kit
+uv tool install headless-vault-kit
 # or, with nothing but Python:
-python3 -m venv ~/.venv-hvk && ~/.venv-hvk/bin/pip install git+https://github.com/angelsaez/headless-vault-kit
+python3 -m venv ~/.venv-hvk && ~/.venv-hvk/bin/pip install headless-vault-kit
 ```
+
+The package is `headless-vault-kit`; the command it installs is `hvk`.
 
 Then, from anywhere inside your vault:
 

@@ -33,13 +33,15 @@ que nadie mira.
 
 ## 2. Instalación y primer arranque
 
-Python 3.11 o superior. Hasta que esté en PyPI:
+Python 3.11 o superior, y nada más.
 
 ```sh
-uv tool install --from git+https://github.com/angelsaez/headless-vault-kit headless-vault-kit
+uv tool install headless-vault-kit
 # o, sin nada más que Python:
-python3 -m venv ~/.venv-hvk && ~/.venv-hvk/bin/pip install git+https://github.com/angelsaez/headless-vault-kit
+python3 -m venv ~/.venv-hvk && ~/.venv-hvk/bin/pip install headless-vault-kit
 ```
+
+El paquete se llama `headless-vault-kit`; el comando que instala es `hvk`.
 
 Y desde cualquier sitio dentro de tu vault:
 

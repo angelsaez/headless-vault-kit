@@ -63,17 +63,25 @@ previa — no empieces por ahí.
 
 ## Instalación
 
-Todavía no está en PyPI, así que las dos vías instalan desde este repositorio. Elige una.
-
 **A. Como comando, con [uv](https://docs.astral.sh/uv/)** — recomendada si solo quieres
 usarlo. `hvk` queda en tu `PATH`, en su propio entorno aislado:
 
 ```bash
-uv tool install --from git+https://github.com/angelsaez/headless-vault-kit headless-vault-kit
+uv tool install headless-vault-kit
 ```
 
 `uv tool upgrade headless-vault-kit` lo actualiza después; `uv tool uninstall headless-vault-kit`
-lo quita del todo.
+lo quita del todo. `pipx install headless-vault-kit` y `pip install headless-vault-kit` también
+funcionan.
+
+El paquete se llama `headless-vault-kit` y el comando es `hvk`: el nombre largo es el
+descriptivo y es el que instalas, el corto es el que escribes.
+
+Para instalar un commit sin publicar, nombra el repositorio:
+
+```bash
+uv tool install --from git+https://github.com/angelsaez/headless-vault-kit headless-vault-kit
+```
 
 **B. Desde un clon** — si quieres leer el código, cambiarlo o pasar los tests:
 
@@ -166,9 +174,8 @@ nocturna los instala `deploy/install.sh` por ti.
 La unit de systemd del watcher, y todo lo demás para levantar esto en un servidor, está en
 [`deploy/`](deploy/).
 
-Cuando esto llegue a PyPI, instalarlo será `uv tool install headless-vault-kit` y nada
-más. El comando sigue siendo `hvk`: cómo se llama un paquete y qué deja en tu `PATH` son
-dos nombres distintos, y el largo es el descriptivo.
+Cada versión llega a PyPI empujando un tag, por un workflow que no lleva ningún token de API
+dentro: [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## La guía completa
 
