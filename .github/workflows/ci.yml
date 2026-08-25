@@ -64,7 +64,11 @@ jobs:
       # until this existed the only route CI proved was pip's. They are not the same: uv builds
       # an isolated environment and puts a launcher on PATH, which is where an entry point or a
       # missing package shows up differently.
-      - uses: astral-sh/setup-uv@v5
+      # Pinned to an exact release, not a floating major. astral-sh stopped publishing `@v8`
+      # and `@v8.0`-style tags from v8.0.0 onwards, deliberately, so that a compromised action
+      # cannot be pushed under a tag somebody already trusts. `@v5` resolves to nothing at all,
+      # which is how this job failed on every push between being written and being fixed.
+      - uses: astral-sh/setup-uv@v10.0.1
       - name: install this checkout as a tool
         run: uv tool install --from . headless-vault-kit
       - name: it is on PATH and answers

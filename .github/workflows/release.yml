@@ -64,7 +64,12 @@ jobs:
           printf '# Two\n' > /tmp/rel-vault/Two.md
           /tmp/fresh/bin/hvk --vault /tmp/rel-vault scan
           /tmp/fresh/bin/hvk --vault /tmp/rel-vault backlinks Two --json | grep -q One.md
-      - uses: actions/upload-artifact@v4
+      # Pinned exactly, not to a floating major. This workflow ends in `id-token: write` and
+      # publishes something other people install, and the action this project trusted yesterday
+      # is not necessarily the code behind that tag tomorrow -- which is the advice
+      # gh-action-pypi-publish gives about its own dependencies. It is also how the floating
+      # `@v4` used here at first turned out not to exist any more.
+      - uses: actions/upload-artifact@v7.0.1
         with:
           name: distribution
           path: dist/
@@ -81,7 +86,8 @@ jobs:
     permissions:
       id-token: write        # the whole of the authentication: no token, no secret
     steps:
-      - uses: actions/download-artifact@v4
+      # v8 here and v7 above is not a mistake: the two actions version independently.
+      - uses: actions/download-artifact@v8.0.1
         with:
           name: distribution
           path: dist/

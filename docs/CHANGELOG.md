@@ -42,6 +42,24 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-25 — Three action tags that did not exist
+
+- **`astral-sh/setup-uv@v5` does not exist**, so the `uv-tool` job added yesterday failed to
+  resolve its action on every push since. Not a flaky job and not a broken command — the
+  commands were checked afterwards on Linux and all pass. The tag was invented from habit.
+- **They stopped publishing floating major tags on purpose.** From v8.0.0 astral-sh no longer
+  ships `@v8` or `@v8.0`, so that a compromised action cannot be pushed under a tag somebody
+  already trusts. Pinned to `@v10.0.1`.
+- **`actions/upload-artifact@v4` has gone the same way**, which would have failed `release.yml`
+  the first time anybody rehearsed it. Both artifact actions are now pinned exactly, and to
+  different majors — v7 and v8 — because the two version independently.
+- **Pinned rather than floated, in `release.yml` especially.** That workflow ends in
+  `id-token: write` and publishes something other people install, and the action a project
+  trusted yesterday is not necessarily the code behind that tag tomorrow. It is the advice
+  `gh-action-pypi-publish` gives about its own dependencies.
+- The lesson worth keeping: an action reference is a dependency with no lockfile and no error
+  until it runs. `actions/checkout@v4` was checked too and is still live.
+
 ## 2026-08-25 — `props --where` was over budget, and the table said otherwise
 
 - **The plan's own criterion was failing and nothing was watching.** `pytest -m slow` measures
