@@ -175,6 +175,11 @@ is what you get instead.
 Bring a test vault with it, under `test-vaults/`, including the file that *looks* like your
 format and is not.
 
+## Releasing
+
+How a version reaches PyPI, why there is no API token in this repository, and how to rehearse a
+release without publishing anything: [`docs/RELEASING.md`](docs/RELEASING.md).
+
 ## What is unlikely to be merged
 
 - **Anything that executes plugin code**, or emulates the app's runtime. Permanently out of

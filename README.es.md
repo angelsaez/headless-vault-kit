@@ -223,6 +223,10 @@ El repositorio y la herramienta se llaman **headless-vault-kit** (descriptivo, s
 solo); el binario del CLI es **`hvk`** (`hvk search`, `hvk backlinks`, `hvk base "..."`) —
 repo largo y claro, comando corto y cómodo.
 
+## Publicar una versión
+
+Cómo llega una versión a PyPI, y por qué no hay ningún token de API en este repositorio: [`docs/RELEASING.md`](docs/RELEASING.md).
+
 ## Hasta dónde llega
 
 Qué está construido, qué queda pospuesto y cuán maduro es: [`docs/ROADMAP.md`](docs/ROADMAP.md).

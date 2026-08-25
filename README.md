@@ -219,6 +219,10 @@ The repository and tool are **headless-vault-kit** (descriptive, self-explanator
 CLI binary is **`hvk`** (`hvk search`, `hvk backlinks`, `hvk base "..."`) — long clear repo
 name, short comfortable command.
 
+## Releasing
+
+How a version reaches PyPI, and why there is no API token in this repository: [`docs/RELEASING.md`](docs/RELEASING.md).
+
 ## How far along this is
 
 What is built, what is postponed and how mature it is: [`docs/ROADMAP.md`](docs/ROADMAP.md).
