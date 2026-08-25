@@ -3,8 +3,14 @@
 # headless-vault-kit
 
 > Devuelve la funcionalidad propia de Obsidian a un vault que vive en un servidor headless,
-> donde la app nunca se abre: índice SQLite, backlinks, consultas de Bases, y
-> automatización agéntica 24/7. El CLI se instala como **`hvk`**.
+> donde la app nunca se abre: índice SQLite, backlinks, consultas de Bases y Dataview, un
+> servidor MCP, y automatización agéntica 24/7. El CLI se instala como **`hvk`**.
+
+> [!NOTE]
+> **Esto es joven.** Corre en un servidor, para una persona, desde el 2026-08-24, y no ha
+> pasado nunca por una segunda instalación. Todo lo de abajo es cierto; cuánto de ello lo ha
+> comprobado alguien que no sea el autor está en [`docs/ROADMAP.md`](docs/ROADMAP.md), que lo
+> dice sin adornos.
 
 ## El problema
 
@@ -25,9 +31,11 @@ reconstruible desde los propios archivos. Este proyecto lo reconstruye en el ser
   actualización incremental al ritmo del sync.
 - **CLI `hvk`**: búsquedas, backlinks, tareas y propiedades en milisegundos, para
   que el agente consulte sin gastar tokens leyendo archivos.
-- **Consultas sin app**: Bases (`.base`) ejecutado contra el índice, más vistas
-  materializadas escritas como Markdown dentro de tus propias notas — visibles desde
-  cualquier dispositivo.
+- **Consultas sin app**: Bases (`.base`) y un subconjunto documentado de Dataview ejecutados
+  contra el índice, más vistas materializadas escritas como Markdown dentro de tus propias
+  notas — visibles desde cualquier dispositivo.
+- **Lienzos**: los `.canvas` se leen, así que una nota puesta en un tablero no queda huérfana, y
+  se les pueden añadir notas y flechas. Solo añadir: nada de lo que colocaste a mano se mueve.
 - **Vault como cola**: notas-orden con estado en frontmatter; un runner las ejecuta con
   Claude Code y el resultado se sincroniza de vuelta a todos tus dispositivos.
 - **Harness**: permisos, hooks y auditoría con los medios nativos de Claude Code + git.
@@ -35,9 +43,10 @@ reconstruible desde los propios archivos. Este proyecto lo reconstruye en el ser
   por defecto, y capaz de escribir solo si la instancia se arrancó con `--write`.
 
 El criterio de alcance es un modelo de tres niveles: el comportamiento natural de la app se
-replica exacto; los formatos oficiales de Obsidian (Bases, Canvas, plantillas) se soportan
-completos; y los plugins de comunidad más usados entran solo si su estado vive en archivos
-parseables — el resto, vía una [interfaz de parsers
+replica exacto; los formatos propios de Obsidian —Bases y Canvas— están soportados, mientras que
+**las plantillas y las notas periódicas se descartaron a propósito** por ser funcionalidad de
+escritorio (el [ROADMAP](docs/ROADMAP.md) dice qué las traería de vuelta); y los formatos de la
+comunidad entran solo si su estado vive en archivos parseables, vía una [interfaz de parsers
 extensible](CONTRIBUTING.md#writing-a-parser-adapter) para que cualquiera aporte el suyo. Los
 tableros de Obsidian Kanban se leen por esa interfaz, como ejemplo trabajado. Nunca se ejecuta
 código de plugins ni se reproduce la interfaz.
@@ -129,9 +138,11 @@ Dos cosas que conviene saber desde el principio:
 - **Ejecutándolo dentro de un vault puedes omitir `--vault`.** hvk sube por el árbol desde el
   directorio actual hasta encontrar una carpeta `.obsidian/`.
 - **`hvk rebuild` siempre es seguro.** El índice se deriva de tus archivos y de nada más, así
-  que borrarlo cuesta tiempo y nada más. Nada de `scan`, `search`, `backlinks`, `links`,
-  `tags`, `tasks`, `props`, `orphans`, `base` o `info` escribe jamás en tu vault; solo lo hacen
-  `views --apply` y `jobs --run`, y ambos lo dicen en su nombre.
+  que borrarlo cuesta tiempo y nada más.
+- **Cuatro cosas escriben en tu vault, y ninguna otra.** `views --apply`, `canvas --apply`,
+  `jobs --run` y `mcp --write` — todas lo dicen en el comando que has escrito. `scan`, `search`,
+  `backlinks`, `links`, `tags`, `tasks`, `props`, `orphans`, `base`, `dql`, `canvas` sin
+  `--apply`, `doctor` e `info` solo leen.
 
 | Comando | Qué responde |
 |---|---|
@@ -174,9 +185,6 @@ nocturna los instala `deploy/install.sh` por ti.
 La unit de systemd del watcher, y todo lo demás para levantar esto en un servidor, está en
 [`deploy/`](deploy/).
 
-Cada versión llega a PyPI empujando un tag, por un workflow que no lleva ningún token de API
-dentro: [`docs/RELEASING.md`](docs/RELEASING.md).
-
 ## La guía completa
 
 Cada comando, para qué sirve cada pieza, los casos de uso y el vocabulario en dos idiomas:
@@ -193,7 +201,8 @@ deploy/       Units de systemd de usuario, cron y el runbook para el servidor
 tools/        Utilidades de desarrollo, no del producto (espejo del vault, testbed)
 skills/       Skills de Claude Code, para que el agente sepa qué comando usar
 docs/adr/     Decisiones de arquitectura: el «por qué» de cada elección de diseño
-docs/         CHANGELOG.md, la bitácora del repositorio
+docs/         La guía, el roadmap, el procedimiento de release y CHANGELOG.md — la bitácora
+.github/      El CI, y el workflow de release que publica sin ningún token de API
 ```
 
 Escrito en Python 3.11+ ([ADR-0001](docs/adr/0001-indexer-language.md)), con `ruamel.yaml` y
@@ -215,10 +224,13 @@ Si vienes a leer el código, los tests son el mapa:
 .venv/bin/pytest -m slow      # rendimiento, sobre un vault generado de 10 000 notas
 ```
 
-Cada push y cada pull request pasan la suite en Python 3.11 y 3.13, instalan el paquete
-construido con pip y con `uv tool install` y comprueban que cada uno responde contra un vault que
-no ha visto nunca, y parsean todos los scripts de shell ([el workflow](.github/workflows/ci.yml)).
-Solo en Linux: Linux es donde esto está pensado para correr.
+`main` está protegida: no llega nada que no venga por un pull request con sus seis checks en
+verde. [CONTRIBUTING.md](CONTRIBUTING.md#running-the-tests) los enumera y dice qué cazaría cada
+uno. Solo en Linux: Linux es donde esto está pensado para correr.
+
+El primer pull request desde un fork espera a que un mantenedor arranque sus checks. Es la
+puerta de GitHub para quien viene de fuera, no un juicio sobre tu parche: un pull request
+ejecuta tu código en un runner, así que alguien mira antes de que corra.
 
 El despliegue no se ejercita en CI: necesita una instancia de systemd de usuario y una máquina
 desechable. Vive en [`tools/testbed/`](tools/testbed/), un contenedor Debian de usar y tirar, y
