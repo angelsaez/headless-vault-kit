@@ -42,6 +42,26 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-25 — The MCP server met a client that was not a test
+
+- **Driven by Claude Code over stdio**, against a 273-note mirror of a real vault. First
+  evidence about the server that did not come from a test of its own, and the roadmap said
+  plainly that it had none.
+- **The opt-in holds at the protocol level.** The client was offered twelve tools, not sixteen:
+  the four that write are absent from `tools/list` rather than refused inside a handler, so a
+  client genuinely cannot call what it was never told about.
+- **A refusal arrived as a refusal.** `TASK queries are not implemented; this reads LIST and
+  TABLE` reached the model as the sentence ADR-0016 spent a page wording, the client showed it
+  as that one call failing, and the session carried on. That was the bet in ADR-0018 — `isError`
+  in the result rather than a JSON-RPC error, which most clients render as a dead server — and
+  it is the first time anything but a test has agreed.
+- **The handshake instructions reached the client**, the line about notes being data included.
+- **What it did not prove is written down beside what it did**: no writing tool has ever been
+  driven by a client, the guard never fired from outside a test because that session declared no
+  protected folders, and one client on one platform is the weakest useful evidence there is.
+- The mirror's index was on schema 3 and was rebuilt to 5, which is the Kanban bump doing exactly
+  what it was for.
+
 ## 2026-08-25 — Every MCP tool documented, in both languages, with a test that says so
 
 - **The guides named the sixteen MCP tools and documented none of their arguments.** Those live

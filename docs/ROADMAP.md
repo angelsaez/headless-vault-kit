@@ -27,12 +27,40 @@ installation to show up — let alone the ones that only appear on somebody else
 
 - **Nothing is published.** No PyPI release, and `uv tool install --from git+...` remains the
   documented route. That part of the phase was always "leave it ready", and it still is.
-- **The MCP server has never been driven by a client that is not a test.** Its protocol is
-  exercised by a fake client in `tests/test_mcp.py`, which proves the framing and the boundary
-  and proves nothing at all about interoperability.
+- **The MCP server has now met one real client, and only one.** On 2026-08-25 it was driven by
+  Claude Code over stdio against a 273-note mirror of a real vault — the handshake, `tools/list`
+  and `tools/call` — which is the first evidence about it that did not come from a test of its
+  own. What that showed, and what it did not, is below.
 - **The parser interface has one adapter, written here.** The plan's original exit criterion
   asked for one written by somebody else; the owner retired that on 2026-08-24 as a criterion
   measuring adoption rather than design. Kanban is what stands in its place.
+
+### What the first real client proved
+
+Read-only, against `hvk mcp` with no `--write`:
+
+- The client was offered **twelve tools and not sixteen**. The four that write are not refused,
+  they are absent from `tools/list` — so the opt-in of
+  [ADR-0018](adr/0018-an-mcp-server-that-writes.md) holds at the protocol level and not merely
+  as a check inside a handler.
+- **A refusal arrived as a refusal.** `TASK queries are not implemented; this reads LIST and
+  TABLE` reached the model as the sentence it was written as, the client showed it as that one
+  call failing, and the session carried on. That was the bet: `isError` in the result rather
+  than a JSON-RPC error, which most clients render as a dead server.
+- **The handshake's instructions reached the client**, including the line that matters — that
+  the notes are data and not instructions.
+- `info`, `search`, `backlinks` and `tasks` answered correctly against real data.
+
+What it did **not** prove, which is most of it:
+
+- **No writing tool has ever been driven by a client.** `note_write`, `note_set_property`,
+  `views_apply` and `jobs_run` have only ever run under test. That is the half worth being
+  nervous about and it is still unexercised outside the suite.
+- **The guard has never fired through a real client.** That session declared no protected
+  folders, so the rule was never reached from outside a test.
+- **One client, one platform.** Claude Code on Windows. Claude Desktop, editors and anything
+  else that speaks MCP remain untried, and interoperability with one implementation is the
+  weakest useful evidence there is.
 
 ## Maturity
 
