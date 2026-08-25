@@ -42,6 +42,27 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-25 — The repository is public, and `main` is no longer protected by memory
+
+- **Public**, checked before rather than after. Every object in the history — 1165 of them,
+  across all branches — was searched for `.plans/`, `CLAUDE.md`, `_PRIVADA` and the real vault's
+  path. None appear: the history had been rewritten with `git-filter-repo` at some point and the
+  plan's own annex, which still said that step "has not been taken", was wrong.
+- **The source was already public anyway.** The sdist published to PyPI carries the whole tree —
+  211 files, `src/`, `tests/`, `docs/adr/`, `deploy/`. What a private repository was still
+  keeping was the history, not the code.
+- **`main` is protected by a ruleset**: no direct pushes, no force pushes, no deletion, and six
+  checks that have to pass. That is what `CLAUDE.md` has asked for since the first day —
+  *nothing is merged without review* — enforced by something other than remembering.
+  Required approvals is 0, because GitHub does not let anyone approve their own pull request and
+  a rule a lone maintainer has to switch off is worse than no rule.
+- **Tags matching `v*` cannot be moved or deleted.** A tag publishes to PyPI, and PyPI does not
+  recycle version numbers, so a tag pointing somewhere other than what was published is a
+  discrepancy nothing can repair afterwards.
+- **A fork's pull request does not run until a maintainer starts it.** A pull request runs the
+  contributor's code on a runner; it gets no secrets and no write token, and now it does not get
+  a runner either until somebody has looked.
+
 ## 2026-08-25 — 0.1.0 on PyPI
 
 - **`headless-vault-kit 0.1.0` is published.** Pushing `v0.1.0` ran the release workflow: the
