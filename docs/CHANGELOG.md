@@ -42,6 +42,30 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-26 — A README that is true
+
+The repository went public yesterday, which makes the README the first thing a stranger reads.
+Read as a stranger would, it had four claims that were no longer true and one paragraph printed
+twice.
+
+- **"Obsidian's official formats (Bases, Canvas, templates) get full support."** Templates were
+  dropped on 2026-08-24, deliberately, as a desktop feature — the annex says so and the README
+  had never been told. It now says they were dropped and points at what would bring them back.
+- **"Only `views --apply` and `jobs --run` write to your vault."** Two more do, as of phase 7:
+  `canvas --apply` and `mcp --write`. That is the sentence somebody trusts before pointing this
+  at notes they care about, so it is now a list of four, with every read-only command named
+  beside it — and checked by running all eleven of them against a vault and confirming it did
+  not change by a byte.
+- **Dataview and canvases were missing from "what it does"** — one built in phase 3, the other
+  in phase 7, neither mentioned where somebody decides whether to install this.
+- **The release paragraph appeared twice** in both languages, once mid-page and once as its own
+  section.
+- **The CI paragraph described a workflow that has since grown to six checks.** It now points at
+  the table in `CONTRIBUTING.md` rather than restating it worse, and says that `main` is
+  protected and that a fork's first pull request waits for a maintainer to start it.
+- **A note at the top says how young this is**: one server, one person, no second installation.
+  That belongs where somebody decides whether to depend on it, not only in the roadmap.
+
 ## 2026-08-25 — The repository is public, and `main` is no longer protected by memory
 
 - **Public**, checked before rather than after. Every object in the history — 1165 of them,

@@ -3,8 +3,14 @@
 # headless-vault-kit
 
 > Puts Obsidian's own functionality back on a vault that lives on a headless server, where the
-> app never opens: a SQLite index, backlinks, Bases queries, and agent-driven
-> automation running 24/7. The CLI installs as **`hvk`**.
+> app never opens: a SQLite index, backlinks, Bases and Dataview queries, an MCP server, and
+> agent-driven automation running 24/7. The CLI installs as **`hvk`**.
+
+> [!NOTE]
+> **This is young.** It has run on one server, for one person, since 2026-08-24, and has never
+> been through a second installation. Everything below is true; how much of it has been proven
+> by anyone other than the author is in [`docs/ROADMAP.md`](docs/ROADMAP.md), which says so
+> plainly.
 
 ## The problem
 
@@ -24,18 +30,22 @@ state that can be rebuilt from the files themselves. This project rebuilds it on
   updates as sync delivers changes.
 - **`hvk` CLI**: search, backlinks, tasks and properties in milliseconds, so agents can
   query the vault without burning tokens reading files one by one.
-- **Queries without the app**: Bases (`.base`) executed against the index, plus materialized
-  views rendered into your notes as Markdown — visible from any device.
+- **Queries without the app**: Bases (`.base`) and a documented subset of Dataview executed
+  against the index, plus materialized views rendered into your notes as Markdown — visible
+  from any device.
+- **Whiteboards**: `.canvas` files are read, so a note on a board is not an orphan, and notes
+  and arrows can be added to one. Only added: nothing you arranged by hand is ever moved.
 - **The vault as a job queue**: order-notes with their state in frontmatter; a runner
   executes them with Claude Code and the results sync back to all your devices.
 - **Harness**: permissions, hooks and auditing via Claude Code's native features + git.
 - **MCP server**: `hvk mcp` serves the vault to any MCP client over stdio — read-only by
   default, and able to write only when the instance was started with `--write`.
 
-The scope is governed by a three-tier model: the app's native behavior is replicated
-exactly; Obsidian's official formats (Bases, Canvas, templates) get full support; and the
-most popular community plugins are included only when their state lives in parseable files
-— everything else goes through an [extensible parser
+The scope is governed by a three-tier model: the app's native behavior is replicated exactly;
+Obsidian's own formats — Bases and Canvas — are supported, while **templates and periodic notes
+were deliberately dropped** as a desktop feature ([ROADMAP](docs/ROADMAP.md) says what would
+bring them back); and community formats are included only when their state lives in parseable
+files, through an [extensible parser
 interface](CONTRIBUTING.md#writing-a-parser-adapter) so anyone can contribute an adapter.
 Obsidian Kanban boards are read through that interface as the worked example. Plugin code is
 never executed and the UI is never reproduced.
@@ -126,9 +136,11 @@ Two things worth knowing straight away:
 - **Run it inside a vault and `--vault` can be dropped.** hvk walks up from the working
   directory until it finds a `.obsidian/` folder.
 - **`hvk rebuild` is always safe.** The index is derived from your files and nothing else, so
-  deleting it costs time and nothing more. Nothing in `scan`, `search`, `backlinks`, `links`,
-  `tags`, `tasks`, `props`, `orphans`, `base` or `info` ever writes to your vault; only
-  `views --apply` and `jobs --run` do, and both say so in their names.
+  deleting it costs time and nothing more.
+- **Four things write to your vault, and nothing else does.** `views --apply`,
+  `canvas --apply`, `jobs --run` and `mcp --write` — every one of them says so in the command
+  you typed. `scan`, `search`, `backlinks`, `links`, `tags`, `tasks`, `props`, `orphans`,
+  `base`, `dql`, `canvas` without `--apply`, `doctor` and `info` only ever read.
 
 | Command | What it answers |
 |---|---|
@@ -170,9 +182,6 @@ the order-note runner and a nightly backup are installed for you by `deploy/inst
 A systemd unit for the watcher, and everything else needed to run this on a server, is in
 [`deploy/`](deploy/).
 
-Released to PyPI by pushing a tag, through a workflow with no API token in it:
-[`docs/RELEASING.md`](docs/RELEASING.md).
-
 ## The complete guide
 
 Every command, what each part is for, the worked cases, and the two-language vocabulary:
@@ -189,7 +198,8 @@ deploy/       systemd user units, cron and the runbook for putting it on a serve
 tools/        Development utilities, not part of the product (vault mirror, testbed)
 skills/       Claude Code skills, so an agent knows which command to reach for
 docs/adr/     Architecture decision records — the "why" behind every design choice
-docs/         CHANGELOG.md, the repository journal
+docs/         The guide, the roadmap, the release procedure, and CHANGELOG.md — the journal
+.github/      CI, and the release workflow that publishes without an API token
 ```
 
 Written in Python 3.11+ ([ADR-0001](docs/adr/0001-indexer-language.md)), with `ruamel.yaml`
@@ -211,10 +221,13 @@ If you are reading the code, the tests are the map:
 .venv/bin/pytest -m slow      # performance, against a generated 10,000-note vault
 ```
 
-Every push and pull request runs the suite on Python 3.11 and 3.13, installs the built package
-both with pip and with `uv tool install` and checks each answers against a vault it has never
-seen, and parses every shell script ([the workflow](.github/workflows/ci.yml)). Linux only:
-Linux is where this is meant to run.
+`main` is protected: nothing reaches it except through a pull request whose six checks pass.
+[CONTRIBUTING.md](CONTRIBUTING.md#running-the-tests) names each of them and what it would catch.
+Linux only: Linux is where this is meant to run.
+
+A first pull request from a fork waits for a maintainer to start its checks. That is GitHub's
+gate for outside contributors, not a comment on your patch — a pull request runs your code on a
+runner, so somebody looks before it does.
 
 The deployment is not exercised in CI — it needs a systemd user instance and a machine to throw
 away. It lives in [`tools/testbed/`](tools/testbed/), a disposable Debian container, and that is
