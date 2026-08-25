@@ -42,6 +42,20 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-25 — `props --where` was over budget, and the table said otherwise
+
+- **The plan's own criterion was failing and nothing was watching.** `pytest -m slow` measures
+  the numbers in `ROADMAP.md`, and `props --where` had drifted to ~190 ms against a 100 ms
+  budget. The failure predates phase 7 — it was confirmed on the commit before any of it — and
+  the table went on advertising "0.8 – 80 ms" on Windows the whole time.
+- **The cause was one round trip per row.** `query.props` selected the matching files and then
+  fetched each file's values with its own statement: a query matching two thirds of a
+  ten-thousand-note vault ran seven thousand of them. It is two statements now, whatever the
+  answer's size, with the file-selection clause repeated as a subquery — passing several
+  thousand ids back in would be well past what SQLite binds in one statement.
+- **56 ms**, from 190. The whole slow suite passes, and the Windows column now says what the
+  machine prints rather than what it said in June.
+
 ## 2026-08-25 — Writing to a whiteboard, and the Dataview spelling a real vault needed
 
 - **`file.link` failed on the first `dataview` block written by somebody else** (ADR-0021). One

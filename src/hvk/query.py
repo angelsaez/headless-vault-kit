@@ -301,21 +301,34 @@ def props(
         params.extend(values)
         shown = shown or condition_key
 
-    sql = ["SELECT f.id AS id, f.path AS path FROM files f WHERE f.kind = 'note'"]
-    sql.extend(clauses)
-    sql.append("ORDER BY f.path")
-    rows = conn.execute(chr(10).join(sql), params).fetchall()
+    matching = ["SELECT f.id AS id, f.path AS path FROM files f WHERE f.kind = 'note'"]
+    matching.extend(clauses)
+    rows = conn.execute(
+        chr(10).join(matching) + chr(10) + "ORDER BY f.path", params
+    ).fetchall()
+
+    # Two queries, whatever the answer's size. This used to fetch one file's values per file,
+    # which is one round trip per row: on a 10,000-note vault a query matching two thirds of it
+    # ran seven thousand statements and missed the plan's 100 ms budget by a factor of two. The
+    # file-selection clause is repeated as a subquery rather than passing the ids back in,
+    # because a few thousand of them is well past what SQLite will bind in one statement.
+    grouped: dict = {}
+    if shown and rows:
+        selection = chr(10).join(["SELECT f.id FROM files f WHERE f.kind = 'note'", *clauses])
+        for row in conn.execute(
+            f"SELECT p.file_id AS file_id, p.value AS value FROM props p "
+            f"WHERE lower(p.key) = lower(?) AND p.file_id IN ({selection}) "
+            f"ORDER BY p.file_id, p.idx IS NULL, p.idx",
+            [shown, *params],
+        ):
+            if row["value"] is not None:
+                grouped.setdefault(row["file_id"], []).append(row["value"])
 
     out = []
     for row in rows:
         item = {"path": row["path"]}
         if shown:
-            values = conn.execute(
-                "SELECT value FROM props WHERE file_id = ? AND lower(key) = lower(?) "
-                "ORDER BY idx IS NULL, idx",
-                (row["id"], shown),
-            ).fetchall()
-            item[shown] = ", ".join(v["value"] for v in values if v["value"] is not None)
+            item[shown] = ", ".join(grouped.get(row["id"], ()))
         out.append(item)
     return out
 

@@ -94,11 +94,17 @@ The numbers the plan set as its exit criteria for phase 2:
 
 | Criterion | Target | Linux | Windows |
 |---|---|---|---|
-| Full rebuild | < 60 s | **4.9 s** | 8.2 s |
-| Incremental update | < 5 s | **0.34 s**, or 0.19 s targeted | 0.76 s / 0.31 s |
-| Index queries | < 100 ms | **0.5 – 35 ms** | 0.8 – 80 ms |
+| Full rebuild | < 60 s | **4.9 s** | 8.7 s |
+| Incremental update | < 5 s | **0.34 s**, or 0.19 s targeted | 0.78 s |
+| Index queries | < 100 ms | **0.5 – 35 ms** | 0.7 – 54 ms |
 
 Run them yourself with `pytest -m slow`.
+
+The Windows query figure said 80 ms until 2026-08-25 and was wrong by then: `props --where`
+had drifted to 190 ms, over the plan's budget, and the number in this table had not moved with
+it. The cause was one round trip to the database per matching row — a query matching two thirds
+of a ten-thousand-note vault ran seven thousand statements. It is two statements now, whatever
+the answer's size, and the measurement above is what the machine actually prints.
 
 ## What phase 7 added
 
