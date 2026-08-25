@@ -42,6 +42,19 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-25 — The release workflow rehearsed, and the last two stale actions
+
+- **`release.yml` ran for the first time, on purpose, without publishing anything.** The suite
+  passed, the distribution built and was checked, the wheel was installed into a clean
+  environment and answered about a vault it had never seen, and **`publish to PyPI` skipped** —
+  which is the whole point of the rehearsal: `if: startsWith(github.ref, 'refs/tags/v')` means a
+  manual run stops before the irreversible half. ADR-0013's rule, applied to releasing.
+- **Two annotations said Node.js 20 is deprecated**, from `actions/checkout@v4` and
+  `actions/setup-python@v5` — both still resolve, both run on a runtime GitHub is retiring. Now
+  on v7, which is current for both.
+- Every action reference in this repository has now been checked against what actually exists,
+  rather than against what it looked like it should be: two of five were wrong the first time.
+
 ## 2026-08-25 — "No jobs were run", which was the whole of CI
 
 - **`ci.yml` had not parsed since the phase 7 merge.** A `run:` block was written with raw

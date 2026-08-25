@@ -21,8 +21,8 @@ jobs:
     # every run with "No jobs were run" -- not one job, not even the tests. A workflow cannot
     # test itself once it is broken, so this is checked from the suite as well.
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
       - run: python -m pip install -e ".[dev]"
@@ -38,8 +38,8 @@ jobs:
         python: ["3.11", "3.13"]
     name: pytest on Python ${{ matrix.python }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
       - name: install
@@ -53,8 +53,8 @@ jobs:
     runs-on: ubuntu-latest
     name: installs as a package
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
       # A plain, non-editable install of the built wheel: this is what a user gets, and it
@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     name: installs the way the README says to
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The README and the guide both tell a stranger to install with `uv tool install`, and
       # until this existed the only route CI proved was pip's. They are not the same: uv builds
       # an isolated environment and puts a launcher on PATH, which is where an entry point or a
@@ -108,7 +108,7 @@ jobs:
     runs-on: ubuntu-latest
     name: shell scripts parse
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Syntax only. The deployment is exercised for real in tools/testbed/, which needs a
       # systemd user instance and a container to throw away, and neither belongs here.
       - name: bash -n every script
