@@ -206,3 +206,49 @@ def test_the_blocks_of_a_note_are_all_run(cli_run):
     assert output.out.count("LIST FROM #active") == 1
     assert "TABLE" in output.out
     assert "dv.list" not in output.out, "the dataviewjs block is not a query"
+
+
+# -- file.link (ADR-0021) ---------------------------------------------------------------------
+
+def test_file_link_is_the_spelling_dataview_uses():
+    """Found by running a real vault's own `dataview` block, which failed on it. `link()` is a
+    function in this engine and a member in Dataview, and `TABLE WITHOUT ID ..., file.link` is
+    how half the blocks in the wild are written."""
+    from hvk.bases import expr as ast
+
+    tree = dql.parse_expression("file.link")
+    assert isinstance(tree, ast.Call)
+    assert tree.callee.identifier == "link"
+
+
+def test_file_link_displays_the_name_and_not_the_whole_path(index):
+    """A Link with no display renders as its path. A table of twenty full paths is not the
+    answer Dataview gives."""
+    from hvk.bases.values import Link
+
+    _, conn, _ = index("dataview")
+    result = dql.run(dql.parse('TABLE WITHOUT ID file.link FROM #project'), conn)
+    shown = [row["values"]["file.link"] for row in result.rows]
+    assert all(isinstance(value, Link) for value in shown)
+    assert all("/" not in str(value) for value in shown), shown
+
+
+def test_file_link_works_inside_a_bigger_query(index):
+    _, conn, _ = index("dataview")
+    result = dql.run(
+        dql.parse('TABLE WITHOUT ID status, file.link AS "Note" FROM #project SORT status ASC'),
+        conn,
+    )
+    assert result.headers == ["status", "Note"]
+    assert result.total >= 1
+
+
+def test_the_bases_engine_is_not_taught_dataview_spellings(index):
+    """The rewrite lives in dql.py and must stay there. Bases reads what the app reads, and a
+    base that used `file.link` would be a base the app cannot open (ADR-0005)."""
+    from hvk.bases.evaluate import Context, evaluate_source
+    from hvk.bases.expr import ExpressionError
+    from hvk.bases.values import File
+
+    with pytest.raises(ExpressionError, match="no member 'link'"):
+        evaluate_source("file.link", Context(file=File(path="A.md", basename="A")))

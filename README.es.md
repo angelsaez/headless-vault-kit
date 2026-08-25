@@ -140,6 +140,7 @@ Dos cosas que conviene saber desde el principio:
 | `hvk base Archivo.base [--view Nombre]` | Ejecuta una vista de un `.base` contra el índice, como tabla Markdown |
 | `hvk views [Ruta] [--apply]` | Regenera las tablas de Bases materializadas dentro de notas; sin `--apply` solo lista lo que está desactualizado |
 | `hvk canvas Tablero.canvas [--edges]` | Qué hay en un lienzo: sus cajas, o las flechas entre ellas |
+| `hvk canvas T.canvas --add-note N [--connect A B] [--create] --apply` | Pone notas, cajas de texto y flechas en un lienzo. Solo añade: nada de lo que ya está se mueve ni se borra |
 | `hvk dql "LIST FROM #x"` \| `--note N.md` | Ejecuta una consulta Dataview, o cada bloque `dataview` de una nota, contra el índice |
 | `hvk jobs --dir D --profiles P [--run]` | Ejecuta las notas-orden que esperan en un directorio; sin `--run` solo informa |
 | `hvk doctor [--jobs-dir D]` | ¿Está sana esta instalación? Para llamarlo desde la monitorización que ya tengas |

@@ -349,6 +349,28 @@ def _views_apply(session, args: dict):
     }
 
 
+def _canvas_add(session, args: dict):
+    """Put notes and arrows on a whiteboard, without moving anything already on it."""
+    from hvk import boards
+
+    connect = args.get("connect") or []
+    if not isinstance(connect, list) or not all(
+        isinstance(pair, list) and len(pair) == 2 and all(isinstance(e, str) for e in pair)
+        for pair in connect
+    ):
+        raise ToolError("connect must be a list of [from, to] pairs of strings")
+
+    outcome = boards.edit(
+        session.vault, text(args, "file", required=True),
+        notes=strings(args, "notes"), texts=strings(args, "texts"),
+        connect=[tuple(pair) for pair in connect],
+        create=flag(args, "create"), apply=True,
+    )
+    session.record("mcp write", tool="canvas_add", path=outcome.canvas,
+                   match=str(len(outcome.nodes) + len(outcome.edges)))
+    return outcome.as_dict()
+
+
 def _jobs_run(session, args: dict):
     """Run the order-notes waiting in the server's jobs directory.
 
@@ -529,6 +551,27 @@ WRITE_TOOLS = (
                                  "Restrict to one note or folder (default: the whole vault)."}}),
         summary="Regenerate the base tables materialised inside notes, and write them. Safe to "
                 "run often: it writes only what actually changed, and nothing when nothing did.",
+    ),
+    Tool(
+        name="canvas_add", run=_canvas_add, writes=True, paths=("file",),
+        schema=_schema({
+            "file": {**STRING, "description": "The .canvas file, by path inside the vault."},
+            "notes": {"type": "array", "items": STRING, "description":
+                      "Notes to put on the board, by path inside the vault."},
+            "texts": {"type": "array", "items": STRING, "description":
+                      "Markdown text boxes to put on the board."},
+            "connect": {"type": "array", "items": {"type": "array", "items": STRING},
+                        "description":
+                        "Arrows, as [from, to] pairs. Each end is a note path, a note name or a "
+                        "node id, and must already be on the board or be added in this call."},
+            "create": {**BOOLEAN, "description":
+                       "Make the canvas if it is not there. Without it a name that does not "
+                       "exist is an error, so a typo cannot start a new board."},
+        }, required=("file",)),
+        summary="Add notes, text boxes and arrows to a whiteboard. Only ever adds: nothing "
+                "already on the board is moved, resized, recoloured or removed, because a "
+                "canvas is the one thing in a vault somebody arranged by hand. Adding the same "
+                "note twice does nothing.",
     ),
     Tool(
         name="jobs_run", run=_jobs_run, writes=True,

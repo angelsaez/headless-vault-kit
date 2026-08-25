@@ -14,6 +14,10 @@ already uses, after two rewrites:
 * ``contains(field, x)`` becomes ``field.contains(x)``. Dataview calls functions and this
   engine calls methods on values. Only a named list is rewritten, and everything else keeps
   the engine's own refusal — an unknown function is an error, never a silent null.
+* ``file.link`` becomes ``link(file, file.basename)``. Dataview spells it as a member and this
+  engine has it as a function. Added after the first real vault's `dataview` block was run and
+  failed on it — see ADR-0021, and note that it is *this* module that learns Dataview's
+  spellings, never the Bases engine, which reads what the app reads.
 
 What is *not* supported fails naming itself, which is the rule ADR-0005 set for Bases and the
 reason to trust either of them: a query that quietly drops a clause returns a table that looks
@@ -82,8 +86,27 @@ class Query:
 
 # -- the expression rewrites -------------------------------------------------------------------
 
+def _file_link():
+    """The tree for ``link(file, file.basename)``.
+
+    The display name is passed explicitly because a Link with none renders as its whole path,
+    and Dataview shows a card's name. A table of twenty full paths is not the same answer.
+    """
+    return ast.Call(
+        ast.Name("link"),
+        (ast.Name("file"), ast.Member(ast.Name("file"), "basename")),
+    )
+
+
+def _is_file_link(node) -> bool:
+    return (isinstance(node, ast.Member) and node.name == "link"
+            and isinstance(node.target, ast.Name) and node.target.identifier == "file")
+
+
 def _rewrite_calls(node):
-    """Turn Dataview's `contains(a, b)` into the engine's `a.contains(b)`, recursively."""
+    """Turn Dataview's spellings into the engine's, recursively."""
+    if _is_file_link(node):
+        return _file_link()
     if isinstance(node, ast.Call):
         arguments = tuple(_rewrite_calls(a) for a in node.arguments)
         callee = node.callee

@@ -272,6 +272,50 @@ coordenadas, tamaños y qué hacer cuando se solapan, y eso todavía no lo ha pe
 
 ---
 
+### Poner cosas en un tablero
+
+Leer es lo de arriba; esto es la mitad de escribir, y tiene exactamente una regla
+([ADR-0022](adr/0022-adding-to-a-whiteboard-never-rearranging-it.md)): **añade, y no reordena
+jamás.**
+
+```sh
+hvk canvas Board.canvas --add-note "Proyectos/Alpha.md" --apply
+hvk canvas Board.canvas --add-note "Proyectos/Beta.md" --connect Alpha Beta --apply
+hvk canvas Board.canvas --add-text "la pregunta abierta es el calendario" --apply
+hvk canvas Plan.canvas --add-note "Proyectos/Alpha.md" --create --apply
+```
+
+Sin `--apply` no se escribe nada y se te dice qué cambiaría, igual que con las vistas. `--create`
+hace falta para crear un canvas que no existe, de modo que un error al teclear el nombre no pueda
+empezar un tablero nuevo en vez de añadir al que querías.
+
+**No se toca nada de lo que ya está en el tablero.** Ni se mueve, ni se redimensiona, ni se
+recolorea, ni se borra — y no hay ninguna opción que haga esas cosas. Un lienzo es lo único de un
+vault que colocaste a mano, en el espacio, y esa disposición no se recupera de un diff. Los
+colores, las posiciones y cualquier clave que invente un Obsidian más nuevo salen exactamente
+como entraron, y el fichero conserva su propia indentación, así que un cambio de una caja es un
+diff de una caja.
+
+**Añadir la misma nota dos veces no hace nada.** Los ids de los nodos salen de aquello a lo que
+apuntan y no de un contador, así que repetir la orden informa de que no ha cambiado nada y no
+toca el fichero. Eso es lo que hace seguro meter esto en un script.
+
+Las cajas nuevas caen en una rejilla **debajo** de todo lo que ya hay. Debajo y nunca en medio:
+cajas apareciendo dentro de tu disposición serían, por accidente, la reordenación que esto se
+niega a hacer. Colocarlas bien es cosa tuya, en la app — una máquina que adivina una disposición
+está adivinando lo que significan las cosas.
+
+Una flecha necesita los dos extremos ya en el tablero, o añadidos en la misma orden:
+
+```sh
+hvk canvas Board.canvas --add-note "Notas/Deep.md" --connect Alpha Deep --apply
+```
+
+Cada extremo es una ruta de nota, un nombre de nota a secas, o un id de nodo de
+`hvk canvas Board.canvas`.
+
+---
+
 ## 7. Consultas Dataview — el subconjunto soportado
 
 Los vaults llegan de fuera llenos de bloques ```` ```dataview ````. `hvk` contesta los que
@@ -681,6 +725,7 @@ también aquí.
 | `note_write` | **\*`path`** — la nota, dentro del vault<br>**\*`text`** — el contenido nuevo entero de la nota<br>`if_unchanged` — `absent` para rechazar si ya existe, o un digest de `note_read` para rechazar si ha cambiado desde entonces | Crea o reemplaza una nota. Atómica, conserva los finales de línea y los permisos del fichero, y no hace nada en absoluto si el contenido es idéntico. Responde `created` y `changed` |
 | `note_set_property` | **\*`path`** — la nota, dentro del vault<br>**\*`key`** — la clave del frontmatter a fijar<br>**\*`value`** — su valor nuevo | Fija una sola propiedad y deja cada otro byte como estaba. El YAML no se vuelve a parsear, así que el orden de las claves, los comentarios y las comillas sobreviven |
 | `views_apply` | `path` — una nota o carpeta (por defecto, todo el vault) | Regenera las tablas de bases materializadas en las notas y las escribe. Responde `views`, `changed` y `errors` |
+| `canvas_add` | **\*`file`** — el `.canvas`, por ruta dentro del vault<br>`notes` — notas que poner en el tablero, por ruta<br>`texts` — cajas de texto Markdown que poner en él<br>`connect` — flechas, como pares `[origen, destino]`; cada extremo es una ruta de nota, un nombre de nota o un id de nodo<br>`create` — crear el canvas si no está | Añade cajas y flechas a un lienzo. **Solo añade**: nada de lo que ya está en el tablero se mueve, se redimensiona, se recolorea ni se borra. Añadir la misma nota dos veces no hace nada |
 | `jobs_run` | `dry_run` — informar sin reclamar ni ejecutar nada | Ejecuta las notas-orden que esperan en el directorio de trabajos del servidor, cada una bajo el perfil que nombra su propio frontmatter |
 
 Los directorios de trabajos y de perfiles son **configuración del servidor y un cliente no puede

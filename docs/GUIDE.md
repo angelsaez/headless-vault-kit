@@ -271,6 +271,48 @@ deciding coordinates, sizes and what to do when they overlap, and nothing has ne
 
 ---
 
+### Putting things on a board
+
+Reading is above; this is the writing half, and it has exactly one rule
+([ADR-0022](adr/0022-adding-to-a-whiteboard-never-rearranging-it.md)): **it adds, and it never
+rearranges.**
+
+```sh
+hvk canvas Board.canvas --add-note "Projects/Alpha.md" --apply
+hvk canvas Board.canvas --add-note "Projects/Beta.md" --connect Alpha Beta --apply
+hvk canvas Board.canvas --add-text "the open question is the schedule" --apply
+hvk canvas Plan.canvas --add-note "Projects/Alpha.md" --create --apply
+```
+
+Without `--apply` nothing is written and you are told what would change, exactly as with views.
+`--create` is needed to make a canvas that is not there, so that a typo in the name cannot start
+a new board instead of adding to the one you meant.
+
+**Nothing already on the board is touched.** Not moved, not resized, not recoloured, not
+removed — and there is no flag that does any of those. A whiteboard is the one thing in a vault
+you arranged by hand, spatially, and that arrangement is not recoverable from a diff. Colours,
+positions and any key a newer Obsidian invents all come back out exactly as they went in, and
+the file keeps its own indentation so a one-box change is a one-box diff.
+
+**Adding the same note twice does nothing.** Node ids come from what the node points at rather
+than from a counter, so running the same command again reports "nothing changed" and does not
+touch the file. That makes this safe to put in a script.
+
+New boxes land in a grid **below** everything already there. Below and never among: boxes
+appearing in the middle of your arrangement would be the rearrangement this refuses to do, by
+accident. Tidying them up is your job, in the app — a machine that guesses at a layout is
+guessing at what things mean.
+
+An arrow needs both ends already on the board, or added in the same command:
+
+```sh
+hvk canvas Board.canvas --add-note "Notes/Deep.md" --connect Alpha Deep --apply
+```
+
+Each end is a note path, a bare note name, or a node id from `hvk canvas Board.canvas`.
+
+---
+
 ## 7. Dataview queries — the supported subset
 
 Vaults arrive from elsewhere full of ```` ```dataview ```` blocks. `hvk` answers the ones it
@@ -669,6 +711,7 @@ Arguments marked **\*** are required. Every tool answers with JSON; the shapes a
 | `note_write` | **\*`path`** — the note, inside the vault<br>**\*`text`** — the note's whole new contents<br>`if_unchanged` — `absent` to refuse if it already exists, or a digest from `note_read` to refuse if it has changed since | Creates or replaces a note. Atomic, keeps the file's line endings and permissions, and does nothing at all when the content is identical. Answers `created` and `changed` |
 | `note_set_property` | **\*`path`** — the note, inside the vault<br>**\*`key`** — the frontmatter key to set<br>**\*`value`** — its new value | Sets one property and leaves every other byte alone. The YAML is never reparsed, so key order, comments and quoting survive |
 | `views_apply` | `path` — one note or folder (default: the whole vault) | Regenerates the base tables materialised in notes and writes them. Answers `views`, `changed` and `errors` |
+| `canvas_add` | **\*`file`** — the `.canvas`, by path inside the vault<br>`notes` — notes to put on the board, by path<br>`texts` — Markdown text boxes to put on it<br>`connect` — arrows, as `[from, to]` pairs; each end is a note path, a note name or a node id<br>`create` — make the canvas if it is not there | Adds boxes and arrows to a whiteboard. **Only ever adds**: nothing already on the board is moved, resized, recoloured or removed. Adding the same note twice does nothing |
 | `jobs_run` | `dry_run` — report without claiming or executing anything | Runs the order-notes waiting in the server's jobs directory, each under the profile its own frontmatter names |
 
 The jobs and profiles directories are **the server's configuration and cannot be chosen by a

@@ -42,6 +42,33 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-25 — Writing to a whiteboard, and the Dataview spelling a real vault needed
+
+- **`file.link` failed on the first `dataview` block written by somebody else** (ADR-0021). One
+  real vault, one real block, and everything in it worked except that: `WITHOUT ID`, two aliased
+  columns, a `FROM` naming a folder full of accents and brackets, `SORT`. The capability was
+  already there — `link()` is a function in the engine — and Dataview spells it as a member of
+  `file`. So there is a third rewrite, which makes ADR-0016's "exactly two" wrong and is why
+  ADR-0021 exists rather than an edit to that file.
+- **The rewrite lives in `dql.py` and the Bases engine was left alone**, with a test asserting
+  `file.link` still fails inside Bases. A base written against a member the app does not have is
+  a base the app cannot open.
+- **Canvases can be written** (ADR-0022), which had been postponed since phase 3 with a real
+  reason attached: *placing boxes is a set of decisions nobody has needed yet*. The decision
+  taken is **adding, never rearranging** — `--add-note`, `--add-text`, `--connect`, `--create`,
+  `--apply`, and no flag that moves, resizes, recolours or removes anything.
+- **A whiteboard is the one thing in a vault somebody arranged by hand, spatially**, and that
+  arrangement is not recoverable from a diff. So existing nodes are passed through exactly as
+  they parsed — colours, positions, and any key a future Obsidian invents — the file keeps its
+  own indentation, and new boxes land in a grid *below* everything already there, never among it.
+- **Node ids are a hash of what they point at, not a counter**, so adding the same note twice is
+  a no-op that says so and does not touch the file. Same property `hvk views` has, same reason:
+  something on a schedule must not produce a diff when nothing changed.
+- **A node has to point at a file that exists.** A box pointing at nothing looks like a box that
+  has not finished loading, which is the least visible broken link there is — and ADR-0015 built
+  canvas *reading* precisely because an unlinked note is the state in which people delete things.
+- `canvas_add` on the MCP side, behind `--write` like every other tool that changes anything.
+
 ## 2026-08-25 — Protected turned out to mean "not named", and now means "does not leave"
 
 - **Pointing a real client at a real vault with a real protected folder found a real hole.**

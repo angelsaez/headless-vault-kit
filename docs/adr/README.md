@@ -49,3 +49,5 @@ wrong is part of what makes the log worth keeping.
 | [0018](0018-an-mcp-server-that-writes.md) | An MCP server that writes | accepted | 7 |
 | [0019](0019-naming-the-adapters-to-load.md) | Naming the adapters to load | accepted | 7 |
 | [0020](0020-protected-means-what-does-not-leave.md) | Protected means what does not leave | accepted | 7 |
+| [0021](0021-the-third-rewrite.md) | The third rewrite | accepted | 3 |
+| [0022](0022-adding-to-a-whiteboard-never-rearranging-it.md) | Adding to a whiteboard, never rearranging it | accepted | 7 |

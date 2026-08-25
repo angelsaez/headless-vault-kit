@@ -132,8 +132,17 @@ anyone here use it" but "is this a format the community writes"
 `SORT` and `LIMIT`; everything else refuses with its own name in the message. **DataviewJS
 remains permanently out of scope** — its blocks are not even read.
 
+Writing canvases has come off this list too, on 2026-08-25, with the shape the postponement
+implied: **adding, never rearranging**
+([ADR-0022](adr/0022-adding-to-a-whiteboard-never-rearranging-it.md)). Boxes and arrows can be
+added and a board can be created; nothing already on one is moved, resized, recoloured or
+removed, and no flag does those things.
+
 - **DataviewJS**, and executing any plugin code. Permanently out of scope: this project
   replicates file formats, never a runtime.
+- **Moving, resizing or deleting anything on a canvas.** Deliberately not built. A whiteboard is
+  the one thing in a vault arranged by hand, spatially, and that arrangement is not recoverable
+  from a diff. It comes back as an ADR superseding 0022, never as a flag.
 - **Templates and periodic notes.** Dropped: creating tomorrow's daily note is a desktop
   feature, done in the app where you are already typing. It comes back if someone wants
   periodic notes created *without* the app in front of them.

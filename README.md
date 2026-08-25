@@ -137,6 +137,7 @@ Two things worth knowing straight away:
 | `hvk base File.base [--view Name]` | Run a view from a `.base` file against the index, as a Markdown table |
 | `hvk views [Path] [--apply]` | Refresh the base tables materialised inside notes; without `--apply` it only lists what is stale |
 | `hvk canvas Board.canvas [--edges]` | What is on a whiteboard: its boxes, or the arrows between them |
+| `hvk canvas B.canvas --add-note N [--connect A B] [--create] --apply` | Put notes, text boxes and arrows on a whiteboard. Only ever adds: nothing already on the board is moved or removed |
 | `hvk dql "LIST FROM #x"` \| `--note N.md` | Run a Dataview query, or every `dataview` block in a note, against the index |
 | `hvk jobs --dir D --profiles P [--run]` | Run the order-notes waiting in a directory; without `--run` it only reports |
 | `hvk doctor [--jobs-dir D]` | Is this installation healthy? For calling from monitoring you already have |

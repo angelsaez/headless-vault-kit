@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 
 from hvk import __version__, db, dql, jobs, output, parse, paths, query, views, write
+from hvk import boards as _boards
 from hvk import scan as scanner
 from hvk.bases import base_file as _base_file
 from hvk.bases import values as bases_values
@@ -139,6 +140,27 @@ def build_parser() -> argparse.ArgumentParser:
         "--edges", action="store_true",
         help="the arrows instead of the boxes: what the canvas says connects to what",
     )
+    canvas_cmd.add_argument(
+        "--add-note", action="append", metavar="PATH", default=None,
+        help="put a note on the board; repeat for several. Nothing already there is moved",
+    )
+    canvas_cmd.add_argument(
+        "--add-text", action="append", metavar="TEXT", default=None,
+        help="put a Markdown text box on the board; repeat for several",
+    )
+    canvas_cmd.add_argument(
+        "--connect", action="append", nargs=2, metavar=("FROM", "TO"), default=None,
+        help="draw an arrow between two boxes, named by note path, note name or node id",
+    )
+    canvas_cmd.add_argument(
+        "--create", action="store_true",
+        help="make the canvas if it is not there; without it a name that does not exist is an "
+             "error, so a typo cannot start a new board instead of adding to yours",
+    )
+    canvas_cmd.add_argument(
+        "--apply", action="store_true",
+        help="actually write the canvas; without it nothing is touched and the change is listed",
+    )
 
     jobs_cmd = add("jobs", "run the order-notes waiting in a directory")
     jobs_cmd.add_argument("--dir", metavar="PATH", help="the jobs directory (or HVK_JOBS_DIR)")
@@ -231,6 +253,14 @@ def _run(args: argparse.Namespace) -> int:
 
     if args.command == "mcp":
         return _mcp(location, args)
+
+    # Changing a canvas is a file operation, like the jobs runner: it reads one file and writes
+    # it back. Opening the index first would mean a board could not be added to until somebody
+    # had scanned the vault, which is a dependency this does not have.
+    if args.command == "canvas" and (
+        args.add_note or args.add_text or args.connect or args.create
+    ):
+        return _canvas_edit(location, args)
 
     conn = db.connect(location.db_path)
     try:
@@ -437,6 +467,24 @@ def _dql(conn, location: paths.Locations, args: argparse.Namespace) -> None:
         print()
     if args.json:
         output.emit_object(payload[0] if len(payload) == 1 else payload, as_json=True)
+
+
+def _canvas_edit(location: paths.Locations, args: argparse.Namespace) -> int:
+    """Add boxes and arrows to a whiteboard, or say what would be added (ADR-0022)."""
+    from hvk import boards
+
+    outcome = boards.edit(
+        write.Vault(location.vault), args.file,
+        notes=args.add_note or (), texts=args.add_text or (),
+        connect=[tuple(pair) for pair in (args.connect or ())],
+        create=args.create, apply=args.apply,
+    )
+    output.emit_object(outcome.as_dict(), as_json=args.json)
+    if not args.json and outcome.changed and not args.apply:
+        print()
+        print(f"nothing was written. Run it again with --apply to change "
+              f"{outcome.canvas}.")
+    return 0
 
 
 def _canvas(location: paths.Locations, args: argparse.Namespace) -> None:
@@ -654,7 +702,8 @@ def main(argv: list[str] | None = None) -> int:
         return code
     except (paths.VaultError, db.IndexError_, query.QueryError,
             _base_file.BaseError, ExpressionError, write.WriteError,
-            jobs.JobError, views.ViewError, dql.DqlError, parse.ParserError) as exc:
+            jobs.JobError, views.ViewError, dql.DqlError, parse.ParserError,
+            _boards.BoardError) as exc:
         print(f"hvk: {exc}", file=sys.stderr)
         return 2
     except BrokenPipeError:
