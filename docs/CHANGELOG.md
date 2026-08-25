@@ -42,6 +42,25 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-25 — 0.1.0 on PyPI
+
+- **`headless-vault-kit 0.1.0` is published.** Pushing `v0.1.0` ran the release workflow: the
+  suite, the build, the metadata check, the wheel installed into a clean environment and asked a
+  question — and then the upload, over OIDC, with no token anywhere in this repository.
+- **Verified from the index rather than from this checkout**: a clean virtual environment on a
+  Linux machine, `pip install headless-vault-kit`, and a Kanban board read back with its list and
+  its date. That is the thing a stranger runs, and it is not the same thing as a green build.
+- **PyPI's trusted publisher was created without an environment constraint**, so PyPI wrote to
+  say it could be made more secure — correctly. Left empty, any run of `release.yml` on this
+  repository can publish; set to `pypi`, only a run inside the environment a required reviewer
+  guards can. `RELEASING.md` now says where to add it after the fact, because that is when
+  anybody will read it.
+- **The roadmap says plainly that this went out the same day the phase was built**, against its
+  own entry condition of weeks of stability. The machinery was rehearsed first; a rehearsal
+  proves the pipeline, not the software.
+- The commit before this one claimed the roadmap already said so. It did not — the edit had
+  failed on an anchor and the commit went ahead anyway. It says so now.
+
 ## 2026-08-25 — The release workflow rehearsed, and the last two stale actions
 
 - **`release.yml` ran for the first time, on purpose, without publishing anything.** The suite

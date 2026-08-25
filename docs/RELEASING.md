@@ -34,6 +34,12 @@ install.
    | Workflow name | `release.yml` |
    | Environment name | `pypi` |
 
+   **The environment field is optional on PyPI's side and is worth filling in.** Left empty, any
+   run of `release.yml` on this repository can publish; filled in, only a run inside the `pypi`
+   environment can — which is the one a required reviewer guards. PyPI notices when it is missing
+   and emails *"Trusted Publisher for project … can be made more secure"*. It can be added after
+   the fact: *Manage project → Publishing*, edit the publisher, set the environment.
+
 3. On GitHub, *Settings → Environments → New environment*, named `pypi`. Adding yourself as a
    required reviewer there means a release waits for you to press a button, which is worth it
    for something irreversible.
@@ -79,17 +85,17 @@ waits for you at the last step.
 
 ## Afterwards
 
-Change the install instructions in [`README.md`](../README.md), [`README.es.md`](../README.es.md)
-and both guides, which currently say *"not on PyPI yet"* and give the `git+` route. What replaces
-them is:
+Check that the thing a stranger will run actually works, from the index rather than from this
+checkout:
 
 ```bash
-uv tool install headless-vault-kit
+python3 -m venv /tmp/check && /tmp/check/bin/pip install headless-vault-kit
+/tmp/check/bin/hvk --version
 ```
 
-`uv tool upgrade headless-vault-kit` updates it; `uv tool uninstall headless-vault-kit` removes
-it. Installing from a git URL keeps working and stays documented for anyone who wants an
-unreleased commit.
+The install instructions in [`README.md`](../README.md), [`README.es.md`](../README.es.md) and
+both guides have named the PyPI route since 0.1.0, keeping the `git+` route documented
+underneath for anyone who wants an unreleased commit.
 
 ## What is not automated, deliberately
 

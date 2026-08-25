@@ -12,7 +12,7 @@ does and how to use it; this is where "how far along is it" lives.
 | 4 | Materialized views | **Done** |
 | 5 | Order-notes: the vault as a job queue | **Done** |
 | 6 | Security, healthchecks, rehearsed backups | **Done** |
-| 7 | MCP server, community parser interface, packaging | Built, and **entered early** — see below |
+| 7 | MCP server, community parser interface, packaging | **Done**, published as 0.1.0 — entered early, see below |
 
 ## Phase 7 was entered before its condition was met
 
@@ -25,8 +25,11 @@ What that costs is worth naming. The condition existed because publishing is the
 mistakes stop being yours alone, and two days is not enough time for the failure modes of one
 installation to show up — let alone the ones that only appear on somebody else's machine. So:
 
-- **Nothing is published.** No PyPI release, and `uv tool install --from git+...` remains the
-  documented route. That part of the phase was always "leave it ready", and it still is.
+- **It was published anyway.** `headless-vault-kit 0.1.0` went to PyPI on 2026-08-25, the same
+  day the phase was built, which is the opposite of what the entry condition asked for. The
+  release machinery was rehearsed first ([RELEASING.md](RELEASING.md)) and the install was
+  checked from the index on a clean machine — but a rehearsal proves the pipeline, not the
+  software.
 - **The MCP server has now met one real client, and only one.** On 2026-08-25 it was driven by
   Claude Code over stdio against a 273-note mirror of a real vault — the handshake, `tools/list`
   and `tools/call` — which is the first evidence about it that did not come from a test of its
@@ -159,8 +162,6 @@ removed, and no flag does those things.
   ([ADR-0019](adr/0019-naming-the-adapters-to-load.md)); what hvk will not do is sweep the
   machine and run whatever declares itself. Making `hvk scan` execute code nobody named is a
   decision about trust, and it comes back the day publishing forces the question.
-- **Publishing to PyPI.** Deliberately not done. The phase's own entry condition was weeks of
-  stability and it has had days, so what is ready is the packaging, not the release.
 
 ## Where the rest of the reasoning is
 
