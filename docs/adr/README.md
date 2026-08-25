@@ -48,3 +48,4 @@ wrong is part of what makes the log worth keeping.
 | [0017](0017-a-parser-interface-extracted-from-two.md) | A parser interface, extracted from the two that existed | accepted | 7 |
 | [0018](0018-an-mcp-server-that-writes.md) | An MCP server that writes | accepted | 7 |
 | [0019](0019-naming-the-adapters-to-load.md) | Naming the adapters to load | accepted | 7 |
+| [0020](0020-protected-means-what-does-not-leave.md) | Protected means what does not leave | accepted | 7 |

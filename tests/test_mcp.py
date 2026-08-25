@@ -412,3 +412,113 @@ def test_views_apply_writes_a_materialised_view(client, vault, tmp_path):
     assert not failed, payload
     assert payload["errors"] == 0
     assert "One.md" in (vault.vault / "Dash.md").read_text(encoding="utf-8")
+
+
+# -- what leaves, not only what was asked for (ADR-0020) --------------------------------------
+#
+# `Session.check` refuses a call that *names* a protected folder, which was the hook's rule and
+# the only one a hook could have had. A query reaches a file three other ways -- a substring
+# filter, a bare name that resolves, and a full-text search naming no path at all -- so the
+# answer is checked on the way out too. These are the three.
+
+def test_a_partial_path_filter_cannot_reach_a_protected_folder(client, vault):
+    """`path:_PRIV` names nothing the guard would recognise and selects everything under
+    `_PRIVATE`. Blocking the spelled-out name while this worked would have been protection that
+    only looks like protection."""
+    payload, failed = call(client, "search", {"query": "secret path:_PRIV"},
+                           protect=["_PRIVATE"])
+    assert not failed
+    assert payload["matches"] == []
+    assert payload["hidden"] == 1
+
+
+def test_a_full_text_search_naming_no_path_cannot_reach_it_either(client):
+    """The case that could never be closed by looking at arguments, because there is no path in
+    the call at all."""
+    payload, failed = call(client, "search", {"query": "secret"}, protect=["_PRIVATE"])
+    assert not failed
+    assert [m["path"] for m in payload["matches"]] == []
+
+
+def test_a_bare_name_that_resolves_into_a_protected_folder_is_refused(client, vault):
+    """Not an empty answer: what was asked about *is* the protected note, reached under another
+    name. That deserves the same refusal `note_read` would have given."""
+    (vault.vault / "_PRIVATE" / "Diary.md").write_text("# Diary\n", encoding="utf-8")
+    scanner.scan(vault)
+    message, failed = call(client, "backlinks", {"target": "Diary"}, protect=["_PRIVATE"])
+    assert failed
+    assert "protected folder" in message and "whichever name it is reached by" in message
+
+
+def test_nothing_is_filtered_when_nothing_is_protected(client):
+    payload, failed = call(client, "search", {"query": "secret"})
+    assert not failed
+    assert [m["path"] for m in payload["matches"]] == ["_PRIVATE/Secret.md"]
+    assert "hidden" not in payload
+
+
+def test_an_unprotected_answer_is_returned_untouched(client):
+    """The filter must not cost correctness on the ordinary path, which is every call."""
+    payload, _ = call(client, "search", {"query": "Links"}, protect=["_PRIVATE"])
+    assert [m["path"] for m in payload["matches"]] == ["One.md"]
+    assert "hidden" not in payload
+
+
+def test_the_drop_is_declared_rather_than_silent(client):
+    """An answer that quietly hides two matches invites a model to conclude there is nothing
+    there. Saying how many were hidden admits something exists without saying what."""
+    payload, _ = call(client, "search", {"query": "secret"}, protect=["_PRIVATE"])
+    assert payload["hidden"] == 1
+
+
+def test_a_counter_is_corrected_with_the_rows_it_counts(client, vault):
+    """A total that still said ten beside eight rows is the table that looks right and is not,
+    which ADR-0005 and ADR-0016 both refused to ship."""
+    from hvk.mcp import server as mcp_server
+
+    payload, hidden = mcp_server.scrub(
+        {"rows": [{"path": "_PRIVATE/a.md"}, {"path": "b.md"}], "total": 2, "shown": 2},
+        ["_PRIVATE"],
+    )
+    assert hidden == 1
+    assert payload == {"rows": [{"path": "b.md"}], "total": 1, "shown": 1, "hidden": 1}
+
+
+def test_rows_are_found_however_deeply_they_are_nested(client):
+    """A dql answer holds a list of results, each holding its own rows. A rule that only looked
+    at the top would have let every one of those through."""
+    from hvk.mcp import server as mcp_server
+
+    payload, hidden = mcp_server.scrub(
+        {"results": [{"query": "LIST", "rows": [{"path": "_PRIVATE/a.md"}, {"path": "b.md"}],
+                      "total": 2}]},
+        ["_PRIVATE"],
+    )
+    assert hidden == 1
+    assert payload["results"][0]["rows"] == [{"path": "b.md"}]
+    assert payload["results"][0]["total"] == 1
+
+
+@pytest.mark.parametrize("key", ["path", "source", "target", "file", "resolved", "note"])
+def test_every_key_an_answer_names_a_file_under_is_checked(key):
+    """A tool added later will name its file under one of these. If it invents a new key, this
+    is the list that has to grow with it."""
+    from hvk.mcp import server as mcp_server
+
+    assert key in mcp_server.PATH_KEYS
+    _, hidden = mcp_server.scrub([{key: "_PRIVATE/a.md"}], ["_PRIVATE"])
+    assert hidden == 1
+
+
+def test_filtering_leaves_a_line_in_the_log(client, vault):
+    call(client, "search", {"query": "secret"}, protect=["_PRIVATE"])
+    assert "mcp filtered rule=protected tool=search match=1" in \
+        vault.log_path.read_text(encoding="utf-8")
+
+
+def test_counts_are_not_filtered_and_that_is_written_down(client):
+    """`info` counts every note, protected ones included. Recomputing them would mean querying
+    again for every call, and a count reveals that something exists without revealing anything
+    about it -- the same thing `hidden` already says out loud."""
+    payload, _ = call(client, "info", {}, protect=["_PRIVATE"])
+    assert payload["notes"] == 3

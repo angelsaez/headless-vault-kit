@@ -79,8 +79,13 @@ def _paths_in(command: str) -> list:
         return command.split()
 
 
-def _touches(value: str, protected: list) -> str | None:
-    """The first protected path *value* mentions, or None."""
+def touches(value: str, protected: list) -> str | None:
+    """The first protected path *value* mentions, or None.
+
+    Public because the MCP server needs the same answer about a path it is about to *return*,
+    not only about one a caller named (ADR-0020). One definition of "inside a protected folder",
+    used by both, is the only way the two can agree.
+    """
     lowered = value.replace("\\", "/").lower()
     for name in protected:
         needle = name.replace("\\", "/").lower().strip("/")
@@ -142,7 +147,7 @@ def decide(payload: dict, *, vault: Path | None = None, protected: list | None =
     # 1. Protected folders, whatever the tool. Checked first: a protected path is off limits
     #    even to a read, which is the point of calling it protected rather than read-only.
     for value in [*named, *(_paths_in(command) if command else [])]:
-        hit = _touches(value, protected)
+        hit = touches(value, protected)
         if hit:
             return Decision(
                 DENY,

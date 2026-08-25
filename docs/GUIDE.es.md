@@ -719,9 +719,14 @@ llamante.
 - **Toda escritura pasa por la misma capa por la que escribe todo lo demás de aquí** (las reglas
   de la sección 8): atómica, sin escribir nada cuando nada ha cambiado, y con un rechazo si el
   fichero se movió por debajo.
-- **El guard se aplica también aquí.** `--protect` usa el mismo código que el hook de la sección
-  10, así que una carpeta vedada a tu agente lo está para cualquier cliente MCP. Sin eso,
-  «protegida» habría querido decir protegida frente a exactamente un programa.
+- **El guard se aplica también aquí, y llega más lejos que en el hook.** `--protect` usa el mismo
+  código que la sección 10, así que una carpeta vedada a tu agente lo está para cualquier cliente
+  MCP. Pero además de rechazar la llamada, se revisa la respuesta al salir: una búsqueda que nunca
+  nombró la carpeta, un filtro que solo nombró un trozo de su nombre, o el nombre suelto de una
+  nota que resuelve dentro de ella llegan igualmente, y las filas de una carpeta protegida no
+  salen ([ADR-0020](adr/0020-protected-means-what-does-not-leave.md)). Cuando se descarta algo, la
+  respuesta lo dice con `hidden: n`, para que el modelo sepa que su respuesta está incompleta en
+  vez de concluir que no había nada. Los recuentos de `info` son la excepción y no se filtran.
 - **Cada escritura y cada rechazo dejan línea en `hvk.log`.** Si un agente puede escribir en el
   vault, *quién escribió esto* tiene que tener respuesta.
 

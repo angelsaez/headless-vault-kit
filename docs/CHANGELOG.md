@@ -42,6 +42,37 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-25 — Protected turned out to mean "not named", and now means "does not leave"
+
+- **Pointing a real client at a real vault with a real protected folder found a real hole.**
+  ADR-0018 claimed a folder protected from the agent was protected from any MCP client. With
+  `--protect "700 - DIARIO"`, `search {"query": "el path:\"700 - DIARIO\""}` was refused and
+  `search {"query": "el path:700"}` came back with the diary, snippet and all. So did
+  `backlinks {"target": "2026-03-30"}`, resolving a bare name into the same folder.
+- **The rule was the wrong shape, not buggy.** ADR-0012 was written for a hook, where every tool
+  call names a path, so refusing calls that name a protected one was complete there. A query
+  surface reaches a file three other ways: a substring filter, a bare name that only becomes a
+  path after the call runs, and a full-text search with no path in it at all.
+- **The third is what forced the decision.** Closing the first two alone would have been worse
+  than closing none — `path:700` refused while `search "borrador"` still hands over the diary is
+  exactly the *"protection that only looks like protection"* this project refuses to ship, a
+  phrase already in `guard.py`, about a different rule, written by the same hand.
+- **So what leaves is checked too** (ADR-0020). Every row naming a file inside a protected
+  folder is dropped from the answer, at any depth, using the same `guard.touches()` that decides
+  the argument case — one definition of "inside a protected folder" for both, which is the only
+  way they can agree. When the answer *is* the protected thing, the call is refused rather than
+  emptied, naming why: *"whichever name it is reached by"*.
+- **Counters come down with the rows, and the drop is declared.** `total` and `shown` are
+  corrected and the answer gains `hidden: n`. A total still saying ten beside eight rows is the
+  table that looks right and is not; an answer that quietly hides two matches invites a model to
+  conclude there is nothing there. `hidden: 2` admits something exists without saying what.
+- **This makes the MCP surface stricter than the command line, deliberately.** `hvk search` still
+  returns everything, because whoever typed it has a shell and could have used `grep`. The
+  difference is who is asking.
+- Written down beside it: `info` counts are not filtered, and the list of keys an answer names a
+  file under will go stale exactly like ADR-0011's bypass flags — there is a test pointing at it,
+  which is the most that can be said.
+
 ## 2026-08-25 — The MCP server met a client that was not a test
 
 - **Driven by Claude Code over stdio**, against a 273-note mirror of a real vault. First

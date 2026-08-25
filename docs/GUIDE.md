@@ -705,9 +705,14 @@ second caller:
 - **Every write goes through the same layer everything else here writes through**
   (section 8's rules): atomic, no write at all when nothing changed, and a refusal when the file
   moved underneath.
-- **The guard applies here too.** `--protect` uses the same code as the hook in section 10, so a
-  folder that is off limits to your agent is off limits to any MCP client. Without it, "protected"
-  would have meant protected against exactly one program.
+- **The guard applies here too, and it goes further than it does at the hook.** `--protect` uses
+  the same code as section 10, so a folder off limits to your agent is off limits to any MCP
+  client. But a call is refused *and* the answer is checked on the way out: a search that never
+  named the folder, a filter that named only part of it, or a bare note name that resolves inside
+  it are all reached anyway, and rows from a protected folder never leave
+  ([ADR-0020](adr/0020-protected-means-what-does-not-leave.md)). When something is dropped the
+  answer says `hidden: n`, so a model learns its answer is partial instead of concluding there
+  was nothing there. Counts in `info` are the exception, and are not filtered.
 - **Every write and every refusal is a line in `hvk.log`.** If an agent can write to the vault,
   *who wrote this* has to have an answer.
 

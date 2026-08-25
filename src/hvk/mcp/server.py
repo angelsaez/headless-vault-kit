@@ -117,6 +117,59 @@ class Session:
                 raise ToolError(decision.reason)
 
 
+# Keys under which an answer names a file. A row carrying one of these that points inside a
+# protected folder is a row that must not leave (ADR-0020).
+PATH_KEYS = ("path", "source", "target", "file", "resolved", "note")
+
+#: Returned in place of a row that names a protected file, so a list can drop it and a whole
+#: answer can be refused when it is the answer itself that is protected.
+_HIDDEN = object()
+
+
+def scrub(value, protected: list):
+    """Return ``(value, hidden)`` with every row naming a protected file removed.
+
+    Recursive because an answer's rows are not always at the top: a `dql` result holds a list of
+    results, each holding its own rows. Deliberately blunt about what a row is -- any object
+    naming a file under a protected folder -- because dropping one row too many is a far better
+    failure here than letting one through, and because a rule per tool would be a rule that gets
+    forgotten the next time a tool is added.
+
+    **Counters are corrected, and the drop is declared.** A `total` that still says ten beside
+    eight rows is exactly the table that looks right and is not, which ADR-0005 and ADR-0016 both
+    refused to ship; and an answer that quietly hides two matches invites a model to conclude
+    there is nothing there. Saying `hidden: 2` admits that something exists without saying what,
+    which is a much smaller thing to give away than the answer itself.
+    """
+    if isinstance(value, dict):
+        for key in PATH_KEYS:
+            named = value.get(key)
+            if isinstance(named, str) and named and guard.touches(named, protected):
+                return _HIDDEN, 1
+        cleaned, hidden = {}, 0
+        for key, item in value.items():
+            item, dropped = scrub(item, protected)
+            hidden += dropped
+            cleaned[key] = None if item is _HIDDEN else item
+        if hidden:
+            for counter in ("total", "shown"):
+                if isinstance(cleaned.get(counter), int):
+                    cleaned[counter] = max(0, cleaned[counter] - hidden)
+            cleaned["hidden"] = hidden
+        return cleaned, hidden
+
+    if isinstance(value, list):
+        kept, hidden = [], 0
+        for item in value:
+            item, dropped = scrub(item, protected)
+            hidden += dropped
+            if item is not _HIDDEN:
+                kept.append(item)
+        return kept, hidden
+
+    return value, 0
+
+
 def call_tool(session: Session, name: str, arguments: dict) -> dict:
     """Run one tool and shape the answer the way ``tools/call`` wants it.
 
@@ -139,6 +192,23 @@ def call_tool(session: Session, name: str, arguments: dict) -> dict:
         # A bug in hvk, not a question the vault cannot answer. Named as one, so it is not
         # mistaken for a refusal the client should work around.
         return _error_result(f"hvk failed on {name}: {type(exc).__name__}: {exc}")
+
+    # Checking the arguments is not enough, and this is the whole of ADR-0020. `session.check`
+    # refuses a call that *names* a protected folder, which was the hook's rule and the only one
+    # a hook could have. A query reaches a file three other ways: a substring filter, a bare name
+    # that resolves, and a full-text search naming no path at all. So what leaves is checked too.
+    if session.protected:
+        payload, hidden = scrub(payload, session.protected)
+        if payload is _HIDDEN:
+            # Not an empty answer: the thing asked about *is* the protected one, reached under
+            # another name. Saying so is the same refusal `note_read` would have given.
+            session.record("mcp deny", rule="protected", tool=name, match="(resolved)")
+            return _error_result(
+                f"that resolves to a file inside a protected folder of this vault. Nothing in "
+                f"there is the agent's to read or change, whichever name it is reached by."
+            )
+        if hidden:
+            session.record("mcp filtered", rule="protected", tool=name, match=str(hidden))
 
     return {"content": [{"type": "text", "text": _dump(payload)}]}
 
