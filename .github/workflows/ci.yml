@@ -13,6 +13,21 @@ permissions:
   contents: read
 
 jobs:
+  workflows:
+    runs-on: ubuntu-latest
+    name: the workflows themselves parse
+    # First, and on its own, because of how this file failed once: a `run:` block with a raw
+    # newline inside a quoted shell string made the whole file unparseable, so GitHub failed
+    # every run with "No jobs were run" -- not one job, not even the tests. A workflow cannot
+    # test itself once it is broken, so this is checked from the suite as well.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m pytest tests/test_workflows.py -q
+
   tests:
     runs-on: ubuntu-latest
     strategy:
@@ -64,10 +79,10 @@ jobs:
       # until this existed the only route CI proved was pip's. They are not the same: uv builds
       # an isolated environment and puts a launcher on PATH, which is where an entry point or a
       # missing package shows up differently.
+      #
       # Pinned to an exact release, not a floating major. astral-sh stopped publishing `@v8`
       # and `@v8.0`-style tags from v8.0.0 onwards, deliberately, so that a compromised action
-      # cannot be pushed under a tag somebody already trusts. `@v5` resolves to nothing at all,
-      # which is how this job failed on every push between being written and being fixed.
+      # cannot be pushed under a tag somebody already trusts.
       - uses: astral-sh/setup-uv@v10.0.1
       - name: install this checkout as a tool
         run: uv tool install --from . headless-vault-kit
@@ -77,19 +92,17 @@ jobs:
           hvk --version
           mkdir -p /tmp/uv-vault/.obsidian
           echo '{}' > /tmp/uv-vault/.obsidian/app.json
-          printf '# One
-
-Links to [[Two]].
-' > /tmp/uv-vault/One.md
-          printf '# Two
-' > /tmp/uv-vault/Two.md
+          printf '# One\n\nLinks to [[Two]].\n' > /tmp/uv-vault/One.md
+          printf '# Two\n' > /tmp/uv-vault/Two.md
           hvk --vault /tmp/uv-vault scan
           hvk --vault /tmp/uv-vault backlinks Two --json | grep -q One.md
       - name: it speaks MCP
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          printf '%s
-'             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'             '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'             | hvk --vault /tmp/uv-vault mcp | grep -q '"backlinks"'
+          {
+            echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
+            echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+          } | hvk --vault /tmp/uv-vault mcp | grep -q '"backlinks"'
 
   scripts:
     runs-on: ubuntu-latest

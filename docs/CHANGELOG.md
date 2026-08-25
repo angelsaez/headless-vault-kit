@@ -42,6 +42,30 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-25 — "No jobs were run", which was the whole of CI
+
+- **`ci.yml` had not parsed since the phase 7 merge.** A `run:` block was written with raw
+  newlines inside a single-quoted shell string, so the file was not valid YAML — and GitHub does
+  not fail the job that contains the mistake, it fails the run with **"No jobs were run"**. Not
+  one red job: none at all. No tests, no package check, nothing, on every push, with an email
+  that did not say why.
+- **The previous entry blamed an action tag, and that was wrong about the cause.** The tag was
+  genuinely invented and is genuinely fixed, but it was never reached: the file never parsed far
+  enough to resolve an action. Left in the log because a wrong diagnosis that was published is
+  part of what happened.
+- **`tests/test_workflows.py`** now parses every workflow, checks each job has steps, each step
+  is an action *or* a command, each action names a version, and runs `bash -n` over every `run:`
+  — the same reading the `scripts` job already gives `deploy/`. Verified against the broken file
+  itself rather than only against the fixed one: reconstructed, it fails exactly here.
+- **`release.yml` is held to exact versions by a test**, since it ends in `id-token: write` and
+  publishes something other people install.
+- **A workflow cannot report that it is broken.** That is why this is checked from the suite, on
+  a laptop, before anything is pushed — and why CI's first job is now the one that reads the
+  workflows.
+- What the file does *not* do: count quotes. The first version did, failed on an apostrophe in a
+  shell comment, and would not have caught this anyway — the quotes balanced perfectly, across
+  the lines they should never have spanned.
+
 ## 2026-08-25 — Three action tags that did not exist
 
 - **`astral-sh/setup-uv@v5` does not exist**, so the `uv-tool` job added yesterday failed to
