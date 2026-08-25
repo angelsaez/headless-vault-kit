@@ -697,6 +697,48 @@ Apunta el cliente donde ese cliente espere. La forma es casi siempre esta:
 Añade `"--write"` a `args` cuando de verdad lo quieras, y `"--protect", "Privada"` por cada
 carpeta que ningún cliente deba tocar.
 
+### Llegar a él desde otra máquina
+
+**Que sea stdio significa que el cliente arranca el proceso, así que por defecto el cliente y el
+vault están en la misma máquina.** Es un valor por defecto raro para un proyecto cuya premisa
+entera es un vault que vive en un servidor delante del que no te sientas, así que conviene
+contar cómo se resuelven los dos casos habituales.
+
+**Si el vault también sincroniza a la máquina en la que estás**, apunta el cliente a la copia
+local. Es la respuesta simple y muchas veces es la correcta.
+
+**Si lo que quieres es el índice del servidor** —el que el watcher mantiene al segundo— envuelve
+el comando en `ssh`. El cliente arranca `ssh`, y la entrada y la salida del proceso remoto viajan
+por la conexión que ya tenías:
+
+```json
+{
+  "mcpServers": {
+    "vault": {
+      "command": "ssh",
+      "args": [
+        "-i", "/ruta/a/la/clave",
+        "usuario@tu-servidor",
+        "/home/usuario/.local/bin/hvk --vault /home/usuario/vault mcp"
+      ]
+    }
+  }
+}
+```
+
+Usa la ruta completa a `hvk` en el otro lado: un comando SSH no interactivo no lee el perfil que
+pone `~/.local/bin` en el `PATH`. Todo lo demás sigue igual — `--write` y `--protect` van al
+final de ese comando remoto, y el guard se aplica exactamente igual que en local.
+
+Nada de esto abre ningún puerto. El transporte sigue siendo stdio; SSH lo transporta, y SSH es ya
+como llegas a esa máquina.
+
+**No hay transporte HTTP ni SSE**, así que no se puede apuntar un servicio alojado a tu vault por
+internet. Eso es la decisión de la [ADR-0018](adr/0018-an-mcp-server-that-writes.md) y no un
+hueco pendiente de rellenar: un servidor que escribe en tus notas no escucha en un puerto, y
+añadirle uno abriría todas las preguntas sobre autenticación que stdio responde por no tener
+ninguna.
+
 ### Las herramientas, al completo
 
 Los argumentos marcados con **\*** son obligatorios. Todas responden en JSON, y con las mismas
