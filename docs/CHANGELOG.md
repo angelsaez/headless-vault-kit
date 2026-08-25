@@ -42,6 +42,24 @@ Format: `## YYYY-MM-DD — title`, saying what changed and why.
   exists — so what is checked is what can rot silently: that the subcommand exists, that every
   flag is real, and that every documented query is one this project can actually parse.
 
+## 2026-08-26 — Reaching the MCP server from a machine that is not the server
+
+- **The guides explained how to configure a client and never said where the client has to run.**
+  stdio means the client starts the process, so by default it and the vault are on the same
+  machine — which is an odd default to leave unsaid in a project whose whole premise is a vault
+  living on a server nobody sits in front of.
+- **Both cases are documented now**: point the client at the local copy if the vault syncs to
+  the machine you are on, or wrap the command in `ssh` to use the server's own index — the one
+  the watcher keeps current to the second. Verified, not assumed: a client on a laptop, the
+  vault on an ARM64 VPS, the handshake, `tools/list` and a `tools/call` all answered over SSH.
+- **The gotcha is written down** because it costs an afternoon otherwise: use the full path to
+  `hvk` on the far side. A non-interactive SSH command does not read the profile that puts
+  `~/.local/bin` on `PATH`.
+- **And the thing that does not change**: none of this opens a port. The transport is still
+  stdio and SSH is carrying it. There is no HTTP or SSE transport, which is
+  [ADR-0018](adr/0018-an-mcp-server-that-writes.md)'s decision and not a gap — adding one would
+  raise every question about authentication that stdio answers by not having any.
+
 ## 2026-08-26 — A README that is true
 
 The repository went public yesterday, which makes the README the first thing a stranger reads.

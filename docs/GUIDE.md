@@ -684,6 +684,47 @@ Point a client at it the way that client expects. The shape is nearly always thi
 Add `"--write"` to `args` when you mean it, and `"--protect", "Private"` for each folder no
 client may touch.
 
+### Reaching it from another machine
+
+**stdio means the client starts the process, so by default the client and the vault are on the
+same machine.** That is an odd default for a project whose whole premise is a vault living on a
+server you do not sit in front of, so it is worth saying how the two usual cases work.
+
+**If the vault also syncs to the machine you are on**, point the client at the local copy. That
+is the simple answer and it is often the right one.
+
+**If you want the server's index** — the one the watcher keeps current to the second — wrap the
+command in `ssh`. The client starts `ssh`, and the remote process's stdin and stdout travel down
+the connection you already had:
+
+```json
+{
+  "mcpServers": {
+    "vault": {
+      "command": "ssh",
+      "args": [
+        "-i", "/path/to/key",
+        "you@your-server",
+        "/home/you/.local/bin/hvk --vault /home/you/vault mcp"
+      ]
+    }
+  }
+}
+```
+
+Use the full path to `hvk` on the far side: a non-interactive SSH command does not read the
+profile that puts `~/.local/bin` on `PATH`. Everything else is unchanged — `--write` and
+`--protect` go on the end of that remote command, and the guard applies exactly as it does
+locally.
+
+Nothing about this opens a port. The transport is still stdio; SSH is carrying it, and SSH is
+already how you reach that machine.
+
+**There is no HTTP or SSE transport**, so a hosted service cannot be pointed at your vault over
+the internet. That is [ADR-0018](adr/0018-an-mcp-server-that-writes.md)'s decision rather than a
+gap waiting to be filled: a server that writes to your notes does not listen on a port, and
+adding one would raise every question about authentication that stdio answers by not having any.
+
 ### The tools, in full
 
 Arguments marked **\*** are required. Every tool answers with JSON; the shapes are the same ones
